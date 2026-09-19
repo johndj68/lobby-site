@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit-redis'
 
 interface RegisterInput {
   fullName:     string
@@ -52,11 +52,11 @@ export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
 
   // 3 cadastros / 10 min e 10 / dia por IP — blunt contra criação em massa
-  const burstLimit = checkRateLimit({ key: `register:ip:${ip}`, limit: 3, windowMs: 600_000 })
+  const burstLimit = await checkRateLimit({ key: `register:ip:${ip}`, limit: 3, windowMs: 600_000 })
   const burstLimited = rateLimitResponse(burstLimit)
   if (burstLimited) return burstLimited
 
-  const dayLimit = checkRateLimit({ key: `register:ip:day:${ip}`, limit: 10, windowMs: 86_400_000 })
+  const dayLimit = await checkRateLimit({ key: `register:ip:day:${ip}`, limit: 10, windowMs: 86_400_000 })
   const dayLimited = rateLimitResponse(dayLimit)
   if (dayLimited) return dayLimited
 
