@@ -56,6 +56,16 @@ export const borderRadius = {
   '4xl': '26px',
 }
 
+// Form input styles
+export const formStyles = {
+  inputHeight: 'h-12',
+  inputRadius: 'rounded-2xl',
+  inputPadding: 'pl-10',
+  labelClass: 'mb-2 block text-sm font-semibold',
+  errorClass: 'text-xs font-medium',
+  focusRing: `focus-visible:ring-4 focus-visible:ring-[${colors.primary}]/10 focus-visible:border-[${colors.primary}]/40`,
+}
+
 export const gradients = {
   primary: `linear-gradient(135deg, ${colors.primary}18, ${colors.secondaryLight}18)`,
   primaryBold: `linear-gradient(135deg, ${colors.primary}, ${colors.secondaryLight})`,
