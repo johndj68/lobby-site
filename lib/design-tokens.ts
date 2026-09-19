@@ -66,6 +66,15 @@ export const formStyles = {
   focusRing: `focus-visible:ring-4 focus-visible:ring-[${colors.primary}]/10 focus-visible:border-[${colors.primary}]/40`,
 }
 
+// Status badge colors
+export const badgeColors = {
+  free: { bg: 'rgba(22,163,74,0.08)', text: '#16A34A', border: 'rgba(22,163,74,0.25)' },
+  paid: { bg: 'rgba(217,119,6,0.08)', text: '#D97706', border: 'rgba(217,119,6,0.25)' },
+  beginner: { bg: 'rgba(22,163,74,0.08)', text: '#16A34A', border: 'rgba(22,163,74,0.22)' },
+  intermediate: { bg: 'rgba(217,119,6,0.08)', text: '#D97706', border: 'rgba(217,119,6,0.22)' },
+  advanced: { bg: 'rgba(220,38,38,0.08)', text: '#DC2626', border: 'rgba(220,38,38,0.22)' },
+}
+
 export const gradients = {
   primary: `linear-gradient(135deg, ${colors.primary}18, ${colors.secondaryLight}18)`,
   primaryBold: `linear-gradient(135deg, ${colors.primary}, ${colors.secondaryLight})`,
