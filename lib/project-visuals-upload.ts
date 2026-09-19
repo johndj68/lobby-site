@@ -28,7 +28,57 @@ function validateFile(file: File, kind: 'image' | 'document') {
   }
 }
 
+export interface UploadImageResponse {
+  url: string
+  path: string
+  width: number
+  height: number
+  sizeFinal: number
+  sizeOriginal: number
+  quality: number
+  savings: number
+}
+
+export async function uploadProjectImage(
+  file: File,
+  kind: 'common' | 'avatar' | 'document' = 'common',
+): Promise<UploadImageResponse> {
+  if (file.size > 10 * 1024 * 1024) {
+    throw new VisualUploadError('Arquivo muito grande (máx. 10 MB).')
+  }
+
+  if (!ACCEPTED_TYPES.image.test(file.type)) {
+    throw new VisualUploadError('Tipo de arquivo não aceito. Use PNG, JPG ou WebP.')
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('kind', kind)
+
+  const response = await fetch('/api/upload/image', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new VisualUploadError(error.error || 'Erro ao enviar imagem.')
+  }
+
+  return response.json()
+}
+
 export async function uploadProjectVisual(file: File, kind: 'image' | 'document'): Promise<string> {
+  if (kind === 'image') {
+    try {
+      const result = await uploadProjectImage(file, 'common')
+      return result.url
+    } catch (err) {
+      if (err instanceof VisualUploadError) throw err
+      throw new VisualUploadError('Erro ao fazer upload de imagem.')
+    }
+  }
+
   validateFile(file, kind)
   const supabase = createClient()
   const path = `${Date.now()}-${safeFileName(file.name)}`
