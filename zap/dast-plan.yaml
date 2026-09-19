@@ -1,0 +1,201 @@
+# ZAP Automation Framework — DAST autenticado do LOBBY.
+# NUNCA aponte DAST_BASE_URL pra produção. Ver SECURITY.md §11 pro
+# procedimento completo de confirmação de ambiente antes de rodar isto.
+#
+# Uso:
+#   export DAST_BASE_URL=http://localhost:3000
+#   export DAST_COMMON_EMAIL=... DAST_COMMON_PASSWORD=...
+#   export DAST_ADMIN_EMAIL=...  DAST_ADMIN_PASSWORD=...
+#   export DAST_BLOCKED_EMAIL=... DAST_BLOCKED_PASSWORD=...
+#   export DAST_OTHER_ORG_EMAIL=... DAST_OTHER_ORG_PASSWORD=...
+#   /tmp/zap/ZAP_2.16.1/zap.sh -cmd -autorun zap/dast-plan.yaml
+#
+# Nenhuma credencial fica neste arquivo — tudo vem de env vars do processo
+# que invoca o ZAP (nunca comitadas; ver .env.staging.local, gitignorado).
+
+env:
+  contexts:
+    - name: "lobby-client"
+      urls:
+        - "${DAST_BASE_URL}"
+      includePaths:
+        - "${DAST_BASE_URL}/"
+        - "${DAST_BASE_URL}/dashboard.*"
+        - "${DAST_BASE_URL}/login.*"
+        - "${DAST_BASE_URL}/cadastro.*"
+        - "${DAST_BASE_URL}/projetos.*"
+        - "${DAST_BASE_URL}/recursos.*"
+        - "${DAST_BASE_URL}/solucoes.*"
+        - "${DAST_BASE_URL}/sobre.*"
+        - "${DAST_BASE_URL}/busca.*"
+        - "${DAST_BASE_URL}/contato.*"
+        - "${DAST_BASE_URL}/api/notify/message.*"
+      excludePaths:
+        # Destrutivo / envia e-mail-SMS-webhook real / pagamento — nunca no
+        # escopo de scan ativo automático, mesmo em staging.
+        - "${DAST_BASE_URL}/api/auth/forgot-password.*"
+        - "${DAST_BASE_URL}/recuperar-senha.*"
+        - "${DAST_BASE_URL}/atualizar-senha.*"
+        - "${DAST_BASE_URL}/api/stripe.*"
+        - "${DAST_BASE_URL}/api/auth/register.*"   # cria conta real a cada hit — só testado manualmente/isolado
+        - ".*logout.*"
+      authentication:
+        method: "browser"
+        parameters:
+          loginPageUrl: "${DAST_BASE_URL}/login"
+          loginPageWait: 5
+          browserId: "firefox-headless"
+      sessionManagement:
+        method: "cookie"
+      users:
+        - name: "dast-common"
+          credentials:
+            username: "${DAST_COMMON_EMAIL}"
+            password: "${DAST_COMMON_PASSWORD}"
+        - name: "dast-blocked"
+          credentials:
+            username: "${DAST_BLOCKED_EMAIL}"
+            password: "${DAST_BLOCKED_PASSWORD}"
+        - name: "dast-other-org"
+          credentials:
+            username: "${DAST_OTHER_ORG_EMAIL}"
+            password: "${DAST_OTHER_ORG_PASSWORD}"
+
+    - name: "lobby-admin"
+      urls:
+        - "${DAST_BASE_URL}"
+      includePaths:
+        - "${DAST_BASE_URL}/admin.*"
+      excludePaths:
+        # Ver lista completa de exclusões de operações destrutivas/reais no
+        # SECURITY.md §11 — spider/scan tradicional (link-follow) não chama
+        # Server Actions por si só, mas o Ajax Spider (que clica botões)
+        # pode; por isso essas rotas/ações ficam fora mesmo em staging.
+        - "${DAST_BASE_URL}/admin/equipe.*"        # cria/exclui técnico de verdade
+        - "${DAST_BASE_URL}/admin/configuracoes.*" # inclui fluxo de convite
+        - "${DAST_BASE_URL}/api/stripe.*"
+        - "${DAST_BASE_URL}/api/auth/forgot-password.*"
+        - ".*logout.*"
+      authentication:
+        method: "browser"
+        parameters:
+          loginPageUrl: "${DAST_BASE_URL}/admin/login"
+          loginPageWait: 5
+          browserId: "firefox-headless"
+      sessionManagement:
+        method: "cookie"
+      users:
+        - name: "dast-admin"
+          credentials:
+            username: "${DAST_ADMIN_EMAIL}"
+            password: "${DAST_ADMIN_PASSWORD}"
+
+jobs:
+  # ── Passo 1: valida config dos contextos ──────────────────────────────
+  - type: env
+    parameters: {}
+
+  # ── Passo 2: Baseline passivo, sem autenticação (ETAPA 5) ─────────────
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+
+  - type: spider
+    parameters:
+      context: "lobby-client"
+      url: "${DAST_BASE_URL}"
+      maxDuration: 5
+    name: "spider-anonymous"
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "zap/reports"
+      reportFile: "baseline-anonymous-{{yyyy-MM-dd}}"
+    risks: [info, low, medium, high]
+
+  # ── Passo 3: navegação autenticada por perfil (ETAPA 6) ────────────────
+  # Repita este bloco de 3 jobs (spider autenticado / passive-wait / report)
+  # uma vez por usuário, trocando `user` — ZAP AF não tem loop nativo sobre
+  # `users`, então cada perfil é seu próprio bloco explícito (mantém
+  # sessão/contexto/relatório separados por perfil, como pede a ETAPA 6).
+
+  - type: spider
+    parameters:
+      context: "lobby-client"
+      user: "dast-common"
+      url: "${DAST_BASE_URL}/dashboard"
+      maxDuration: 5
+    name: "spider-common"
+  - type: passiveScan-wait
+    parameters: { maxDuration: 5 }
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "zap/reports"
+      reportFile: "authenticated-common-{{yyyy-MM-dd}}"
+    risks: [info, low, medium, high]
+
+  - type: spider
+    parameters:
+      context: "lobby-admin"
+      user: "dast-admin"
+      url: "${DAST_BASE_URL}/admin"
+      maxDuration: 5
+    name: "spider-admin"
+  - type: passiveScan-wait
+    parameters: { maxDuration: 5 }
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "zap/reports"
+      reportFile: "authenticated-admin-{{yyyy-MM-dd}}"
+    risks: [info, low, medium, high]
+
+  - type: spider
+    parameters:
+      context: "lobby-client"
+      user: "dast-other-org"
+      url: "${DAST_BASE_URL}/dashboard"
+      maxDuration: 5
+    name: "spider-other-org"
+  - type: passiveScan-wait
+    parameters: { maxDuration: 5 }
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "zap/reports"
+      reportFile: "authenticated-other-org-{{yyyy-MM-dd}}"
+    risks: [info, low, medium, high]
+
+  # ── Passo 4: scan ativo controlado (ETAPA 8) ───────────────────────────
+  # SÓ roda depois da confirmação manual de staging descartável (feita antes
+  # de invocar este plano — ver SECURITY.md §11). Limites conservadores:
+  # delayInMs entre requests, threadPerHost baixo, escopo restrito pelos
+  # includePaths/excludePaths dos contexts acima.
+  - type: activeScan-config
+    parameters:
+      maxRuleDurationInMins: 2
+      maxScanDurationInMins: 10
+      threadPerHost: 2
+      delayInMs: 250
+      addQueryParam: false
+      handleAntiCSRFTokens: true
+
+  - type: activeScan
+    parameters:
+      context: "lobby-client"
+      user: "dast-common"
+      url: "${DAST_BASE_URL}/dashboard"
+    name: "active-scan-common"
+
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "zap/reports"
+      reportFile: "active-scan-common-{{yyyy-MM-dd}}"
+    risks: [medium, high]

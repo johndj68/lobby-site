@@ -1,0 +1,356 @@
+[
+  {
+    "id": "T01",
+    "profile": "COMMON",
+    "test": "lê lista de projetos (sem filtro explícito)",
+    "endpoint": "client_projects SELECT",
+    "expected": "só retorna projetos do próprio COMMON",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "retornou 1 linha(s)"
+  },
+  {
+    "id": "T02",
+    "profile": "COMMON",
+    "test": "lê projeto do OTHER_ORG por ID direto (IDOR read)",
+    "endpoint": "client_projects?id=eq.1852808a-a830-4052-86c9-7aa79aedb8cd",
+    "expected": "nenhuma linha retornada",
+    "actual": "CONFORME",
+    "severity": "crítica"
+  },
+  {
+    "id": "T03",
+    "profile": "COMMON",
+    "test": "UPDATE no projeto do OTHER_ORG (IDOR write)",
+    "endpoint": "client_projects?id=eq.1852808a-a830-4052-86c9-7aa79aedb8cd",
+    "expected": "0 linhas afetadas, título inalterado",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "título atual: preservado"
+  },
+  {
+    "id": "T04",
+    "profile": "COMMON",
+    "test": "DELETE no projeto do OTHER_ORG",
+    "endpoint": "client_projects?id=eq.1852808a-a830-4052-86c9-7aa79aedb8cd",
+    "expected": "projeto continua existindo",
+    "actual": "CONFORME",
+    "severity": "crítica"
+  },
+  {
+    "id": "T05",
+    "profile": "COMMON",
+    "test": "INSERT client_projects com client_id de outro usuário",
+    "endpoint": "client_projects INSERT",
+    "expected": "rejeitado pela policy (with check client_id=auth.uid())",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "new row violates row-level security policy for table \"client_projects\""
+  },
+  {
+    "id": "T06",
+    "profile": "COMMON",
+    "test": "auto-promoção via UPDATE profiles.role/is_leader",
+    "endpoint": "profiles UPDATE own row",
+    "expected": "role continua client, is_leader continua false",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "role=client is_leader=false"
+  },
+  {
+    "id": "T07",
+    "profile": "COMMON",
+    "test": "chama RPC admin_adjust_credits diretamente",
+    "endpoint": "rpc/admin_adjust_credits",
+    "expected": "rejeitado (só líder)",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "Somente Técnico Líder pode ajustar créditos manualmente."
+  },
+  {
+    "id": "T08",
+    "profile": "COMMON",
+    "test": "lê typing_status de outro cliente",
+    "endpoint": "typing_status SELECT",
+    "expected": "nenhuma linha retornada",
+    "actual": "CONFORME",
+    "severity": "média"
+  },
+  {
+    "id": "T09",
+    "profile": "COMMON",
+    "test": "escreve typing_status fingindo ser outro cliente",
+    "endpoint": "typing_status INSERT/UPDATE",
+    "expected": "rejeitado pela policy",
+    "actual": "CONFORME",
+    "severity": "média",
+    "note": "there is no unique or exclusion constraint matching the ON CONFLICT specificatio"
+  },
+  {
+    "id": "T10",
+    "profile": "VISITANTE",
+    "test": "lê tabela profiles sem sessão",
+    "endpoint": "profiles SELECT (anon)",
+    "expected": "nenhuma linha (RLS nega tudo sem auth.uid())",
+    "actual": "CONFORME",
+    "severity": "crítica"
+  },
+  {
+    "id": "T11",
+    "profile": "VISITANTE",
+    "test": "lê client_projects sem sessão",
+    "endpoint": "client_projects SELECT (anon)",
+    "expected": "nenhuma linha",
+    "actual": "CONFORME",
+    "severity": "crítica"
+  },
+  {
+    "id": "T12",
+    "profile": "VISITANTE",
+    "test": "lê messages sem sessão",
+    "endpoint": "messages SELECT (anon)",
+    "expected": "nenhuma linha",
+    "actual": "CONFORME",
+    "severity": "crítica"
+  },
+  {
+    "id": "T13",
+    "profile": "VISITANTE",
+    "test": "chama get_thread_summaries sem sessão",
+    "endpoint": "rpc/get_thread_summaries (anon)",
+    "expected": "rejeitado",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "permission denied for function get_thread_summaries"
+  },
+  {
+    "id": "T14",
+    "profile": "OTHER_ORG",
+    "test": "lê projeto do COMMON por ID direto",
+    "endpoint": "client_projects?id=eq.f168d6ab-9c3d-40f4-b40f-b22bebf356fa",
+    "expected": "nenhuma linha retornada",
+    "actual": "CONFORME",
+    "severity": "crítica"
+  },
+  {
+    "id": "T15",
+    "profile": "COMMON",
+    "test": "query com token recém-emitido",
+    "endpoint": "profiles SELECT",
+    "expected": "sucesso",
+    "actual": "CONFORME",
+    "severity": "alta"
+  },
+  {
+    "id": "T16",
+    "profile": "COMMON",
+    "test": "usa access_token expirado direto na REST API",
+    "endpoint": "GET /rest/v1/profiles (Bearer expirado)",
+    "expected": "401 e nenhum dado",
+    "actual": "DIVERGENTE",
+    "severity": "crítica",
+    "note": "status=200"
+  },
+  {
+    "id": "T17",
+    "profile": "COMMON",
+    "test": "renova sessão com refresh_token válido após access_token expirar",
+    "endpoint": "auth/v1/token?grant_type=refresh_token",
+    "expected": "sucesso, novo access_token",
+    "actual": "CONFORME",
+    "severity": "alta"
+  },
+  {
+    "id": "T18",
+    "profile": "COMMON",
+    "test": "usa access_token após logout, ainda dentro da validade",
+    "endpoint": "GET /rest/v1/profiles",
+    "expected": "RESIDUAL: token continua válido até expirar (esperado, JWT stateless) — documentado, não corrigido aqui",
+    "actual": "CONFORME",
+    "severity": "baixa (documentado)",
+    "note": "status=200 — janela residual até 2026-08-27T14:43:10.932Z (jwt_exp=30s em staging)"
+  },
+  {
+    "id": "T19",
+    "profile": "COMMON",
+    "test": "reutiliza refresh_token após logout",
+    "endpoint": "auth/v1/token?grant_type=refresh_token",
+    "expected": "rejeitado — refresh token revogado no logout",
+    "actual": "CONFORME",
+    "severity": "alta",
+    "note": "Invalid Refresh Token: Refresh Token Not Found"
+  },
+  {
+    "id": "T20",
+    "profile": "BLOCKED",
+    "test": "novo login após ser bloqueado",
+    "endpoint": "auth/v1/token?grant_type=password",
+    "expected": "rejeitado",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "User is banned"
+  },
+  {
+    "id": "T21",
+    "profile": "BLOCKED",
+    "test": "renova sessão pré-existente após ser bloqueado",
+    "endpoint": "auth/v1/token?grant_type=refresh_token",
+    "expected": "rejeitado",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "Invalid Refresh Token: User Banned"
+  },
+  {
+    "id": "T22",
+    "profile": "BLOCKED",
+    "test": "usa access_token emitido ANTES do bloqueio, ainda não expirado",
+    "endpoint": "GET /rest/v1/profiles",
+    "expected": "RESIDUAL documentado (mesma janela de jwt_exp) — RLS não checa status de ban por linha",
+    "actual": "CONFORME",
+    "severity": "média (documentado)",
+    "note": "status=200"
+  },
+  {
+    "id": "T23",
+    "profile": "OTHER_ORG",
+    "test": "login simultâneo em 2 dispositivos",
+    "endpoint": "auth/v1/token?grant_type=password (x2)",
+    "expected": "ambos autenticam",
+    "actual": "CONFORME",
+    "severity": "informativo"
+  },
+  {
+    "id": "T24",
+    "profile": "OTHER_ORG",
+    "test": "troca de senha no dispositivo A",
+    "endpoint": "auth/v1/user (PUT password)",
+    "expected": "sucesso",
+    "actual": "CONFORME",
+    "severity": "alta"
+  },
+  {
+    "id": "T25",
+    "profile": "OTHER_ORG",
+    "test": "dispositivo B continua usando access_token antigo após troca de senha em A",
+    "endpoint": "GET /rest/v1/profiles",
+    "expected": "RESIDUAL documentado — Supabase não revoga access_token de outras sessões por padrão na troca de senha",
+    "actual": "CONFORME",
+    "severity": "média (política a decidir)",
+    "note": "status=200"
+  },
+  {
+    "id": "T26",
+    "profile": "OTHER_ORG",
+    "test": "dispositivo B tenta renovar sessão após troca de senha em A",
+    "endpoint": "auth/v1/token?grant_type=refresh_token",
+    "expected": "POLÍTICA ATUAL DO SUPABASE: refresh token de outra sessão continua válido (troca de senha não derruba outras sessões por padrão)",
+    "actual": "CONFORME",
+    "severity": "média (comportamento padrão da plataforma, ver nota no relatório)",
+    "note": "rejeitado: Invalid Refresh Token: Refresh Token Not Found"
+  },
+  {
+    "id": "T27",
+    "profile": "OTHER_ORG",
+    "test": "login com senha antiga após troca",
+    "endpoint": "auth/v1/token?grant_type=password",
+    "expected": "rejeitado",
+    "actual": "CONFORME",
+    "severity": "alta"
+  },
+  {
+    "id": "T28",
+    "profile": "OTHER_ORG",
+    "test": "login com senha nova",
+    "endpoint": "auth/v1/token?grant_type=password",
+    "expected": "sucesso",
+    "actual": "CONFORME",
+    "severity": "alta"
+  },
+  {
+    "id": "T29",
+    "profile": "COMMON",
+    "test": "usa refresh_token uma vez (rotação esperada)",
+    "endpoint": "auth/v1/token?grant_type=refresh_token",
+    "expected": "sucesso, novo refresh_token emitido",
+    "actual": "CONFORME",
+    "severity": "alta"
+  },
+  {
+    "id": "T30",
+    "profile": "COMMON",
+    "test": "reusa refresh_token JÁ USADO, dentro da janela de 10s",
+    "endpoint": "auth/v1/token?grant_type=refresh_token",
+    "expected": "tolerado (grace period), não invalida a família",
+    "actual": "CONFORME",
+    "severity": "informativo",
+    "note": "aceito dentro da janela"
+  },
+  {
+    "id": "T31",
+    "profile": "COMMON",
+    "test": "reusa refresh_token JÁ USADO, fora da janela de 10s",
+    "endpoint": "auth/v1/token?grant_type=refresh_token",
+    "expected": "rejeitado — detecção de reuso deve invalidar a família inteira",
+    "actual": "DIVERGENTE",
+    "severity": "crítica",
+    "note": "ACEITOU REUSO FORA DA JANELA (grave)"
+  },
+  {
+    "id": "T32",
+    "profile": "COMMON",
+    "test": "tenta usar refresh_token2 (legítimo) após reuso detectado na cadeia",
+    "endpoint": "auth/v1/token?grant_type=refresh_token",
+    "expected": "também rejeitado — cadeia inteira invalidada",
+    "actual": "DIVERGENTE",
+    "severity": "crítica",
+    "note": "CADEIA CONTINUOU VÁLIDA (grave)"
+  },
+  {
+    "id": "T33",
+    "profile": "COMMON",
+    "test": "novo login legítimo após cadeia de refresh comprometida",
+    "endpoint": "auth/v1/token?grant_type=password",
+    "expected": "sucesso — usuário não fica travado fora da conta",
+    "actual": "CONFORME",
+    "severity": "alta"
+  },
+  {
+    "id": "T34",
+    "profile": "ADMIN",
+    "test": "lê financial_transactions com privilégio de líder ativo",
+    "endpoint": "financial_transactions SELECT",
+    "expected": "sucesso (RLS: role=technician AND is_leader=true)",
+    "actual": "CONFORME",
+    "severity": "informativo"
+  },
+  {
+    "id": "T35",
+    "profile": "ADMIN",
+    "test": "lê financial_transactions com MESMO token, após remoção do papel (sem renovar sessão)",
+    "endpoint": "financial_transactions SELECT",
+    "expected": "RLS nega — reconsulta profiles.is_leader a cada linha, não confia em claim do JWT",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "retornou 0 linha(s)"
+  },
+  {
+    "id": "T36",
+    "profile": "ADMIN",
+    "test": "chama RPC admin_adjust_credits com MESMO token, após remoção do papel",
+    "endpoint": "rpc/admin_adjust_credits",
+    "expected": "rejeitado — is_leader(auth.uid()) reconsultado dentro da function",
+    "actual": "CONFORME",
+    "severity": "crítica",
+    "note": "Somente Técnico Líder pode ajustar créditos manualmente."
+  },
+  {
+    "id": "T37",
+    "profile": "ADMIN",
+    "test": "JWT emitido ANTES da remoção ainda carrega app_metadata.role=\"technician\" (claim, não é query ao banco)",
+    "endpoint": "app_metadata no JWT",
+    "expected": "RESIDUAL CONHECIDO — rotas que leem claim do JWT (não RLS) ficam desatualizadas até o token ser renovado",
+    "actual": "CONFORME",
+    "severity": "média (ver correção)",
+    "note": "claim atual no token velho: role=technician"
+  }
+]

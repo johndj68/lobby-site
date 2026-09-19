@@ -1,26 +1,413 @@
+/* ════════════════════════════════════════════════════════════════════
+ * globals.css — Estilos globais do projeto LOBBY
+ *
+ * Estrutura deste arquivo:
+ *  1. Importações (fontes, Tailwind, animações, shadcn)
+ *  2. @custom-variant dark  — variante de modo escuro
+ *  3. @theme inline         — mapeamento de tokens de design para o Tailwind
+ *  4. :root                 — variáveis CSS (modo claro)
+ *  5. .dark                 — sobrescritas para modo escuro
+ *  6. @layer base           — reset / estilos base globais
+ *  7. Utilitários LOBBY     — classes reutilizáveis da identidade visual
+ *  8. Scrollbar             — estilização da barra de rolagem
+ *  9. Animações keyframes   — animações usadas em componentes específicos
+ * ════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Importações ─────────────────────────────────────────────────
+   Space Grotesk e Inter são carregadas via next/font/google em app/layout.tsx
+   (self-hosted, expostas como --font-space-grotesk/--font-inter) — não precisam
+   de @import daqui. Um @import direto para fonts.googleapis.com existia aqui
+   antes, mas é bloqueado pela CSP (style-src não permite esse host) e é
+   redundante com o next/font, então foi removido. */
+
+/* Tailwind CSS v4 — framework de utilitários CSS */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* tw-animate-css — animações prontas compatíveis com Tailwind */
+@import "tw-animate-css";
 
+/* shadcn/ui — variáveis e reset do sistema de componentes shadcn */
+@import "shadcn/tailwind.css";
+
+/* ── 2. Variante de modo escuro ─────────────────────────────────────
+   Define a variante `dark` para o Tailwind v4.
+   Ativa os estilos dark quando o elemento ou qualquer ancestral tem
+   a classe `.dark` (usada pelo shadcn/ui para alternância de tema). */
+@custom-variant dark (&:is(.dark *));
+
+/* ── 3. Mapeamento de tokens de design (@theme inline) ──────────────
+   Liga as variáveis CSS (definidas em :root) aos tokens do Tailwind.
+   Isso permite usar classes como `bg-background`, `text-foreground`,
+   `border-border`, `font-sans`, etc. diretamente no JSX.
+   Os valores `--color-lobby-*` são tokens exclusivos da marca LOBBY. */
 @theme inline {
+  /* Cores semânticas de fundo e texto principal */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+
+  /* Fontes: sans = Inter (corpo), heading = Space Grotesk (títulos), mono = Geist Mono (código) */
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-space-grotesk);
   --font-mono: var(--font-geist-mono);
+
+  /* Tokens da sidebar (painel lateral do shadcn/ui) */
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  /* Tokens de gráficos (chart-1 a chart-5 — usados por componentes de visualização) */
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+
+  /* Tokens de interação: anel de foco, inputs e bordas */
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+
+  /* Cor destrutiva: vermelho para erros e ações irreversíveis */
+  --color-destructive: var(--destructive);
+
+  /* Tokens de accent (realce), muted (silenciado), secondary e primary */
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+
+  /* Tokens de popover (menus flutuantes, tooltips, dropdowns) */
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+
+  /* Tokens de card (cards de conteúdo) */
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* Escala de border-radius — base de 0.625rem (10px) com multiplicadores
+     sm = 6px, md = 8px, lg = 10px, xl = 14px, 2xl = 18px, 3xl = 22px, 4xl = 26px */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ── Tokens de cor da marca LOBBY ──────────────────────────────
+     Usados como valores fixos ao longo de todo o projeto.
+     Referência: identidade visual da LOBBY. */
+  --color-lobby-blue: #005BFF;          /* Azul primário — botões CTA, links ativos */
+  --color-lobby-blue-light: #00A3FF;    /* Azul claro — gradientes, destaques */
+  --color-lobby-purple: #6D28D9;        /* Roxo base — tom sólido */
+  --color-lobby-purple-light: #7B2CFF;  /* Roxo vibrante — gradientes, badges */
+  --color-lobby-bg: #F7F8FC;            /* Fundo claro do dashboard do cliente */
+  --color-lobby-bg-alt: #EEF1F7;        /* Fundo alternativo levemente mais escuro */
+  --color-lobby-text: #0B1020;          /* Texto escuro principal */
+  --color-lobby-text-secondary: #5D6475;/* Texto secundário / subtextos */
+  --color-lobby-border: #E3E7F0;        /* Bordas sutis de cards e divisores */
+  --color-lobby-dark: #05070D;          /* Fundo escuro profundo do painel admin */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ── 4. Variáveis CSS — modo claro (:root) ─────────────────────────
+   Define os valores padrão de cada token semântico.
+   Usa o espaço de cor OKLCH para interpolações mais uniformes.
+   Estes valores são sobrescritos pela classe .dark abaixo. */
+:root {
+  /* Fundo e texto da página (branco / quase-preto) */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+
+  /* Card: mesmo fundo branco do background */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+
+  /* Popover: mesmo fundo branco */
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+
+  /* Primary: preto quase puro (botões principais no tema base) */
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+
+  /* Secondary: cinza muito claro */
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+
+  /* Muted: mesmo cinza para elementos silenciados / placeholder */
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+
+  /* Accent: mesmo cinza claro para hover states */
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+
+  /* Destructive: vermelho para erros e confirmações perigosas */
+  --destructive: oklch(0.577 0.245 27.325);
+
+  /* Border e input: cinza bem claro */
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+
+  /* Ring: anel de foco acessível */
+  --ring: oklch(0.708 0 0);
+
+  /* Chart colors: escala de cinzas do mais claro ao mais escuro */
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+
+  /* Border-radius base = 10px; todas as outras escalas derivam deste valor */
+  --radius: 0.625rem;
+
+  /* Sidebar (painel lateral shadcn/ui) — modo claro */
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* ── 5. Sobrescritas para modo escuro (.dark) ───────────────────────
+   Aplicadas quando a classe `.dark` está presente no <html> ou <body>.
+   Inverte fundos claros para escuros e ajusta contrastes. */
+.dark {
+  /* Fundo: quase-preto / texto: quase-branco */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+
+  /* Card e Popover: cinza escuro */
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+
+  /* Primary invertido: claro sobre escuro */
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+
+  /* Secondary, muted, accent: cinza escuro */
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+
+  /* Destructive com tom mais claro para contraste no escuro */
+  --destructive: oklch(0.704 0.191 22.216);
+
+  /* Border e input com transparência em vez de cor sólida */
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+
+  /* Chart colors mantêm mesma escala (já são neutros) */
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+
+  /* Sidebar no escuro */
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376); /* azul violeta acessível */
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* ── 6. Estilos base globais (@layer base) ──────────────────────────
+   Aplicados sobre o reset do Tailwind.
+   `@layer base` garante baixa especificidade e fácil sobrescrita. */
+@layer base {
+  /* Todo elemento herda borda na cor do token `border`
+     e anel de foco com 50% de opacidade (acessibilidade) */
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  /* Body: fundo e cor de texto via tokens semânticos.
+     Inter como fonte padrão de corpo.
+     font-smoothing: renderização suave de fontes em WebKit e Firefox. */
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;   /* suaviza bordas de glifos no macOS/iOS */
+    -moz-osx-font-smoothing: grayscale;    /* equivalente no Firefox no macOS */
+    color: #0B1020;                        /* cor explícita reforça o token lobby-text */
+  }
+
+  /* html: aplica a classe font-sans (Inter via token) */
+  html {
+    @apply font-sans;
+  }
+
+  /* Headings: Space Grotesk em negrito para todos os níveis de título.
+     Cor fixa #0B1020 para consistência com a identidade visual. */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    color: #0B1020;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── 7. Classes utilitárias da marca LOBBY ──────────────────────────
+   Reutilizadas em múltiplos componentes para manter consistência visual.
+   Não fazem parte do sistema Tailwind — são classes CSS puras. */
+
+/* Gradiente diagonal azul → roxo: botões principais, avatares, badges */
+.lobby-gradient {
+  background: linear-gradient(135deg, #005BFF, #7B2CFF);
+}
+
+/* Texto com gradiente azul → roxo.
+   Usa background-clip: text para pintar apenas os glifos com o gradiente.
+   -webkit-text-fill-color: transparent sobrescreve a cor de texto padrão. */
+.lobby-gradient-text {
+  background: linear-gradient(135deg, #005BFF, #7B2CFF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card padrão da identidade LOBBY: fundo branco, borda suave, sombra dupla.
+   Transição de 250ms para hover suave sem travar em dispositivos lentos. */
+.lobby-card {
+  background: #ffffff;
+  border: 1px solid #E3E7F0;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 91, 255, 0.04);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+/* Hover do card: eleva levemente (translateY -2px) e intensifica sombra */
+.lobby-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 91, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ── 8. Estilização da scrollbar ────────────────────────────────────
+   Mantém a barra de rolagem fina e discreta em todos os navegadores.
+   WebKit (Chrome, Safari, Edge) usa pseudo-elementos ::-webkit-scrollbar*.
+   Firefox usa as propriedades padrão scrollbar-width / scrollbar-color. */
+
+/* Scrollbar global — modo claro / site público */
+::-webkit-scrollbar {
+  width: 4px;   /* barra vertical: 4px de largura */
+  height: 4px;  /* barra horizontal: 4px de altura */
+}
+
+/* Trilha (área atrás do polegar): transparente para não ocupar espaço visual */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Polegar (parte arrastável): gradiente azul → roxo da marca LOBBY com 45% opacidade */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, rgba(0,91,255,0.45), rgba(123,44,255,0.45));
+  border-radius: 99px; /* cápsula totalmente arredondada */
+}
+
+/* Hover no polegar: aumenta opacidade para indicar interatividade */
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, rgba(0,91,255,0.75), rgba(123,44,255,0.75));
+}
+
+/* Canto onde barra vertical e horizontal se encontram: transparente */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox — scrollbar fina com cor azul LOBBY sobre trilha transparente */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,91,255,0.35) transparent;
+}
+
+/* ── Bloqueia scroll do body quando o painel admin está ativo ───────
+   AdminShell usa a classe `.admin-layout` no wrapper raiz.
+   overflow: hidden impede o scroll da página pai enquanto o painel
+   gerencia seu próprio scroll internamente. */
+html:has(.admin-layout) {
+  overflow: hidden;
+}
+
+/* ── Scrollbar personalizada para o painel admin (tema escuro) ──────
+   Sobrescreve os estilos globais da scrollbar para elementos dentro
+   de `.admin-layout`, usando fundo escuro (#08101F) e polegar LOBBY. */
+.admin-layout ::-webkit-scrollbar {
+  width: 5px;   /* ligeiramente maior que o padrão para melhor usabilidade */
+  height: 5px;
+}
+
+/* Trilha com fundo escuro, alinhada ao tema do admin */
+.admin-layout ::-webkit-scrollbar-track {
+  background: #08101F;
+  border-radius: 99px;
+}
+
+/* Polegar com gradiente azul → roxo em maior opacidade (60%) para contraste no escuro */
+.admin-layout ::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, rgba(0,91,255,0.60), rgba(123,44,255,0.60));
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.06); /* borda sutil para separar do track */
+}
+
+/* Hover: gradiente sólido para máxima visibilidade */
+.admin-layout ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #005BFF, #7B2CFF);
+}
+
+.admin-layout ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox dentro do admin: cor do polegar em 60% e trilha escura */
+.admin-layout * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,91,255,0.60) #08101F;
+}
+
+/* ── 9. Animações keyframes ─────────────────────────────────────────
+   Definições de @keyframes referenciadas por classes Tailwind ou CSS
+   em componentes específicos. */
+
+/* slow-float: flutuação lenta usada no SolutionsHero (ícone central).
+   Sobe 10px no meio do ciclo e retorna — ajuste translateY para mais/menos flutuação. */
+@keyframes slow-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* lobby-float: bob vertical suave de 8px — usado nos cards flutuantes
+   do LoginPlatformVisual e na imagem central de login.
+   Usa translate3d para ativar aceleração de GPU e evitar jank. */
+@keyframes lobby-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%       { transform: translate3d(0, -8px, 0); }
+}
+
+/* lobby-pulse: pulsação de opacidade + escala — usada nos dots de status
+   do LoginPlatformVisual para simular um indicador "online" piscando. */
+@keyframes lobby-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1);    }
+  50%       { opacity: 1;    transform: scale(1.25); }
 }
