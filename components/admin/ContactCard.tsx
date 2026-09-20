@@ -9,7 +9,7 @@ import {
   Loader2, CircleDot, Archive, RotateCcw, Trash2,
   UserPlus, History, MessageCircle, ExternalLink,
 } from 'lucide-react'
-import { colors, gradients } from '@/lib/design-tokens'
+import { colors, gradients, shadows } from '@/lib/design-tokens'
 import { timeAgo } from '@/lib/utils'
 import type { Contact, ContactResponse, ContactActivity } from '@/app/admin/solicitacoes/page'
 import type { Technician } from '@/types'
