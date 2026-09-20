@@ -13,7 +13,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { createClient } from '@/lib/supabase'
 import { submitContact } from '@/app/contato/actions'
 import { colors, gradients, borderRadius } from '@/lib/design-tokens'
-import { colors } from '@/lib/design-tokens'
 
 /**
  * Interest chips — tune: label (maps to Supabase interest_area), icon.
