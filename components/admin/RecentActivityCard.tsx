@@ -37,7 +37,7 @@ export default function RecentActivityCard({ contacts, leads, onViewArea }: Prop
 
   return (
     <>
-      <div className="rounded-3xl border border-white/[0.08] p-5" style={{ background: colors.card }}>
+      <div className="rounded-3xl border border-white/[0.08] p-5" style={{ background: colors.cardDark }}>
         {/* Cabeçalho com título e ícone decorativo */}
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>

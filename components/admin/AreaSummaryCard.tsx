@@ -65,7 +65,7 @@ export default function AreaSummaryCard({ contacts, onViewArea, onViewAll }: Pro
 
   return (
     <>
-      <div className="rounded-3xl border border-white/[0.08] p-5" style={{ background: colors.card }}>
+      <div className="rounded-3xl border border-white/[0.08] p-5" style={{ background: colors.cardDark }}>
         {/* Cabeçalho com título e link para o drawer detalhado */}
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
@@ -84,7 +84,7 @@ export default function AreaSummaryCard({ contacts, onViewArea, onViewAll }: Pro
             {/* Anel externo colorido gerado via conic-gradient */}
             <div className="h-24 w-24 rounded-full" style={donutStyle} />
             {/* Círculo interno que recorta o centro, criando o efeito "donut" */}
-            <div className="absolute inset-0 m-3 flex flex-col items-center justify-center rounded-full" style={{ background: colors.card }}>
+            <div className="absolute inset-0 m-3 flex flex-col items-center justify-center rounded-full" style={{ background: colors.cardDark }}>
               <span className="text-xl font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{total}</span>
               <span className="text-[9px] text-white/40">total</span>
             </div>

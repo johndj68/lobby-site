@@ -15,7 +15,8 @@ export const colors = {
   background: '#FFFFFF',     // Fundo claro (card, page)
   backgroundAlt: '#F7F8FC',  // Fundo ligeiramente mais escuro
   backgroundAlt2: '#EEF1F7', // Fundo alternativo
-  card: '#FFFFFF',           // Fundo de cards
+  card: '#FFFFFF',           // Fundo de cards (light mode fallback)
+  cardDark: '#1a1f35',        // Fundo de cards (admin dark mode)
   text: '#0B1020',           // Texto escuro principal
   textSecondary: '#5D6475',  // Texto secundário / subtextos
   textMuted: '#94A3B8',      // Texto silenciado

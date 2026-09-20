@@ -175,7 +175,7 @@ export default function ContactCard({ contact, index, expanded, onToggle, onStat
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
       className="rounded-3xl border border-white/[0.08] transition-all duration-300"
-      style={{ background: colors.card, boxShadow: shadows.md, borderColor: colors.primary }}
+      style={{ background: colors.cardDark, boxShadow: shadows.md, borderColor: colors.primary }}
     >
       {/* Barra colorida no topo do card — cor muda conforme o status atual */}
       <div
