@@ -221,7 +221,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                     className="mb-2 text-2xl font-bold text-[#0B1020] sm:text-3xl"
                     style={{ fontFamily: 'Space Grotesk, sans-serif' }}
                   >
-                    Olá, {firstName} 👋
+                    Olá, {firstName}
                   </h1>
                   <p className="mb-1 text-sm font-semibold text-[#005BFF]">
                     Bem-vindo à sua central LOBBY.

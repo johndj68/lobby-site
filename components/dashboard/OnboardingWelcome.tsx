@@ -98,7 +98,7 @@ export default function OnboardingWelcome({ userId, firstName }: Props) {
                     className="text-xl font-bold text-[#0B1020] sm:text-2xl"
                     style={{ fontFamily: 'Space Grotesk, sans-serif' }}
                   >
-                    Bem-vindo à LOBBY, {firstName}! 🎉
+                    Bem-vindo à LOBBY, {firstName}!
                   </h2>
                 </div>
                 <p className="text-sm leading-relaxed text-[#5D6475]">

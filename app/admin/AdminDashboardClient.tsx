@@ -162,7 +162,7 @@ export default function AdminDashboardClient({ user, profile, isLeader, contacts
                   {firstName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Olá, {firstName}! 👋</p>
+                  <p className="text-sm font-semibold text-white">Olá, {firstName}!</p>
                   <p className="text-xs text-white/40">
                     {pendentes === 0
                       ? 'Nenhuma solicitação pendente no momento.'
