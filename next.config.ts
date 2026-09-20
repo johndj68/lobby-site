@@ -6,10 +6,15 @@ const IS_PROD = process.env.NODE_ENV === 'production'
 
 // Content-Security-Policy
 // script-src uses 'unsafe-inline' because Next.js injects inline scripts for hydration.
+// In dev mode, also include 'unsafe-eval' for React error stack traces.
 // To remove 'unsafe-inline', implement nonce-based CSP via proxy.ts instead.
+const scriptSrc = IS_PROD
+  ? `'self' 'unsafe-inline' https://js.stripe.com`
+  : `'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com`
+
 const csp = [
   `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline' https://js.stripe.com`,
+  `script-src ${scriptSrc}`,
   `style-src 'self' 'unsafe-inline'`,
   `img-src 'self' data: blob: https://${SUPABASE_HOST}`,
   `font-src 'self' data:`,
