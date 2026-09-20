@@ -1,140 +1,120 @@
-/* Página inicial do site (rota: /)
+/* Página inicial do marketplace (rota: /)
  *
- * Server Component estático — sem busca de dados ao banco.
- * Todos os dados (serviços, projetos, métricas, passos) vêm de /lib/data.ts.
+ * Exibe catálogo de aplicativos (LOBBY + parceiros), promoções e campanhas patrocinadas.
  *
- * Estrutura de seções na ordem de renderização:
- *  1. HomeHero              — hero principal com headline e visual animado
- *  2. Pillar strip          — 4 pilares da LOBBY (Software, Automação, Dados, Ciberseg.)
- *  3. Serviços + Benefícios — grade de soluções + cards de benefícios
- *  4. HowWeWorkSection      — processo de trabalho em passos
- *  5. HomeProjects          — 3 projetos em destaque do portfólio
- *  6. Métricas              — números de impacto (StatCard por coluna)
- *  7. CTASection            — banner final de chamada para ação
+ * Estrutura:
+ *  1. MarketplaceHero       — hero com busca principal
+ *  2. Categorias            — atalhos para categorias de apps
+ *  3. SponsoredCarousel     — carrossel de apps patrocinados
+ *  4. PromotionsSection     — apps em promoção
+ *  5. ExploreAllAppsSection — grade com filtros e ordenação
+ *  6. Footer                — (do layout.tsx)
  */
 import type { Metadata } from 'next'
-import { Code2, Settings2, BarChart3, Shield, Zap, FileX, TrendingUp, Lock } from 'lucide-react'
-import Container from '@/components/layout/Container'
-import SectionTitle from '@/components/sections/SectionTitle'
-import CTASection from '@/components/sections/CTASection'
-import StatCard from '@/components/cards/StatCard'
-import ServicesGrid from '@/components/sections/ServicesGrid'
-import HowWeWorkSection from '@/components/sections/HowWeWorkSection'
-import { services, howWeWorkSteps, projects, metrics } from '@/lib/data'
-import HomeHero from '@/components/sections/HomeHero'
-import HomeProjects from '@/components/sections/HomeProjects'
-import BaseCard from '@/components/ui/base-card'
-import { colors, borderRadius } from '@/lib/design-tokens'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import MarketplaceHero from '@/components/sections/MarketplaceHero'
+import MarketplaceCategoriesSection from '@/components/sections/MarketplaceCategoriesSection'
+import SponsoredCarouselSection from '@/components/sections/SponsoredCarouselSection'
+import PromotionsSection from '@/components/sections/PromotionsSection'
+import ExploreAllAppsSection from '@/components/sections/ExploreAllAppsSection'
 
 export const metadata: Metadata = {
-  title: 'Home | LOBBY — Software, Automação, Dados e Cibersegurança',
+  title: 'LOBBY — Marketplace de Apps e Ferramentas',
   description:
-    'A LOBBY combina software sob medida, automação, análise de dados e cibersegurança para impulsionar a eficiência, reduzir riscos e acelerar o crescimento do seu negócio.',
+    'Descubra aplicativos e ferramentas da LOBBY e de parceiros para trabalhar melhor e fazer seu negócio crescer.',
 }
 
-/* Os 4 pilares de atuação da LOBBY exibidos no strip abaixo do hero.
-   Cada item mostra ícone + rótulo + descrição curta em card horizontal. */
-const pillars = [
-  { icon: Code2, label: 'Software', description: 'Soluções personalizadas' },
-  { icon: Settings2, label: 'Automação', description: 'Processos mais eficientes' },
-  { icon: BarChart3, label: 'Dados', description: 'Decisões inteligentes' },
-  { icon: Shield, label: 'Cibersegurança', description: 'Negócios protegidos' },
-]
+async function loadMarketplaceData() {
+  try {
+    const supabase = await createServerSupabaseClient()
 
-/* Benefícios exibidos no card de benefícios abaixo da grade de serviços.
-   Reforçam o valor da parceria com a LOBBY de forma direta. */
-const benefits = [
-  { icon: Zap, title: 'Mais eficiência', description: 'Processos otimizados' },
-  { icon: FileX, title: 'Menos processos manuais', description: 'Automação inteligente' },
-  { icon: TrendingUp, title: 'Decisões melhores', description: 'Dados que direcionam' },
-  { icon: Lock, title: 'Segurança total', description: 'Proteção de ponta a ponta' },
-]
+    // Fetch all published applications
+    const { data: apps = [] } = await supabase
+      .from('applications')
+      .select('id, name, slug, description, short_description, category, developer_name, logo_url, preview_image_url, price, billing_period, is_lobby_made')
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
 
-export default function HomePage() {
+    // Fetch active sponsored campaigns within date range
+    const { data: campaigns = [] } = await supabase
+      .from('sponsored_campaigns')
+      .select(
+        `
+        id,
+        application_id,
+        title,
+        description,
+        campaign_image_url,
+        starts_at,
+        ends_at,
+        application:applications(
+          id,
+          name,
+          slug,
+          category,
+          logo_url,
+          price,
+          billing_period
+        )
+      `
+      )
+      .eq('is_approved', true)
+      .eq('is_active', true)
+      .lte('starts_at', new Date().toISOString())
+      .gte('ends_at', new Date().toISOString())
+      .order('display_order', { ascending: true })
+
+    // Fetch active promotions within date range
+    const { data: promotions = [] } = await supabase
+      .from('promotions')
+      .select(
+        `
+        id,
+        application_id,
+        promo_price,
+        original_price,
+        discount_percentage,
+        starts_at,
+        ends_at,
+        application:applications(
+          id,
+          slug,
+          name,
+          category,
+          logo_url,
+          preview_image_url,
+          price,
+          billing_period
+        )
+      `
+      )
+      .eq('is_approved', true)
+      .eq('is_active', true)
+      .lte('starts_at', new Date().toISOString())
+      .gte('ends_at', new Date().toISOString())
+      .order('display_order', { ascending: true })
+
+    return {
+      apps: apps || [],
+      campaigns: campaigns || [],
+      promotions: promotions || [],
+    }
+  } catch (error) {
+    console.error('Error loading marketplace data:', error)
+    return { apps: [], campaigns: [], promotions: [] }
+  }
+}
+
+export default async function HomePage() {
+  const { apps, campaigns, promotions } = await loadMarketplaceData()
+
   return (
     <>
-      <HomeHero />
-
-      {/* ── Pillar strip ──────────────────────────────────────────── */}
-      <section className="py-8" style={{ backgroundColor: colors.backgroundAlt }}>
-        <Container>
-          <div className="overflow-hidden rounded-3xl border" style={{ borderColor: colors.border, backgroundColor: 'white' }}>
-            <div className="grid grid-cols-2 md:grid-cols-4">
-              {pillars.map(({ icon: Icon, label, description }, i) => (
-                <BaseCard
-                  key={label}
-                  variant="pillar"
-                  icon={<Icon size={20} />}
-                  label={label}
-                  description={description}
-                  className={i < pillars.length - 1 ? `border-r border-[${colors.border}]` : ''}
-                />
-              ))}
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* ── O que fazemos + Benefits ───────────────────────────────── */}
-      <section className="relative overflow-hidden py-20 lg:py-24" style={{ backgroundColor: colors.backgroundAlt }}>
-        {/* Radial gradient zones */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(0,91,255,0.08),transparent_30%),radial-gradient(circle_at_85%_30%,rgba(123,44,255,0.10),transparent_35%),radial-gradient(circle_at_50%_100%,rgba(0,163,255,0.08),transparent_40%)]" />
-        {/* Dot grid */}
-        <div className="absolute inset-0 opacity-[0.30] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.16)_1px,transparent_0)] bg-[size:26px_26px]" />
-        {/* Blur blobs */}
-        <div className="absolute -left-32 top-20 h-72 w-72 rounded-full bg-[#005BFF]/[0.08] blur-3xl" aria-hidden="true" />
-        <div className="absolute -right-32 bottom-10 h-96 w-96 rounded-full bg-[#7B2CFF]/[0.09] blur-3xl" aria-hidden="true" />
-
-        <Container className="relative z-10">
-          <SectionTitle
-            eyebrow="Soluções que geram impacto"
-            title="O que fazemos"
-            subtitle="Combinamos software, automação, dados e segurança para transformar sua operação."
-            accentLine
-          />
-
-          <ServicesGrid services={services} />
-
-          {/* Benefits card — using BaseCard for consistency */}
-          <div className="mt-12 overflow-hidden rounded-3xl border" style={{ borderColor: colors.border, backgroundColor: 'white' }}>
-            <div className="grid grid-cols-2 md:grid-cols-4">
-              {benefits.map(({ icon: Icon, title, description }, i) => (
-                <BaseCard
-                  key={title}
-                  variant="benefit"
-                  icon={<Icon size={20} />}
-                  title={title}
-                  description={description}
-                  className={i < benefits.length - 1 ? `border-r border-[${colors.border}]` : ''}
-                />
-              ))}
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      <HowWeWorkSection steps={howWeWorkSteps} />
-
-      {/* Projetos em destaque */}
-      <HomeProjects projects={projects.slice(0, 3)} />
-
-      {/* Métricas */}
-      <section className="py-14 bg-white border-y border-[#E3E7F0]">
-        <Container>
-          <div className="grid grid-cols-2 md:grid-cols-4">
-            {metrics.map((m, i) => (
-              <div
-                key={m.label}
-                className={i < metrics.length - 1 ? 'border-r border-[#E3E7F0]' : ''}
-              >
-                <StatCard metric={m} index={i} />
-              </div>
-            ))}
-          </div>
-        </Container>
-      </section>
-
-      <CTASection />
+      <MarketplaceHero />
+      <MarketplaceCategoriesSection />
+      <SponsoredCarouselSection campaigns={campaigns} />
+      <PromotionsSection promotions={promotions} />
+      <ExploreAllAppsSection initialApps={apps} />
     </>
   )
 }
