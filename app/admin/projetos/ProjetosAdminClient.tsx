@@ -128,21 +128,33 @@ export default function ProjetosAdminClient({ user, profile, isLeader, initialPr
     if (imgInputRef.current) imgInputRef.current.value = ''
   }
 
-  /* Faz upload da imagem para o Supabase Storage e retorna a URL pública.
-     Se não houver arquivo novo, retorna a URL atual do formulário (edição sem troca de imagem). */
+  /* Faz upload da imagem para a API de processamento e retorna a URL pública.
+     Se não houver arquivo novo, retorna a URL atual do formulário (edição sem troca de imagem).
+     A API redimensiona, converte para WebP e otimiza a imagem antes do storage. */
   const uploadImage = async (slug: string): Promise<string | null> => {
     if (!imageFile) return form.image_url || null
     setUploadingImg(true)
     try {
-      const ext  = imageFile.name.split('.').pop() ?? 'jpg'
-      // Nome único: slug + timestamp evita colisões e força cache-bust
-      const path = `${slug}-${Date.now()}.${ext}`
-      const supabase = createClient()
-      const { error: upErr } = await supabase.storage
-        .from(IMG_BUCKET)
-        .upload(path, imageFile, { upsert: true, cacheControl: '3600' })
-      if (upErr) return null
-      return supabase.storage.from(IMG_BUCKET).getPublicUrl(path).data.publicUrl
+      const formData = new FormData()
+      formData.append('file', imageFile)
+      formData.append('slug', slug)
+
+      const response = await fetch('/api/upload/admin-image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        console.error('Upload error:', error)
+        return null
+      }
+
+      const data = await response.json()
+      return data.url
+    } catch (err) {
+      console.error('Upload failed:', err)
+      return null
     } finally {
       setUploadingImg(false)
     }
