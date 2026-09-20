@@ -15,6 +15,7 @@ export const colors = {
   background: '#FFFFFF',     // Fundo claro (card, page)
   backgroundAlt: '#F7F8FC',  // Fundo ligeiramente mais escuro
   backgroundAlt2: '#EEF1F7', // Fundo alternativo
+  card: '#FFFFFF',           // Fundo de cards
   text: '#0B1020',           // Texto escuro principal
   textSecondary: '#5D6475',  // Texto secundário / subtextos
   textMuted: '#94A3B8',      // Texto silenciado
@@ -79,6 +80,8 @@ export const gradients = {
   primary: `linear-gradient(135deg, ${colors.primary}18, ${colors.secondaryLight}18)`,
   primaryBold: `linear-gradient(135deg, ${colors.primary}, ${colors.secondaryLight})`,
   blue: `linear-gradient(135deg, ${colors.primary}15, ${colors.primaryLight}15)`,
+  secondary: `linear-gradient(135deg, ${colors.secondary}18, ${colors.secondaryLight}18)`,
+  success: `linear-gradient(135deg, #10B98118, #34D39918)`,
 }
 
 // Service card accent variants

@@ -1,6 +1,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { colors, shadows, borderRadius } from '@/lib/design-tokens'
+import { colors, shadows, borderRadius, gradients } from '@/lib/design-tokens'
 
 interface BaseCardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'pillar' | 'benefit' | 'stat' | 'service'
@@ -57,7 +57,7 @@ export const BaseCard = React.forwardRef<HTMLDivElement, BaseCardProps>(
         {icon && (
           <div
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
-            style={{ background: colors.gradients.blue }}
+            style={{ background: gradients.blue }}
             aria-hidden="true"
           >
             {typeof icon === 'string' ? (
