@@ -34,7 +34,7 @@ Expected output: 4 rows (app_drafts, app_submissions, app_review_checklist, app_
 
 ### Scenario 1: Create Draft (Manual Entry)
 
-1. **Navigate** to `http://localhost:3000/vendedor/aplicativos/novo`
+1. **Navigate** to `http://localhost:3000/cadastro-meuapp`
    - [ ] Page loads (requires login if not authenticated)
    - [ ] StepIndicator shows 4 steps
    - [ ] Step 1 displays
@@ -110,7 +110,7 @@ Expected: 1 row with status='pending'
 
 ### Scenario 2: Import from URL
 
-1. **Navigate** to `http://localhost:3000/vendedor/aplicativos/novo`
+1. **Navigate** to `http://localhost:3000/cadastro-meuapp`
    - [ ] Page loads, Step 1 displayed
 
 2. **Step 1 - Import URL**

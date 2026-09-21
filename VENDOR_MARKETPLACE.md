@@ -21,7 +21,7 @@ Sistema completo de cadastro e análise de aplicativos no marketplace da LOBBY p
 - Fallback em caso de falha
 
 **✅ FASE 3: Componentes Frontend**
-- `/vendedor/aplicativos/novo` — Início com 2 métodos
+- `/cadastro-meuapp` — Início com 2 métodos
   - Importação por URL com scraping
   - Cadastro manual
   - Informações sobre critérios de avaliação
@@ -132,7 +132,7 @@ Planos de precificação normalizados.
 
 | Rota | Descrição |
 |------|-----------|
-| `/vendedor/aplicativos/novo` | Página inicial de cadastro |
+| `/cadastro-meuapp` | Página inicial de cadastro |
 | `/vendedor/aplicativos` | Lista de rascunhos e submissões |
 | `/vendedor/aplicativos/[id]/editar` | Editor de 4 etapas |
 | `/vendedor/aplicativos/[id]/preview` | Prévia privada |
@@ -162,7 +162,7 @@ Usuário precisa estar vinculado a uma organização via `user_organizations`.
 ### 3. Acessar Fluxo de Cadastro
 
 ```
-http://localhost:3000/vendedor/aplicativos/novo
+http://localhost:3000/cadastro-meuapp
 ```
 
 Visitante → Login → Organização → Começar
@@ -237,7 +237,7 @@ Admin vê:
 npm run dev
 
 # 3. Navegador
-http://localhost:3000/vendedor/aplicativos/novo
+http://localhost:3000/cadastro-meuapp
 
 # 4. Testar métodos
 - URL: https://google.com → deve importar título/descrição
@@ -256,7 +256,7 @@ http://localhost:3000/vendedor/aplicativos/novo
 - `app/api/scrape-app-info/route.ts` (150 linhas)
 
 ### Páginas
-- `app/vendedor/aplicativos/novo/page.tsx`
+- `app/cadastro-meuapp/page.tsx`
 - `app/admin/marketplace/submissoes/page.tsx`
 
 ### Componentes

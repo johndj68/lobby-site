@@ -162,7 +162,7 @@ Documentation/
 
 ### Vendor Journey
 ```
-1. Visit /vendedor/aplicativos/novo
+1. Visit /cadastro-meuapp
    ↓ (redirects to login if needed)
 2. Choose method: URL import or manual
 3. Step 1 → Creates draft in database

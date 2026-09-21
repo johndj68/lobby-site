@@ -37,7 +37,7 @@ Visit: http://localhost:3000/login
 ## 🚀 Test Scenario 1: Manual App Registration
 
 ### Step 1: Navigate to Vendor Page
-1. Go to: **http://localhost:3000/vendedor/aplicativos/novo**
+1. Go to: **http://localhost:3000/cadastro-meuapp**
 2. If not logged in → redirects to login
 3. Log in with test account
 4. Should see Step 1 with 2 cards:
@@ -160,7 +160,7 @@ Visit: http://localhost:3000/login
 ## 🔐 Test Scenario 2: Security - IP Blocking
 
 ### Block Private IPs
-1. Return to **http://localhost:3000/vendedor/aplicativos/novo**
+1. Return to **http://localhost:3000/cadastro-meuapp**
 2. Create new manual draft (Step 1 → Card B → Step 2 fills in)
 3. Go back to **Step 1** (click Step 1 in indicator)
 4. Click **"Importar aplicativo por URL"** (Card A)
