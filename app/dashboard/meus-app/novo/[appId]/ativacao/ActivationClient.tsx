@@ -44,7 +44,7 @@ export default function ActivationClient({ draft, config, plans }: ActivationCli
 
   const handleContinueReview = async () => {
     await handleSave()
-    router.push(`/dashboard/meus-app/novo/${draft.id}/revisao`)
+    router.push(`/dashboard/meus-app/novo/${draft.id}/equipe`)
   }
 
   return (
