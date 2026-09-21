@@ -1,7 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, Filter, RotateCcw, Clock, Zap, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+
+const darkColors = {
+  bg: '#10151F',
+  card: '#171F2D',
+  header: '#131A26',
+  border: '#2B3547',
+  text: '#F1F5F9',
+  textSecondary: '#A9B5C8',
+  primary: '#1765FF',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+}
 
 interface Submission {
   id: string
@@ -10,8 +24,8 @@ interface Submission {
   app_draft_id: string
   submitted_by: string
   public_feedback: string | null
-  internal_notes: string | null
   data: any
+  app_drafts?: any
 }
 
 interface SubmissionsClientProps {
@@ -19,184 +33,195 @@ interface SubmissionsClientProps {
 }
 
 const statusConfig = {
-  pending: { label: 'Pendente', icon: Clock, color: '#F59E0B' },
-  approved: { label: 'Aprovado', icon: CheckCircle, color: '#10B981' },
-  rejected: { label: 'Rejeitado', icon: XCircle, color: '#EF4444' },
-  changes_requested: { label: 'Ajustes solicitados', icon: AlertCircle, color: '#3B82F6' },
+  pending: { label: 'Aguardando análise', icon: Clock, color: darkColors.warning },
+  changes_requested: { label: 'Aguardando ajustes', icon: AlertCircle, color: darkColors.warning },
+  approved: { label: 'Aprovado', icon: CheckCircle, color: darkColors.success },
+  rejected: { label: 'Rejeitado', icon: XCircle, color: darkColors.error },
+  in_review: { label: 'Em análise', icon: Zap, color: darkColors.primary },
 }
 
 export default function SubmissionsClient({ initialSubmissions }: SubmissionsClientProps) {
-  const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions)
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
-  const [action, setAction] = useState<'approve' | 'reject' | 'request_changes' | null>(null)
-  const [publicFeedback, setPublicFeedback] = useState('')
-  const [internalNotes, setInternalNotes] = useState('')
-  const [saving, setSaving] = useState(false)
+  const router = useRouter()
+  const [submissions] = useState<Submission[]>(initialSubmissions)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
 
-  const handleAction = async () => {
-    if (!selectedSubmission || !action) return
+  const pendingCount = submissions.filter((s) => s.status === 'pending').length
+  const reviewingCount = submissions.filter((s) => s.status === 'in_review').length
+  const adjustsCount = submissions.filter((s) => s.status === 'changes_requested').length
+  const approvedCount = submissions.filter((s) => s.status === 'approved').length
+  const rejectedCount = submissions.filter((s) => s.status === 'rejected').length
 
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/admin/submissions/${selectedSubmission.id}/review`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          public_feedback: publicFeedback,
-          internal_notes: internalNotes,
-        }),
-      })
+  const statusCards = [
+    { label: 'Aguardando análise', count: pendingCount, icon: Clock, filter: 'pending', color: darkColors.warning },
+    { label: 'Em análise', count: reviewingCount, icon: Zap, filter: 'in_review', color: darkColors.primary },
+    { label: 'Aguardando ajustes', count: adjustsCount, icon: AlertCircle, filter: 'changes_requested', color: darkColors.warning },
+    { label: 'Aprovadas', count: approvedCount, icon: CheckCircle, filter: 'approved', color: darkColors.success },
+    { label: 'Rejeitadas', count: rejectedCount, icon: XCircle, filter: 'rejected', color: darkColors.error },
+  ]
 
-      if (!res.ok) throw new Error('Failed to update')
-
-      const updated = await res.json()
-      setSubmissions(submissions.map((s) => (s.id === updated.id ? updated : s)))
-      setSelectedSubmission(updated)
-      setAction(null)
-      setPublicFeedback('')
-      setInternalNotes('')
-    } catch (err) {
-      console.error('Action error:', err)
-      alert('Erro ao processar ação')
-    } finally {
-      setSaving(false)
-    }
-  }
+  const filtered = submissions.filter((s) => {
+    const matchSearch = !searchTerm || s.data?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchStatus = statusFilter === 'all' || s.status === statusFilter
+    return matchSearch && matchStatus
+  })
 
   return (
-    <div className="grid md:grid-cols-3 gap-6">
-      {/* List */}
-      <div className="md:col-span-2 space-y-3">
-        {submissions.map((sub) => {
-          const cfg = statusConfig[sub.status as keyof typeof statusConfig]
-          const StatusIcon = cfg?.icon || Clock
-          return (
-            <div
-              key={sub.id}
-              onClick={() => setSelectedSubmission(sub)}
-              className="p-4 rounded-lg border cursor-pointer hover:shadow-md transition-shadow"
-              style={{
-                borderColor: selectedSubmission?.id === sub.id ? '#3B82F6' : '#E5E7EB',
-                backgroundColor: selectedSubmission?.id === sub.id ? '#F0F9FF' : 'white',
-              }}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-bold text-lg">{sub.data?.name || 'Sem nome'}</h3>
-                <div className="flex items-center gap-1" style={{ color: cfg?.color }}>
-                  <StatusIcon size={16} />
-                  <span className="text-xs font-semibold">{cfg?.label}</span>
+    <div style={{ background: darkColors.bg, color: darkColors.text, minHeight: '100vh' }}>
+      {/* Header */}
+      <div style={{ background: darkColors.header, borderBottom: `1px solid ${darkColors.border}`, padding: '32px 24px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>Solicitações do marketplace</h1>
+        <p style={{ color: darkColors.textSecondary, marginBottom: '24px' }}>Revise os aplicativos de parceiros e acompanhe cada etapa até a publicação.</p>
+
+        {/* Status Cards */}
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+          {statusCards.map((card) => {
+            const Icon = card.icon
+            return (
+              <div
+                key={card.filter}
+                onClick={() => setStatusFilter(card.filter)}
+                style={{
+                  background: darkColors.card,
+                  border: statusFilter === card.filter ? `2px solid ${card.color}` : `1px solid ${darkColors.border}`,
+                  borderRadius: '12px',
+                  padding: '16px',
+                  cursor: 'pointer',
+                  transition: 'all 200ms',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon size={24} style={{ color: card.color }} />
+                  <div className="flex-1">
+                    <p style={{ color: darkColors.textSecondary, fontSize: '12px' }}>{card.label}</p>
+                    <p style={{ fontSize: '28px', fontWeight: 'bold', lineHeight: 1 }}>{card.count}</p>
+                  </div>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 mb-2">{sub.data?.short_description}</p>
-              <p className="text-xs text-gray-500">{new Date(sub.submitted_at).toLocaleDateString('pt-BR')}</p>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
-      {/* Details */}
-      {selectedSubmission && (
-        <div className="border rounded-lg p-6 space-y-4" style={{ borderColor: '#E5E7EB' }}>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Aplicativo</p>
-            <h3 className="font-bold text-lg">{selectedSubmission.data?.name}</h3>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Descrição</p>
-            <p className="text-sm">{selectedSubmission.data?.short_description}</p>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Categoria</p>
-            <p className="text-sm">{selectedSubmission.data?.category}</p>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Planos</p>
-            <p className="text-sm">{selectedSubmission.data?.plans || 0} plano(s)</p>
-          </div>
-
-          {selectedSubmission.status !== 'pending' && (
-            <>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Feedback Público</p>
-                <p className="text-sm">{selectedSubmission.public_feedback || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Notas Internas</p>
-                <p className="text-sm">{selectedSubmission.internal_notes || '—'}</p>
-              </div>
-            </>
-          )}
-
-          {selectedSubmission.status === 'pending' && !action ? (
-            <div className="space-y-2 border-t pt-4">
-              <button
-                onClick={() => setAction('approve')}
-                className="w-full px-3 py-2 rounded text-white font-semibold text-sm bg-green-500 hover:bg-green-600"
-              >
-                ✓ Aprovar
-              </button>
-              <button
-                onClick={() => setAction('request_changes')}
-                className="w-full px-3 py-2 rounded text-white font-semibold text-sm bg-blue-500 hover:bg-blue-600"
-              >
-                ⚠ Solicitar ajustes
-              </button>
-              <button
-                onClick={() => setAction('reject')}
-                className="w-full px-3 py-2 rounded text-white font-semibold text-sm bg-red-500 hover:bg-red-600"
-              >
-                ✗ Rejeitar
-              </button>
-            </div>
-          ) : action ? (
-            <div className="border-t pt-4 space-y-3">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 block mb-1">Feedback (público)</label>
-                <textarea
-                  value={publicFeedback}
-                  onChange={(e) => setPublicFeedback(e.target.value)}
-                  placeholder="Mensagem que o dev verá..."
-                  rows={2}
-                  className="w-full p-2 border rounded text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 block mb-1">Notas internas</label>
-                <textarea
-                  value={internalNotes}
-                  onChange={(e) => setInternalNotes(e.target.value)}
-                  placeholder="Apenas para admin..."
-                  rows={2}
-                  className="w-full p-2 border rounded text-sm"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleAction}
-                  disabled={saving}
-                  className="flex-1 px-3 py-2 bg-blue-500 text-white rounded text-sm font-semibold hover:bg-blue-600 disabled:opacity-50"
-                >
-                  {saving ? 'Enviando...' : 'Confirmar'}
-                </button>
-                <button
-                  onClick={() => {
-                    setAction(null)
-                    setPublicFeedback('')
-                    setInternalNotes('')
-                  }}
-                  className="flex-1 px-3 py-2 border rounded text-sm font-semibold"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          ) : null}
+      {/* Filters */}
+      <div style={{ padding: '24px', borderBottom: `1px solid ${darkColors.border}`, display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: darkColors.textSecondary }} />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar aplicativo ou desenvolvedor"
+            style={{
+              width: '100%',
+              padding: '10px 12px 10px 40px',
+              background: darkColors.card,
+              border: `1px solid ${darkColors.border}`,
+              borderRadius: '8px',
+              color: darkColors.text,
+              fontSize: '14px',
+            }}
+          />
         </div>
-      )}
+        <button
+          onClick={() => {
+            setSearchTerm('')
+            setStatusFilter('all')
+          }}
+          style={{
+            background: darkColors.card,
+            border: `1px solid ${darkColors.border}`,
+            color: darkColors.text,
+            padding: '10px 16px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '14px',
+            fontWeight: '500',
+          }}
+        >
+          <RotateCcw size={16} />
+          Limpar
+        </button>
+      </div>
+
+      {/* Table */}
+      <div style={{ padding: '24px', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${darkColors.border}` }}>
+              <th style={{ textAlign: 'left', padding: '12px', color: darkColors.textSecondary, fontSize: '12px', fontWeight: '600' }}>Aplicativo</th>
+              <th style={{ textAlign: 'left', padding: '12px', color: darkColors.textSecondary, fontSize: '12px', fontWeight: '600' }}>Desenvolvedor</th>
+              <th style={{ textAlign: 'left', padding: '12px', color: darkColors.textSecondary, fontSize: '12px', fontWeight: '600' }}>Categoria</th>
+              <th style={{ textAlign: 'left', padding: '12px', color: darkColors.textSecondary, fontSize: '12px', fontWeight: '600' }}>Enviado em</th>
+              <th style={{ textAlign: 'left', padding: '12px', color: darkColors.textSecondary, fontSize: '12px', fontWeight: '600' }}>Status</th>
+              <th style={{ textAlign: 'left', padding: '12px', color: darkColors.textSecondary, fontSize: '12px', fontWeight: '600' }}>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '40px 12px', color: darkColors.textSecondary }}>
+                  Nenhuma solicitação encontrada
+                </td>
+              </tr>
+            ) : (
+              filtered.map((sub) => {
+                const cfg = statusConfig[sub.status as keyof typeof statusConfig]
+                const Icon = cfg?.icon || Clock
+                return (
+                  <tr
+                    key={sub.id}
+                    onClick={() => router.push(`/admin/marketplace/solicitacoes/${sub.id}`)}
+                    style={{
+                      borderBottom: `1px solid ${darkColors.border}`,
+                      cursor: 'pointer',
+                      transition: 'background 200ms',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = darkColors.card)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <img src={sub.data?.logo || ''} alt="Logo" style={{ width: '32px', height: '32px', borderRadius: '6px', background: darkColors.card }} />
+                      <div>
+                        <p style={{ fontWeight: '600', fontSize: '14px' }}>{sub.data?.name}</p>
+                        <p style={{ color: darkColors.textSecondary, fontSize: '12px', marginTop: '2px' }}>{sub.data?.short_description}</p>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px', color: darkColors.textSecondary, fontSize: '14px' }}>-</td>
+                    <td style={{ padding: '12px', color: darkColors.textSecondary, fontSize: '14px' }}>{sub.data?.category}</td>
+                    <td style={{ padding: '12px', color: darkColors.textSecondary, fontSize: '14px' }}>{new Date(sub.submitted_at).toLocaleDateString('pt-BR')}</td>
+                    <td style={{ padding: '12px' }}>
+                      <div className="flex items-center gap-2" style={{ color: cfg?.color, fontSize: '12px', fontWeight: '600' }}>
+                        <Icon size={16} />
+                        {cfg?.label}
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <button
+                        style={{
+                          background: darkColors.primary,
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                        }}
+                      >
+                        Analisar
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
