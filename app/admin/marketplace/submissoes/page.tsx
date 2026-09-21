@@ -17,7 +17,8 @@ export default async function SubmissionsPage() {
       submitted_at,
       app_draft_id,
       submitted_by,
-      reviewer_notes,
+      public_feedback,
+      internal_notes,
       data
     `)
     .order('submitted_at', { ascending: false })
@@ -29,7 +30,7 @@ export default async function SubmissionsPage() {
         <p className="text-gray-600">Analise e aprove apps de parceiros</p>
       </div>
 
-      <SubmissionsClient initialSubmissions={submissions || []} />
+      <SubmissionsClient initialSubmissions={(submissions as any) || []} />
     </div>
   )
 }

@@ -9,7 +9,8 @@ interface Submission {
   submitted_at: string
   app_draft_id: string
   submitted_by: string
-  reviewer_notes: string | null
+  public_feedback: string | null
+  internal_notes: string | null
   data: any
 }
 
@@ -28,7 +29,8 @@ export default function SubmissionsClient({ initialSubmissions }: SubmissionsCli
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions)
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
   const [action, setAction] = useState<'approve' | 'reject' | 'request_changes' | null>(null)
-  const [notes, setNotes] = useState('')
+  const [publicFeedback, setPublicFeedback] = useState('')
+  const [internalNotes, setInternalNotes] = useState('')
   const [saving, setSaving] = useState(false)
 
   const handleAction = async () => {
@@ -36,19 +38,24 @@ export default function SubmissionsClient({ initialSubmissions }: SubmissionsCli
 
     setSaving(true)
     try {
-      const res = await fetch(`/api/admin/submissions/${selectedSubmission.id}`, {
+      const res = await fetch(`/api/admin/submissions/${selectedSubmission.id}/review`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: action.replace('_', ' '), reviewer_notes: notes }),
+        body: JSON.stringify({
+          action,
+          public_feedback: publicFeedback,
+          internal_notes: internalNotes,
+        }),
       })
 
       if (!res.ok) throw new Error('Failed to update')
 
       const updated = await res.json()
       setSubmissions(submissions.map((s) => (s.id === updated.id ? updated : s)))
-      setSelectedSubmission(null)
+      setSelectedSubmission(updated)
       setAction(null)
-      setNotes('')
+      setPublicFeedback('')
+      setInternalNotes('')
     } catch (err) {
       console.error('Action error:', err)
       alert('Erro ao processar ação')
@@ -107,11 +114,24 @@ export default function SubmissionsClient({ initialSubmissions }: SubmissionsCli
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Suporte</p>
-            <p className="text-sm">{selectedSubmission.data?.support_email}</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Planos</p>
+            <p className="text-sm">{selectedSubmission.data?.plans || 0} plano(s)</p>
           </div>
 
-          {!action ? (
+          {selectedSubmission.status !== 'pending' && (
+            <>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Feedback Público</p>
+                <p className="text-sm">{selectedSubmission.public_feedback || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Notas Internas</p>
+                <p className="text-sm">{selectedSubmission.internal_notes || '—'}</p>
+              </div>
+            </>
+          )}
+
+          {selectedSubmission.status === 'pending' && !action ? (
             <div className="space-y-2 border-t pt-4">
               <button
                 onClick={() => setAction('approve')}
@@ -132,27 +152,41 @@ export default function SubmissionsClient({ initialSubmissions }: SubmissionsCli
                 ✗ Rejeitar
               </button>
             </div>
-          ) : (
+          ) : action ? (
             <div className="border-t pt-4 space-y-3">
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Notas para o desenvolvedor..."
-                rows={3}
-                className="w-full p-2 border rounded text-sm"
-              />
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">Feedback (público)</label>
+                <textarea
+                  value={publicFeedback}
+                  onChange={(e) => setPublicFeedback(e.target.value)}
+                  placeholder="Mensagem que o dev verá..."
+                  rows={2}
+                  className="w-full p-2 border rounded text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">Notas internas</label>
+                <textarea
+                  value={internalNotes}
+                  onChange={(e) => setInternalNotes(e.target.value)}
+                  placeholder="Apenas para admin..."
+                  rows={2}
+                  className="w-full p-2 border rounded text-sm"
+                />
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleAction}
                   disabled={saving}
-                  className="flex-1 px-3 py-2 bg-blue-500 text-white rounded text-sm font-semibold hover:bg-blue-600"
+                  className="flex-1 px-3 py-2 bg-blue-500 text-white rounded text-sm font-semibold hover:bg-blue-600 disabled:opacity-50"
                 >
                   {saving ? 'Enviando...' : 'Confirmar'}
                 </button>
                 <button
                   onClick={() => {
                     setAction(null)
-                    setNotes('')
+                    setPublicFeedback('')
+                    setInternalNotes('')
                   }}
                   className="flex-1 px-3 py-2 border rounded text-sm font-semibold"
                 >
@@ -160,7 +194,7 @@ export default function SubmissionsClient({ initialSubmissions }: SubmissionsCli
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>
