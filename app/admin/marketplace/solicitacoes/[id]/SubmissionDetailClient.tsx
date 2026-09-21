@@ -32,6 +32,8 @@ export default function SubmissionDetailClient({
   const [message, setMessage] = useState(submission.public_feedback || '')
   const [internalNotes, setInternalNotes] = useState(submission.internal_notes || '')
   const [saving, setSaving] = useState(false)
+  const [pendingAction, setPendingAction] = useState<'approve' | 'reject' | 'request_changes' | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
 
   const handleSave = async () => {
     setSaving(true)
@@ -48,6 +50,27 @@ export default function SubmissionDetailClient({
       console.error(err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleAction = async (action: 'approve' | 'reject' | 'request_changes') => {
+    setActionLoading(true)
+    try {
+      const res = await fetch(`/api/admin/submissions/${submission.id}/review`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, public_feedback: message, internal_notes: internalNotes }),
+      })
+      if (res.ok) {
+        alert('Decisão registrada')
+        router.push('/admin/marketplace/solicitacoes')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao registrar decisão')
+    } finally {
+      setActionLoading(false)
+      setPendingAction(null)
     }
   }
 
@@ -224,6 +247,8 @@ export default function SubmissionDetailClient({
 
             <div className="space-y-3">
               <button
+                onClick={() => setPendingAction('request_changes')}
+                disabled={actionLoading}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -231,14 +256,17 @@ export default function SubmissionDetailClient({
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
                   fontWeight: '600',
                   fontSize: '14px',
+                  opacity: actionLoading ? 0.6 : 1,
                 }}
               >
-                Solicitar ajustes
+                {actionLoading && pendingAction === 'request_changes' ? 'Enviando...' : 'Solicitar ajustes'}
               </button>
               <button
+                onClick={() => setPendingAction('reject')}
+                disabled={actionLoading}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -246,29 +274,31 @@ export default function SubmissionDetailClient({
                   border: `1px solid ${darkColors.border}`,
                   color: darkColors.error,
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
                   fontWeight: '600',
                   fontSize: '14px',
+                  opacity: actionLoading ? 0.6 : 1,
                 }}
               >
-                Rejeitar solicitação
+                {actionLoading && pendingAction === 'reject' ? 'Enviando...' : 'Rejeitar solicitação'}
               </button>
               <button
-                disabled={blockerCount > 0}
+                onClick={() => setPendingAction('approve')}
+                disabled={blockerCount > 0 || actionLoading}
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: blockerCount > 0 ? darkColors.border : darkColors.success,
+                  background: blockerCount > 0 || actionLoading ? darkColors.border : darkColors.success,
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: blockerCount > 0 ? 'not-allowed' : 'pointer',
+                  cursor: blockerCount > 0 || actionLoading ? 'not-allowed' : 'pointer',
                   fontWeight: '600',
                   fontSize: '14px',
-                  opacity: blockerCount > 0 ? 0.5 : 1,
+                  opacity: blockerCount > 0 || actionLoading ? 0.5 : 1,
                 }}
               >
-                Aprovar aplicativo
+                {actionLoading && pendingAction === 'approve' ? 'Enviando...' : 'Aprovar aplicativo'}
               </button>
             </div>
 
@@ -293,6 +323,125 @@ export default function SubmissionDetailClient({
           </div>
         </div>
       </div>
+
+      {/* Action Confirmation Modal */}
+      {pendingAction && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => !actionLoading && setPendingAction(null)}
+        >
+          <div
+            style={{
+              background: darkColors.card,
+              border: `1px solid ${darkColors.border}`,
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '90%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>
+              {pendingAction === 'approve' && 'Aprovar aplicativo'}
+              {pendingAction === 'reject' && 'Rejeitar solicitação'}
+              {pendingAction === 'request_changes' && 'Solicitar ajustes'}
+            </h3>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ color: darkColors.textSecondary, fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                Feedback ao desenvolvedor
+              </label>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Mensagem que será enviada por email..."
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: darkColors.bg,
+                  border: `1px solid ${darkColors.border}`,
+                  borderRadius: '8px',
+                  color: darkColors.text,
+                  fontFamily: 'system-ui',
+                  fontSize: '14px',
+                  minHeight: '100px',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ color: darkColors.textSecondary, fontSize: '12px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                Notas internas
+              </label>
+              <textarea
+                value={internalNotes}
+                onChange={(e) => setInternalNotes(e.target.value)}
+                placeholder="Apenas para admin (não será enviado)..."
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: darkColors.bg,
+                  border: `1px solid ${darkColors.border}`,
+                  borderRadius: '8px',
+                  color: darkColors.text,
+                  fontFamily: 'system-ui',
+                  fontSize: '14px',
+                  minHeight: '80px',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => handleAction(pendingAction)}
+                disabled={actionLoading}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: pendingAction === 'approve' ? darkColors.success : pendingAction === 'reject' ? darkColors.error : darkColors.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  opacity: actionLoading ? 0.6 : 1,
+                }}
+              >
+                {actionLoading ? 'Enviando...' : 'Confirmar'}
+              </button>
+              <button
+                onClick={() => !actionLoading && setPendingAction(null)}
+                disabled={actionLoading}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'transparent',
+                  border: `1px solid ${darkColors.border}`,
+                  color: darkColors.text,
+                  borderRadius: '8px',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  opacity: actionLoading ? 0.6 : 1,
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
