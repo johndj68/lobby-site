@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import { colors } from '@/lib/design-tokens'
@@ -17,6 +18,7 @@ export default function StepOne({
   hasOrganization,
   onDraftCreated,
 }: StepOneProps) {
+  const router = useRouter()
   const [loadingUrl, setLoadingUrl] = useState(false)
   const [errorUrl, setErrorUrl] = useState('')
   const [urlInput, setUrlInput] = useState('')
@@ -52,14 +54,16 @@ export default function StepOne({
 
       const { data: scrapedData } = await scrapeResponse.json()
 
-      // Create draft
+      // Create draft com dados do scrape
       const { data: draft, error: draftError } = await supabase
         .from('app_drafts')
         .insert({
           organization_id: organizationId,
           created_by: user.id,
-          stage: 1,
+          stage: 2,
           status: 'draft',
+          import_source: 'url',
+          website_url: urlInput,
           ...scrapedData,
         })
         .select()
@@ -67,7 +71,8 @@ export default function StepOne({
 
       if (draftError) throw draftError
 
-      onDraftCreated(draft.id, draft)
+      // Redirecionar para editor em vez de chamar callback
+      router.push(`/cadastro-meuapp/${draft.id}/editar`)
     } catch (error) {
       setErrorUrl((error as Error).message)
     } finally {
@@ -88,7 +93,7 @@ export default function StepOne({
         .insert({
           organization_id: organizationId,
           created_by: user.id,
-          stage: 1,
+          stage: 2,
           status: 'draft',
           import_source: 'manual',
         })
@@ -96,7 +101,8 @@ export default function StepOne({
         .single()
 
       if (error) throw error
-      onDraftCreated(draft.id, draft)
+      // Redirecionar para editor em vez de chamar callback
+      router.push(`/cadastro-meuapp/${draft.id}/editar`)
     } catch (error) {
       setErrorUrl((error as Error).message)
     } finally {
