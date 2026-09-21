@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireClientSession } from '@/lib/services/profile'
 import { notFound } from 'next/navigation'
+import ActivationClient from './ActivationClient'
 
 export const metadata: Metadata = {
   title: 'Ativação e Entrega | LOBBY',
@@ -42,9 +43,10 @@ export default async function AtivacaoPage({ params }: PageProps) {
     .order('display_order')
 
   return (
-    <div>
-      <h1>Ativação e entrega</h1>
-      <p>Carregando...</p>
-    </div>
+    <ActivationClient
+      draft={draft}
+      config={config}
+      plans={plans || []}
+    />
   )
 }
