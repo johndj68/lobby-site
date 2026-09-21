@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import DashboardLayout from '@/components/layout/DashboardLayout'
+import { requireClientSession } from '@/lib/services/profile'
 import AppsClient from './AppsClient'
 
 export const metadata: Metadata = {
@@ -12,8 +11,7 @@ export const metadata: Metadata = {
 export default async function MyAppsPage() {
   const supabase = await createServerSupabaseClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login?redirect=/dashboard/meus-apps')
+  const { user } = await requireClientSession(supabase)
 
   const { data: drafts } = await supabase
     .from('app_drafts')
@@ -22,15 +20,8 @@ export default async function MyAppsPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <DashboardLayout
-      section="meus-apps"
-      title="Meus Aplicativos"
-      breadcrumbs={[
-        { label: 'Dashboard', href: '/dashboard' },
-        { label: 'Meus Aplicativos' },
-      ]}
-    >
+    <div className="space-y-8 p-8">
       <AppsClient initialDrafts={drafts || []} userId={user.id} />
-    </DashboardLayout>
+    </div>
   )
 }

@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import DashboardLayout from '@/components/layout/DashboardLayout'
+import { requireClientSession } from '@/lib/services/profile'
+import { redirect } from 'next/navigation'
 import AppEditor from '../AppEditor'
 
 export default async function EditAppPage({
@@ -10,8 +10,7 @@ export default async function EditAppPage({
 }) {
   const supabase = await createServerSupabaseClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login?redirect=/dashboard/meus-apps')
+  const { user } = await requireClientSession(supabase)
 
   const { data: draft, error } = await supabase
     .from('app_drafts')
@@ -29,16 +28,11 @@ export default async function EditAppPage({
     .order('display_order', { ascending: true })
 
   return (
-    <DashboardLayout
-      section="meus-apps"
-      title="Editor de Aplicativo"
-      breadcrumbs={[
-        { label: 'Dashboard', href: '/dashboard' },
-        { label: 'Meus Aplicativos', href: '/dashboard/meus-apps' },
-        { label: 'Editor' },
-      ]}
-    >
+    <div className="space-y-8 p-8">
+      <div>
+        <h1 className="text-3xl font-bold">Editor de Aplicativo</h1>
+      </div>
       <AppEditor initialDraft={draft} initialPlans={plans || []} />
-    </DashboardLayout>
+    </div>
   )
 }
