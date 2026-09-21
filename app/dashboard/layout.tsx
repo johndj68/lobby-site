@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireClientSession } from '@/lib/services/profile'
-import DashboardShell from '@/components/layout/DashboardShell'
+import DashboardLayoutWrapper from '@/components/layout/DashboardLayoutWrapper'
 
 export const metadata: Metadata = {
   title: 'Dashboard | LOBBY',
@@ -12,8 +12,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const supabase = await createServerSupabaseClient()
   const { user, profile } = await requireClientSession(supabase)
   return (
-    <DashboardShell user={user} profile={profile}>
+    <DashboardLayoutWrapper user={user} profile={profile}>
       {children}
-    </DashboardShell>
+    </DashboardLayoutWrapper>
   )
 }
