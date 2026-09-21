@@ -84,11 +84,12 @@ export async function PATCH(
       .single()
 
     if (dev?.email) {
-      const actionText = {
+      const actionTexts = {
         approve: 'aprovado',
         reject: 'rejeitado',
         request_changes: 'requer ajustes',
-      }[action]
+      }
+      const actionText = actionTexts[action as keyof typeof actionTexts]
 
       const html = `
 <div style="font-family: Arial, sans-serif; max-width: 600px;">
