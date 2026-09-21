@@ -29,6 +29,7 @@ export default function SubmissionDetailClient({
 }: SubmissionDetailClientProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('visao-geral')
+  const [messageTab, setMessageTab] = useState<'dev' | 'internal'>('dev')
   const [message, setMessage] = useState(submission.public_feedback || '')
   const [internalNotes, setInternalNotes] = useState(submission.internal_notes || '')
   const [saving, setSaving] = useState(false)
@@ -174,36 +175,40 @@ export default function SubmissionDetailClient({
           <div style={{ background: darkColors.card, border: `1px solid ${darkColors.border}`, borderRadius: '12px', padding: '20px' }}>
             <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', borderBottom: `1px solid ${darkColors.border}`, paddingBottom: '16px' }}>
               <button
+                onClick={() => setMessageTab('dev')}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: darkColors.text,
+                  color: messageTab === 'dev' ? darkColors.text : darkColors.textSecondary,
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   paddingBottom: '8px',
-                  borderBottom: `2px solid ${darkColors.primary}`,
+                  borderBottom: messageTab === 'dev' ? `2px solid ${darkColors.primary}` : 'none',
                 }}
               >
                 Mensagem ao desenvolvedor
               </button>
               <button
+                onClick={() => setMessageTab('internal')}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: darkColors.textSecondary,
+                  color: messageTab === 'internal' ? darkColors.text : darkColors.textSecondary,
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
+                  paddingBottom: '8px',
+                  borderBottom: messageTab === 'internal' ? `2px solid ${darkColors.primary}` : 'none',
                 }}
               >
                 Nota interna
               </button>
             </div>
             <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Mensagem ao desenvolvedor..."
+              value={messageTab === 'dev' ? message : internalNotes}
+              onChange={(e) => messageTab === 'dev' ? setMessage(e.target.value) : setInternalNotes(e.target.value)}
+              placeholder={messageTab === 'dev' ? 'Mensagem ao desenvolvedor...' : 'Nota interna (não será enviada)...'}
               style={{
                 width: '100%',
                 padding: '12px',
