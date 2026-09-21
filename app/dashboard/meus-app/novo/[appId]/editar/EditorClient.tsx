@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Check, AlertCircle, Monitor, Smartphone, X, Zap } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
+import BackButton from '@/components/ui/BackButton'
 import MediaTab from './tabs/MediaTab'
 
 interface User {
@@ -99,6 +100,11 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
 
   return (
     <div className="flex flex-col min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
+      {/* Back Button */}
+      <div className="bg-white border-b px-8 py-3" style={{ borderColor: colors.border }}>
+        <BackButton />
+      </div>
+
       {/* Breadcrumb + Stage */}
       <div className="bg-white border-b px-8 py-3" style={{ borderColor: colors.border }}>
         <p className="text-xs mb-3" style={{ color: colors.textSecondary }}>
@@ -353,13 +359,7 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
 
       {/* Bottom Actions */}
       <div className="bg-white border-t px-8 py-4 flex items-center justify-between" style={{ borderColor: colors.border }}>
-        <button
-          onClick={() => router.back()}
-          className="px-4 py-2 rounded-lg text-sm font-semibold border"
-          style={{ borderColor: colors.border, color: colors.text }}
-        >
-          ← Voltar
-        </button>
+        <BackButton />
 
         <div className="flex items-center gap-3">
           <button
