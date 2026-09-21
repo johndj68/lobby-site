@@ -72,8 +72,7 @@ export default function AreaSummaryCard({ contacts, onViewArea, onViewAll }: Pro
             Resumo por área
           </h3>
           <button type="button" onClick={() => setOpen(true)} aria-label="Ver detalhamento por área"
-            className="text-[11px] text-white/40 transition-colors hover:text-white"
-            style={{ '&:hover': { color: colors.primaryLight } }}>
+            className="text-[11px] text-white/40 transition-colors hover:text-white">
             Ver detalhado →
           </button>
         </div>

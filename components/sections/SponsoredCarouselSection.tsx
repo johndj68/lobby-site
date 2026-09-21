@@ -219,7 +219,7 @@ export default function SponsoredCarouselSection({
                 <div className="relative w-full h-64 rounded-2xl overflow-hidden">
                   <Image
                     src={current.campaign_image_url}
-                    alt={current.application.name}
+                    alt={app?.name || 'App'}
                     fill
                     className="object-cover"
                   />

@@ -39,7 +39,7 @@ export default function StepTwo({
         .from('app_drafts')
         .update({
           ...formData,
-          languages: formData.languages.split(',').filter(l => l.trim()),
+          languages: formData.languages.split(',').filter((l: string) => l.trim()),
           stage: 2,
           last_edited_at: new Date().toISOString(),
         })

@@ -25,14 +25,14 @@ export default function MediaTab({
       setUploading(true)
       setUploadError('')
 
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('draftId', draftId)
-      formData.append('type', type)
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      uploadFormData.append('draftId', draftId)
+      uploadFormData.append('type', type)
 
       const response = await fetch('/api/upload-app-media', {
         method: 'POST',
-        body: formData,
+        body: uploadFormData,
       })
 
       const data = await response.json()
@@ -50,7 +50,7 @@ export default function MediaTab({
           { url: data.url, type: 'main', alt: file.name },
         ])
       } else if (type === 'gallery') {
-        const gallery = formData?.media_gallery || []
+        const gallery = (formData?.media_gallery as any[]) || []
         onFieldChange('media_gallery', [
           ...gallery,
           { url: data.url, type: 'screenshot', alt: file.name },

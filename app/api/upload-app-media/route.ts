@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { v4 as uuid } from 'crypto'
+import { randomUUID } from 'crypto'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Upload to Supabase Storage
     const fileExt = file.name.split('.').pop()?.toLowerCase()
-    const fileName = `${uuid()}.${fileExt}`
+    const fileName = `${randomUUID()}.${fileExt}`
     const storagePath = `app-media/${draftId}/${type}/${fileName}`
 
     const arrayBuffer = await file.arrayBuffer()

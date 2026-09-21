@@ -40,15 +40,34 @@ export default function EditorTabs({
           formData?.name &&
           formData?.category &&
           formData?.short_description &&
-          formData?.full_description
+          formData?.full_description &&
+          formData?.differentiator &&
+          formData?.benefit_one &&
+          formData?.benefit_two &&
+          formData?.target_audience &&
+          formData?.website_url
         )
       case 'midia':
-        return !!(formData?.logo_url && formData?.media_gallery)
+        return !!(formData?.logo_url && formData?.media_gallery?.some((m: any) => m.type === 'main'))
       case 'funcionalidades':
         return formData?.features?.length >= 2
+      case 'historia':
+        return true // Optional section
+      case 'confianca':
+        return true // Optional section
+      case 'faq':
+        return true // Optional section
       default:
         return false
     }
+  }
+
+  const getTabStatus = (tabId: string) => {
+    const isComplete = isTabComplete(tabId)
+    if (tabId === 'historia' || tabId === 'confianca' || tabId === 'faq') {
+      return 'optional'
+    }
+    return isComplete ? 'complete' : 'incomplete'
   }
 
   return (
@@ -57,7 +76,9 @@ export default function EditorTabs({
       <div className="flex flex-wrap gap-2 mb-6 pb-4 border-b" style={{ borderColor: colors.border }}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id
-          const isComplete = isTabComplete(tab.id)
+          const status = getTabStatus(tab.id)
+          const isComplete = status === 'complete'
+          const isOptional = status === 'optional'
 
           return (
             <button
@@ -68,14 +89,18 @@ export default function EditorTabs({
                 color: isActive ? colors.primary : colors.textSecondary,
                 backgroundColor: isActive ? colors.backgroundAlt : 'transparent',
               }}
+              title={isOptional ? 'Seção opcional' : ''}
             >
               {isComplete && !isActive && (
                 <CheckCircle2 size={16} style={{ color: colors.primary }} />
               )}
               {!isComplete && !isActive && (
-                <Circle size={16} style={{ color: colors.textMuted }} />
+                <Circle size={16} style={{ color: isOptional ? colors.textMuted : '#DC2626' }} />
               )}
               {tab.label}
+              {isOptional && !isActive && (
+                <span className="text-xs opacity-60">(opcional)</span>
+              )}
             </button>
           )
         })}
