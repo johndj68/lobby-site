@@ -410,18 +410,37 @@ function BasicInfoTab({ formData, onChange }: any) {
             Categoria *
           </label>
           <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
-            Escolha a categoria principal do seu aplicativo.
+            Escolha ou escreva a categoria principal do seu aplicativo.
           </p>
-          <select
+          <input
+            list="categoria-list"
+            type="text"
             value={formData.category || ''}
             onChange={(e) => onChange('category', e.target.value)}
+            placeholder="Ex: Automação, CRM, Produtividade"
             className="w-full px-4 py-2 rounded-lg border text-sm"
             style={{ borderColor: colors.border, color: colors.text }}
-          >
-            <option>Automação</option>
-            <option>CRM</option>
-            <option>Produtividade</option>
-          </select>
+          />
+          <datalist id="categoria-list">
+            <option value="Automação" />
+            <option value="CRM" />
+            <option value="Produtividade" />
+            <option value="Análise de Dados" />
+            <option value="Marketing" />
+            <option value="Vendas" />
+            <option value="RH" />
+            <option value="Contabilidade" />
+            <option value="Financeiro" />
+            <option value="E-commerce" />
+            <option value="Educação" />
+            <option value="Saúde" />
+            <option value="Logística" />
+            <option value="Comunicação" />
+            <option value="Design" />
+            <option value="Desenvolvimento" />
+            <option value="SEO" />
+            <option value="Segurança" />
+          </datalist>
         </div>
         <div>
           <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
