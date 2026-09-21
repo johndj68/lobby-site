@@ -297,37 +297,101 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
 
           {/* Preview Box */}
           <div
-            className="bg-white rounded-lg p-6 space-y-4"
+            className="bg-white rounded-lg p-6 space-y-6 overflow-y-auto"
             style={{
               borderColor: colors.border,
               border: '1px solid',
               minHeight: '600px',
+              maxHeight: '700px',
             }}
           >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-lg" style={{ backgroundColor: colors.primary }} />
-              <div className="flex-1">
-                <p className="font-bold" style={{ color: colors.text }}>
-                  {formData.name || 'Nome do app'}
+            {/* App Header */}
+            <div className="flex items-start gap-4 pb-4 border-b" style={{ borderColor: colors.border }}>
+              <div
+                className="w-16 h-16 rounded-lg flex items-center justify-center text-xl font-bold text-white shrink-0"
+                style={{ backgroundColor: colors.primary }}
+              >
+                {(formData.name || 'A')?.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-lg line-clamp-2" style={{ color: colors.text }}>
+                  {formData.name || 'Nome do aplicativo'}
                 </p>
-                <p className="text-sm" style={{ color: colors.textSecondary }}>
-                  Por {profile.full_name || 'Seu nome'} · Automação
+                <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                  Por {profile.full_name || 'Seu nome'}
+                  {formData.category && ` · ${formData.category}`}
                 </p>
               </div>
             </div>
 
-            <p style={{ color: colors.text }}>
-              {formData.description || 'Descrição curta do app'}
-            </p>
+            {/* Short Description */}
+            {formData.shortDesc && (
+              <div>
+                <p className="text-sm font-semibold mb-1" style={{ color: colors.primary }}>
+                  Descrição
+                </p>
+                <p className="text-sm" style={{ color: colors.text }}>
+                  {formData.shortDesc}
+                </p>
+              </div>
+            )}
 
-            {formData.features && (
-              <div className="space-y-2">
-                {formData.features.map((feat: string, i: number) => (
-                  <p key={i} className="text-sm flex gap-2">
-                    <Check size={16} style={{ color: colors.primary }} className="shrink-0" />
-                    <span style={{ color: colors.text }}>{feat}</span>
-                  </p>
-                ))}
+            {/* Diferencial */}
+            {formData.differentiation && (
+              <div>
+                <p className="text-sm font-semibold mb-1" style={{ color: colors.primary }}>
+                  O que torna único
+                </p>
+                <p className="text-sm" style={{ color: colors.text }}>
+                  {formData.differentiation}
+                </p>
+              </div>
+            )}
+
+            {/* Benefícios */}
+            {(formData.benefit1 || formData.benefit2) && (
+              <div>
+                <p className="text-sm font-semibold mb-2" style={{ color: colors.primary }}>
+                  Benefícios
+                </p>
+                <div className="space-y-2">
+                  {formData.benefit1 && (
+                    <p className="text-sm flex gap-2">
+                      <Check size={16} style={{ color: colors.primary }} className="shrink-0" />
+                      <span style={{ color: colors.text }}>{formData.benefit1}</span>
+                    </p>
+                  )}
+                  {formData.benefit2 && (
+                    <p className="text-sm flex gap-2">
+                      <Check size={16} style={{ color: colors.primary }} className="shrink-0" />
+                      <span style={{ color: colors.text }}>{formData.benefit2}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Imagens */}
+            {formData.images && formData.images.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2" style={{ color: colors.primary }}>
+                  Galeria ({formData.images.length})
+                </p>
+                <div className="space-y-2">
+                  {formData.images.slice(0, 2).map((img: any, i: number) => (
+                    <img
+                      key={i}
+                      src={img.url}
+                      alt={img.name}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                  ))}
+                  {formData.images.length > 2 && (
+                    <p className="text-xs" style={{ color: colors.textSecondary }}>
+                      +{formData.images.length - 2} mais imagens
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
