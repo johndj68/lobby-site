@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireTechnicianSession } from '@/lib/services/profile'
 import SubmissionsClient from './SubmissionsClient'
@@ -6,8 +5,8 @@ import SubmissionsClient from './SubmissionsClient'
 export default async function SubmissionsPage() {
   const supabase = await createServerSupabaseClient()
 
+  // requireTechnicianSession already validates technician role
   const { user, profile } = await requireTechnicianSession(supabase)
-  if (profile?.role !== 'admin') redirect('/dashboard')
 
   // Fetch submissions
   const { data: submissions } = await supabase
