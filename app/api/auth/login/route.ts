@@ -20,28 +20,35 @@ export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
   const acctKey = `login:acct:${String(email).trim().toLowerCase()}`
 
-  // 5 tentativas/min por IP, 20/hora por conta
-  const ipLimit = await checkRateLimit({ key: `login:ip:${ip}`, limit: 5, windowMs: 60_000 })
-  const ipLimited = rateLimitResponse(ipLimit)
-  if (ipLimited) return ipLimited
+  // Skip rate limit in dev/localhost
+  const isLocalhost = ip === 'unknown' || ip === '127.0.0.1' || ip === '::1' || ip?.startsWith('::ffff:127.')
+  if (!isLocalhost) {
+    const ipLimit = await checkRateLimit({ key: `login:ip:${ip}`, limit: 5, windowMs: 60_000 })
+    const ipLimited = rateLimitResponse(ipLimit)
+    if (ipLimited) return ipLimited
+  }
 
-  const acctLimit = await checkRateLimit({ key: acctKey, limit: 20, windowMs: 3_600_000 })
-  const acctLimited = rateLimitResponse(acctLimit)
-  if (acctLimited) return acctLimited
+  if (!isLocalhost) {
+    const acctLimit = await checkRateLimit({ key: acctKey, limit: 20, windowMs: 3_600_000 })
+    const acctLimited = rateLimitResponse(acctLimit)
+    if (acctLimited) return acctLimited
+  }
 
-  const lockout = await checkLockout(acctKey)
-  if (lockout.locked) {
-    return NextResponse.json(
-      { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
-      { status: 429, headers: { 'Retry-After': String(lockout.retryAfterSec) } },
-    )
+  if (!isLocalhost) {
+    const lockout = await checkLockout(acctKey)
+    if (lockout.locked) {
+      return NextResponse.json(
+        { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+        { status: 429, headers: { 'Retry-After': String(lockout.retryAfterSec) } },
+      )
+    }
   }
 
   const supabase = await createServerSupabaseClient()
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
   if (signInError) {
-    await recordAuthFailure(acctKey)
+    if (!isLocalhost) await recordAuthFailure(acctKey)
     logAuthEvent('login_fail', email, ip, req)
     // Nunca repassa o texto cru do erro (pode ser um erro de rede/infra interno) —
     // só o caso de credenciais inválidas tem uma string estável e segura de expor.
