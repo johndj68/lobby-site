@@ -171,6 +171,91 @@ export default function SubmissionDetailClient({
             </div>
           )}
 
+          {/* Conteúdo Tab */}
+          {activeTab === 'conteudo' && (
+            <div style={{ background: darkColors.card, border: `1px solid ${darkColors.border}`, borderRadius: '12px', padding: '20px', marginBottom: '24px', space: '16px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: darkColors.textSecondary }}>DESCRIÇÃO</h4>
+                <p style={{ lineHeight: '1.6' }}>{submission.app_drafts?.long_description || submission.app_drafts?.short_description}</p>
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: darkColors.textSecondary }}>LOGO</h4>
+                <img src={submission.app_drafts?.logo_url} alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '8px' }} />
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: darkColors.textSecondary }}>GALERIA</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
+                  {submission.app_drafts?.gallery_urls?.map((url: string, idx: number) => (
+                    <img key={idx} src={url} alt={`Screenshot ${idx}`} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '8px' }} />
+                  )) || <p style={{ color: darkColors.textSecondary }}>Sem imagens</p>}
+                </div>
+              </div>
+              <div>
+                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: darkColors.textSecondary }}>FEATURES</h4>
+                <ul style={{ lineHeight: '1.8', color: darkColors.textSecondary }}>
+                  {submission.app_drafts?.features?.map((f: string, idx: number) => (
+                    <li key={idx}>• {f}</li>
+                  )) || <li>Sem features informadas</li>}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Oferta Tab */}
+          {activeTab === 'oferta' && (
+            <div style={{ background: darkColors.card, border: `1px solid ${darkColors.border}`, borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '16px', color: darkColors.textSecondary }}>PLANOS</h4>
+              {submission.app_drafts?.plans?.length > 0 ? (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {submission.app_drafts.plans.map((plan: any, idx: number) => (
+                    <div key={idx} style={{ background: darkColors.bg, border: `1px solid ${darkColors.border}`, borderRadius: '8px', padding: '16px' }}>
+                      <h5 style={{ fontWeight: '600', marginBottom: '8px' }}>{plan.name}</h5>
+                      <p style={{ color: darkColors.textSecondary, fontSize: '12px', marginBottom: '8px' }}>{plan.description}</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '18px', fontWeight: '700', color: darkColors.success }}>
+                          ${plan.price} {plan.billing_period}
+                        </span>
+                        <span style={{ color: darkColors.textSecondary, fontSize: '12px' }}>
+                          {plan.trial_days && `Teste ${plan.trial_days}d`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ color: darkColors.textSecondary }}>Sem planos informados</p>
+              )}
+            </div>
+          )}
+
+          {/* Ativação Tab */}
+          {activeTab === 'ativacao' && (
+            <div style={{ background: darkColors.card, border: `1px solid ${darkColors.border}`, borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: darkColors.textSecondary }}>MÉTODO</h4>
+                <p>{submission.app_drafts?.activation_method || '—'}</p>
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: darkColors.textSecondary }}>LINK ATIVAÇÃO</h4>
+                <a href={submission.app_drafts?.activation_url} target="_blank" style={{ color: darkColors.primary, wordBreak: 'break-all' }}>
+                  {submission.app_drafts?.activation_url || '—'}
+                </a>
+              </div>
+              <div>
+                <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: darkColors.textSecondary }}>EMAIL SUPORTE</h4>
+                <p>{submission.app_drafts?.support_email || '—'}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Histórico Tab */}
+          {activeTab === 'historico' && (
+            <div style={{ background: darkColors.card, border: `1px solid ${darkColors.border}`, borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+              <p style={{ color: darkColors.textSecondary }}>Versão atual: {submission.id.slice(0, 8)}</p>
+              <p style={{ color: darkColors.textSecondary, fontSize: '12px', marginTop: '4px' }}>Enviado em {new Date(submission.submitted_at).toLocaleDateString('pt-BR')}</p>
+            </div>
+          )}
+
           {/* Messages */}
           <div style={{ background: darkColors.card, border: `1px solid ${darkColors.border}`, borderRadius: '12px', padding: '20px' }}>
             <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', borderBottom: `1px solid ${darkColors.border}`, paddingBottom: '16px' }}>
