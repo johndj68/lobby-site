@@ -8,7 +8,7 @@ export default async function SubmissionsPage() {
   // requireTechnicianSession already validates technician role
   const { user, profile } = await requireTechnicianSession(supabase)
 
-  // Fetch submissions
+  // Fetch submissions with app info
   const { data: submissions } = await supabase
     .from('app_submissions')
     .select(`
@@ -18,19 +18,11 @@ export default async function SubmissionsPage() {
       app_draft_id,
       submitted_by,
       public_feedback,
-      internal_notes,
-      data
+      app_drafts(id, name, short_description, logo_url, category)
     `)
     .order('submitted_at', { ascending: false })
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Submissões de Aplicativos</h1>
-        <p className="text-gray-600">Analise e aprove apps de parceiros</p>
-      </div>
-
-      <SubmissionsClient initialSubmissions={(submissions as any) || []} />
-    </div>
+    <SubmissionsClient initialSubmissions={(submissions as any) || []} />
   )
 }

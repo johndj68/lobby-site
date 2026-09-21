@@ -61,7 +61,7 @@ export default function SubmissionsClient({ initialSubmissions }: SubmissionsCli
   ]
 
   const filtered = submissions.filter((s) => {
-    const matchSearch = !searchTerm || s.data?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchSearch = !searchTerm || s.app_drafts?.name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchStatus = statusFilter === 'all' || s.status === statusFilter
     return matchSearch && matchStatus
   })
@@ -184,14 +184,14 @@ export default function SubmissionsClient({ initialSubmissions }: SubmissionsCli
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <img src={sub.data?.logo || ''} alt="Logo" style={{ width: '32px', height: '32px', borderRadius: '6px', background: darkColors.card }} />
+                      <img src={sub.app_drafts?.logo_url || ''} alt="Logo" style={{ width: '32px', height: '32px', borderRadius: '6px', background: darkColors.card }} />
                       <div>
-                        <p style={{ fontWeight: '600', fontSize: '14px' }}>{sub.data?.name}</p>
-                        <p style={{ color: darkColors.textSecondary, fontSize: '12px', marginTop: '2px' }}>{sub.data?.short_description}</p>
+                        <p style={{ fontWeight: '600', fontSize: '14px' }}>{sub.app_drafts?.name}</p>
+                        <p style={{ color: darkColors.textSecondary, fontSize: '12px', marginTop: '2px' }}>{sub.app_drafts?.short_description}</p>
                       </div>
                     </td>
                     <td style={{ padding: '12px', color: darkColors.textSecondary, fontSize: '14px' }}>-</td>
-                    <td style={{ padding: '12px', color: darkColors.textSecondary, fontSize: '14px' }}>{sub.data?.category}</td>
+                    <td style={{ padding: '12px', color: darkColors.textSecondary, fontSize: '14px' }}>{sub.app_drafts?.category}</td>
                     <td style={{ padding: '12px', color: darkColors.textSecondary, fontSize: '14px' }}>{new Date(sub.submitted_at).toLocaleDateString('pt-BR')}</td>
                     <td style={{ padding: '12px' }}>
                       <div className="flex items-center gap-2" style={{ color: cfg?.color, fontSize: '12px', fontWeight: '600' }}>
