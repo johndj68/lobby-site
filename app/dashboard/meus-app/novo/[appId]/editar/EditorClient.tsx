@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Check, AlertCircle, Monitor, Smartphone } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
+import MediaTab from './tabs/MediaTab'
 
 interface User {
   id: string
@@ -259,7 +260,7 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
           {/* Tab Content */}
           <div>
             {activeTab === 'basico' && <BasicInfoTab formData={formData} onChange={handleFieldChange} />}
-            {activeTab === 'midia' && <MediaTab formData={formData} onChange={handleFieldChange} />}
+            {activeTab === 'midia' && <MediaTab formData={formData} onChange={handleFieldChange} appId={draft.id} />}
             {activeTab === 'funcionalidades' && <FeaturesTab formData={formData} onChange={handleFieldChange} />}
             {activeTab === 'historia' && <HistoryTab formData={formData} onChange={handleFieldChange} />}
             {activeTab === 'sinais' && <SignalsTab formData={formData} onChange={handleFieldChange} />}
@@ -371,7 +372,7 @@ function BasicInfoTab({ formData, onChange }: any) {
         <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>
           Nome do aplicativo *
         </label>
-        <p className="text-xs mb-2" style={{ color: '#666' }}>
+        <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
           Use um nome claro e fácil de lembrar.
         </p>
         <input
@@ -380,7 +381,7 @@ function BasicInfoTab({ formData, onChange }: any) {
           onChange={(e) => onChange('name', e.target.value)}
           placeholder="FlowPilot"
           className="w-full px-4 py-2 rounded-lg border text-sm"
-          style={{ borderColor: '#DDD' }}
+          style={{ borderColor: colors.border, color: colors.text }}
         />
       </div>
 
@@ -391,7 +392,7 @@ function BasicInfoTab({ formData, onChange }: any) {
             value={formData.category || ''}
             onChange={(e) => onChange('category', e.target.value)}
             className="w-full px-4 py-2 rounded-lg border text-sm"
-            style={{ borderColor: '#DDD' }}
+            style={{ borderColor: colors.border, color: colors.text }}
           >
             <option>Automação</option>
             <option>CRM</option>
@@ -406,14 +407,14 @@ function BasicInfoTab({ formData, onChange }: any) {
             onChange={(e) => onChange('subcategory', e.target.value)}
             placeholder="Fluxos de trabalho"
             className="w-full px-4 py-2 rounded-lg border text-sm"
-            style={{ borderColor: '#DDD' }}
+            style={{ borderColor: colors.border, color: colors.text }}
           />
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Descrição curta *</label>
-        <p className="text-xs mb-2" style={{ color: '#666' }}>
+        <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
           Uma frase que seja exibida no seu anúncio.
         </p>
         <input
@@ -422,13 +423,13 @@ function BasicInfoTab({ formData, onChange }: any) {
           onChange={(e) => onChange('shortDesc', e.target.value)}
           placeholder="Automatize tarefas e conecte suas ferramentas."
           className="w-full px-4 py-2 rounded-lg border text-sm"
-          style={{ borderColor: '#DDD' }}
+          style={{ borderColor: colors.border, color: colors.text }}
         />
       </div>
 
       <div>
         <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Chamada complementar</label>
-        <p className="text-xs mb-2" style={{ color: '#666' }}>
+        <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
           Opcional. Uma linha de apoio que reforça o valor do seu app.
         </p>
         <input
@@ -437,13 +438,13 @@ function BasicInfoTab({ formData, onChange }: any) {
           onChange={(e) => onChange('tagline', e.target.value)}
           placeholder="Menos trabalho manual. Mais tempo para crescer."
           className="w-full px-4 py-2 rounded-lg border text-sm"
-          style={{ borderColor: '#DDD' }}
+          style={{ borderColor: colors.border, color: colors.text }}
         />
       </div>
 
       <div>
         <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Diferencial do produto *</label>
-        <p className="text-xs mb-2" style={{ color: '#666' }}>
+        <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
           Explique o que torna seu aplicativo único.
         </p>
         <textarea
@@ -451,14 +452,14 @@ function BasicInfoTab({ formData, onChange }: any) {
           onChange={(e) => onChange('differentiation', e.target.value)}
           placeholder="Crie fluxos visuais para conectar ferramentas e automatizar tarefas, sem precisar programar."
           className="w-full px-4 py-2 rounded-lg border text-sm"
-          style={{ borderColor: '#DDD' }}
+          style={{ borderColor: colors.border, color: colors.text }}
           rows={4}
         />
       </div>
 
       <div>
         <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Benefícios em duas linhas *</label>
-        <p className="text-xs mb-2" style={{ color: '#666' }}>
+        <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
           Destaque os principais benefícios para seus clientes.
         </p>
         <div className="space-y-2">
@@ -468,7 +469,7 @@ function BasicInfoTab({ formData, onChange }: any) {
             onChange={(e) => onChange('benefit1', e.target.value)}
             placeholder="Conecte suas ferramentas em um só lugar"
             className="w-full px-4 py-2 rounded-lg border text-sm"
-            style={{ borderColor: '#DDD' }}
+            style={{ borderColor: colors.border, color: colors.text }}
           />
           <input
             type="text"
@@ -476,19 +477,10 @@ function BasicInfoTab({ formData, onChange }: any) {
             onChange={(e) => onChange('benefit2', e.target.value)}
             placeholder="Automatize tarefas com fluxos visuais"
             className="w-full px-4 py-2 rounded-lg border text-sm"
-            style={{ borderColor: '#DDD' }}
+            style={{ borderColor: colors.border, color: colors.text }}
           />
         </div>
       </div>
-    </div>
-  )
-}
-
-function MediaTab({ formData, onChange }: any) {
-  return (
-    <div className="space-y-6 text-center py-12">
-      <AlertCircle size={48} style={{ color: '#999', margin: '0 auto' }} />
-      <p style={{ color: '#666' }}>Upload de mídia em desenvolvimento</p>
     </div>
   )
 }
