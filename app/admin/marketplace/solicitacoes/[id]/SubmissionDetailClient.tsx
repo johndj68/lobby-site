@@ -173,7 +173,7 @@ export default function SubmissionDetailClient({
 
           {/* Conteúdo Tab */}
           {activeTab === 'conteudo' && (
-            <div style={{ background: darkColors.card, border: `1px solid ${darkColors.border}`, borderRadius: '12px', padding: '20px', marginBottom: '24px', space: '16px' }}>
+            <div style={{ background: darkColors.card, border: `1px solid ${darkColors.border}`, borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
               <div style={{ marginBottom: '20px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: darkColors.textSecondary }}>DESCRIÇÃO</h4>
                 <p style={{ lineHeight: '1.6' }}>{submission.app_drafts?.long_description || submission.app_drafts?.short_description}</p>
