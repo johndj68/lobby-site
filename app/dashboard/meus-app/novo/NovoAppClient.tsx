@@ -44,7 +44,7 @@ export default function NovoAppClient({ user, profile }: NovoAppClientProps) {
       if (!res.ok) throw new Error('Falha ao criar')
 
       const { id } = await res.json()
-      router.push(`/partner/novo/${id}/editar`)
+      router.push(`/dashboard/meus-app/novo/${id}/editar`)
     } catch (err) {
       console.error(err)
       alert('Erro ao criar rascunho')
@@ -65,7 +65,7 @@ export default function NovoAppClient({ user, profile }: NovoAppClientProps) {
       if (!res.ok) throw new Error('Falha')
 
       const { id } = await res.json()
-      router.push(`/partner/novo/${id}/editar`)
+      router.push(`/dashboard/meus-app/novo/${id}/editar`)
     } catch (err) {
       alert('Erro')
     } finally {

@@ -99,32 +99,6 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
 
   return (
     <div className="flex flex-col min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
-      {/* Header */}
-      <header className="border-b bg-white" style={{ borderColor: colors.border }}>
-        <div className="px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="text-lg font-bold" style={{ color: colors.primary }}>
-              LOBBY
-            </div>
-            <div style={{ backgroundColor: colors.border }} className="w-px h-6" />
-            <span className="text-sm font-semibold" style={{ color: colors.text }}>
-              PARCEIROS
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <button style={{ color: colors.primary }} className="text-sm hover:underline flex items-center gap-2">
-              ← Voltar ao painel
-            </button>
-            <button style={{ color: colors.primary }} className="text-sm hover:underline flex items-center gap-2">
-              ⓘ Ajuda
-            </button>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: colors.primary, color: 'white' }}>
-              JS
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Breadcrumb + Stage */}
       <div className="bg-white border-b px-8 py-3" style={{ borderColor: colors.border }}>
         <p className="text-xs mb-3" style={{ color: colors.textSecondary }}>
