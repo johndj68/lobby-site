@@ -3,16 +3,7 @@
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
-
-interface Plan {
-  id?: string
-  name: string
-  currency: string
-  price: number | null
-  billing_period: string
-  features: string[] | null
-  activation_method: string | null
-}
+import type { Plan } from '@/types/app'
 
 interface StageThreeProps {
   plans: Plan[]
