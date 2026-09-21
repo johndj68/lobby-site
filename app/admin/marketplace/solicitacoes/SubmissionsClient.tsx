@@ -70,7 +70,7 @@ export default function SubmissionsClient({ initialSubmissions }: SubmissionsCli
     <div style={{ background: darkColors.bg, color: darkColors.text, minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ background: darkColors.header, borderBottom: `1px solid ${darkColors.border}`, padding: '32px 24px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px' }}>Solicitações do marketplace</h1>
+        <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '8px', color: darkColors.text }}>Solicitações do marketplace</h1>
         <p style={{ color: darkColors.textSecondary, marginBottom: '24px' }}>Revise os aplicativos de parceiros e acompanhe cada etapa até a publicação.</p>
 
         {/* Status Cards */}
