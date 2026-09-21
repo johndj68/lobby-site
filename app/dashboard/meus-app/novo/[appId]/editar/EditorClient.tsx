@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Check, AlertCircle, Monitor, Smartphone } from 'lucide-react'
+import { ChevronRight, Check, AlertCircle, Monitor, Smartphone, X, Zap } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
 import MediaTab from './tabs/MediaTab'
 
@@ -35,13 +35,13 @@ interface EditorClientProps {
 
 type Tab = 'basico' | 'midia' | 'funcionalidades' | 'historia' | 'sinais' | 'faq'
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'basico', label: 'Informações básicas' },
-  { id: 'midia', label: 'Mídia' },
-  { id: 'funcionalidades', label: 'Funcionalidades' },
-  { id: 'historia', label: 'História do produto' },
-  { id: 'sinais', label: 'Sinais de confiança' },
-  { id: 'faq', label: 'Perguntas frequentes' },
+const TABS: { id: Tab; label: string; icon?: string }[] = [
+  { id: 'basico', label: 'Informações básicas', icon: '📋' },
+  { id: 'midia', label: 'Mídia', icon: '🖼️' },
+  { id: 'funcionalidades', label: 'Funcionalidades', icon: '⊙' },
+  { id: 'historia', label: 'História do produto', icon: '📖' },
+  { id: 'sinais', label: 'Sinais de confiança', icon: '🛡️' },
+  { id: 'faq', label: 'Perguntas frequentes', icon: '❓' },
 ]
 
 export default function EditorClient({ draft, user, profile }: EditorClientProps) {
@@ -52,10 +52,8 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
   const [saved, setSaved] = useState(false)
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop')
 
-  // Auto-save
   useEffect(() => {
     if (!saved) return
-
     const timeout = setTimeout(async () => {
       setSaving(true)
       try {
@@ -100,10 +98,10 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
       {/* Header */}
       <header className="border-b bg-white" style={{ borderColor: colors.border }}>
-        <div className="px-6 py-4 flex items-center justify-between">
+        <div className="px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="text-lg font-bold" style={{ color: colors.primary }}>
               LOBBY
@@ -114,14 +112,10 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.back()}
-              style={{ color: colors.primary }}
-              className="text-sm hover:underline flex items-center gap-2"
-            >
+            <button style={{ color: colors.primary }} className="text-sm hover:underline flex items-center gap-2">
               ← Voltar ao painel
             </button>
-            <button style={{ color: colors.primary }} className="text-sm hover:underline">
+            <button style={{ color: colors.primary }} className="text-sm hover:underline flex items-center gap-2">
               ⓘ Ajuda
             </button>
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: colors.primary, color: 'white' }}>
@@ -131,91 +125,93 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
         </div>
       </header>
 
-      {/* Breadcrumb & Stage Indicator */}
-      <div className="bg-white border-b px-6 py-4" style={{ borderColor: colors.border }}>
-        <div className="max-w-full">
-          <p className="text-sm mb-4" style={{ color: colors.textSecondary }}>
-            Meus aplicativos / FlowPilot / Editar
-          </p>
-
-          {/* Stage Indicator */}
-          <div className="flex items-center gap-2">
-            {[1, 2, 3, 4].map((stage) => (
-              <div key={stage} className="flex items-center gap-2">
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full font-bold text-xs text-white"
-                  style={{
-                    backgroundColor: stage <= draft.stage ? colors.primary : '#E5E7EB',
-                  }}
-                >
-                  {stage < draft.stage ? '✓' : stage}
-                </div>
-                {stage < 4 && (
-                  <div
-                    className="w-8 h-1"
-                    style={{
-                      backgroundColor: stage < draft.stage ? colors.primary : '#E5E7EB',
-                    }}
-                  />
-                )}
+      {/* Breadcrumb + Stage */}
+      <div className="bg-white border-b px-8 py-3" style={{ borderColor: colors.border }}>
+        <p className="text-xs mb-3" style={{ color: colors.textSecondary }}>
+          Meus aplicativos / FlowPilot / Editar
+        </p>
+        <div className="flex items-center gap-2">
+          {[1, 2, 3, 4].map((stage) => (
+            <div key={stage} className="flex items-center gap-2">
+              <div
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                  stage < draft.stage ? 'bg-blue-600 text-white' : stage === draft.stage ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                {stage < draft.stage ? '✓' : stage}
               </div>
-            ))}
-            <span className="text-xs font-semibold ml-4" style={{ color: colors.text }}>
-              {draft.stage === 1 && 'Começar'}
-              {draft.stage === 2 && 'Produto e mídia'}
-              {draft.stage === 3 && 'Oferta e planos'}
-              {draft.stage === 4 && 'Revisão'}
-            </span>
+              {stage < 4 && (
+                <div
+                  className="w-6 h-0.5"
+                  style={{
+                    backgroundColor: stage < draft.stage ? colors.primary : '#E5E7EB',
+                  }}
+                />
+              )}
+            </div>
+          ))}
+          <span className="text-xs font-semibold ml-4" style={{ color: colors.text }}>
+            {draft.stage === 1 && 'Começar'}
+            {draft.stage === 2 && 'Produto e mídia'}
+            {draft.stage === 3 && 'Oferta e planos'}
+            {draft.stage === 4 && 'Revisão'}
+          </span>
+        </div>
+      </div>
+
+      {/* Title + Action Bar */}
+      <div className="bg-white border-b px-8 py-6" style={{ borderColor: colors.border }}>
+        <div className="flex items-start justify-between gap-8 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-1" style={{ color: colors.text }}>
+              Crie a página do seu aplicativo
+            </h1>
+            <p className="text-sm" style={{ color: colors.textSecondary }}>
+              Edite as informações e acompanhe a prévia do anúncio.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => handleSaveDraft()}
+              className="px-4 py-2 rounded-lg text-sm font-semibold border"
+              style={{ borderColor: colors.border, color: colors.text }}
+            >
+              Rascunho
+            </button>
+
+            {saved && (
+              <div className="flex items-center gap-1 px-3 py-2" style={{ color: colors.primary }}>
+                <Check size={16} />
+                <span className="text-sm">Salvo agora</span>
+              </div>
+            )}
+
+            <button
+              onClick={handleSaveDraft}
+              disabled={saving}
+              className="px-4 py-2 rounded-lg text-sm font-semibold border"
+              style={{ borderColor: colors.primary, color: colors.primary }}
+            >
+              Salvar rascunho
+            </button>
+
+            <button
+              onClick={handleContinue}
+              disabled={saving}
+              className="px-4 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2"
+              style={{ backgroundColor: colors.primary }}
+            >
+              Continuar <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Action Bar */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: colors.border }}>
-        <h1 className="text-2xl font-bold" style={{ color: colors.text }}>
-          Crie a página do seu aplicativo
-        </h1>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSaveDraft}
-            className="px-4 py-2 rounded-lg text-sm font-semibold border"
-            style={{ borderColor: colors.border, color: colors.text }}
-          >
-            Rascunho
-          </button>
-
-          {saved && (
-            <div className="flex items-center gap-2" style={{ color: colors.primary }}>
-              <Check size={16} />
-              <span className="text-sm">Salvo agora</span>
-            </div>
-          )}
-
-          <button
-            onClick={handleSaveDraft}
-            disabled={saving}
-            className="px-4 py-2 rounded-lg text-sm font-semibold border"
-            style={{ borderColor: colors.primary, color: colors.primary }}
-          >
-            {saving ? 'Salvando...' : 'Salvar rascunho'}
-          </button>
-
-          <button
-            onClick={handleContinue}
-            disabled={saving}
-            className="px-6 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2"
-            style={{ backgroundColor: colors.primary }}
-          >
-            Continuar <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-
-      {/* IA Helper */}
-      <div className="bg-blue-50 border-b px-6 py-3 flex items-start justify-between" style={{ borderColor: colors.border }}>
-        <div className="flex items-start gap-3 flex-1">
-          <span className="text-2xl">⚡</span>
+      {/* IA Helper Box */}
+      <div className="bg-white border-b px-8 py-4 flex items-center justify-between" style={{ borderColor: colors.border }}>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="text-2xl">⚡</div>
           <div>
             <p className="font-semibold text-sm" style={{ color: colors.text }}>
               Quer ajuda para escrever?
@@ -226,184 +222,167 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
           </div>
         </div>
         <button
-          className="px-3 py-1 rounded-lg text-sm font-semibold border flex items-center gap-2 shrink-0"
+          className="px-4 py-2 rounded-lg text-sm font-semibold border flex items-center gap-2 shrink-0"
           style={{ borderColor: colors.primary, color: colors.primary }}
         >
           📋 Copiar prompt
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex gap-6 p-6">
-        {/* Left: Tabs & Form */}
-        <div className="flex-1 bg-white rounded-lg p-6" style={{ borderColor: colors.border, border: '1px solid' }}>
-          {/* Tabs */}
-          <div className="flex items-center gap-4 border-b mb-6 -mx-6 px-6" style={{ borderColor: colors.border }}>
-            {TABS.map(tab => (
+      {/* Tabs */}
+      <div className="bg-white border-b" style={{ borderColor: colors.border }}>
+        <div className="px-8 flex items-center gap-8 overflow-x-auto">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id
+            const isComplete = false
+            return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 text-sm font-semibold border-b-2 -mb-6 pb-4 ${
-                  activeTab === tab.id
-                    ? 'border-primary'
-                    : 'border-transparent'
-                }`}
+                className="py-3 text-sm font-semibold border-b-2 whitespace-nowrap flex items-center gap-2"
                 style={{
-                  color: activeTab === tab.id ? colors.primary : colors.textSecondary,
+                  borderColor: isActive ? colors.primary : 'transparent',
+                  color: isActive ? colors.primary : colors.text,
                 }}
               >
+                <span>{tab.icon}</span>
                 {tab.label}
+                {isComplete && <Check size={14} style={{ color: colors.primary }} />}
               </button>
-            ))}
+            )
+          })}
+          <div className="flex items-center gap-2 ml-auto text-xs font-semibold">
+            <Check size={14} style={{ color: colors.primary }} />
+            <span style={{ color: colors.primary }}>Completo</span>
+            <span style={{ color: '#F59E0B' }}>⊙ Pendente</span>
           </div>
+        </div>
+      </div>
 
-          {/* Tab Content */}
-          <div>
+      {/* Main Content */}
+      <div className="flex-1 flex gap-6 p-8 max-w-7xl mx-auto w-full">
+        {/* Left: Form */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-white rounded-lg p-8" style={{ borderColor: colors.border, border: '1px solid' }}>
             {activeTab === 'basico' && <BasicInfoTab formData={formData} onChange={handleFieldChange} />}
             {activeTab === 'midia' && <MediaTab formData={formData} onChange={handleFieldChange} appId={draft.id} />}
-            {activeTab === 'funcionalidades' && <FeaturesTab formData={formData} onChange={handleFieldChange} />}
-            {activeTab === 'historia' && <HistoryTab formData={formData} onChange={handleFieldChange} />}
-            {activeTab === 'sinais' && <SignalsTab formData={formData} onChange={handleFieldChange} />}
-            {activeTab === 'faq' && <FaqTab formData={formData} onChange={handleFieldChange} />}
+            {activeTab === 'funcionalidades' && <PlaceholderTab />}
+            {activeTab === 'historia' && <PlaceholderTab />}
+            {activeTab === 'sinais' && <PlaceholderTab />}
+            {activeTab === 'faq' && <PlaceholderTab />}
           </div>
         </div>
 
         {/* Right: Preview */}
-        <div className="w-96 space-y-4">
-          {/* Preview Tabs */}
-          <div className="bg-white rounded-lg p-4 flex gap-2">
-            <button
-              onClick={() => setPreviewMode('desktop')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 ${
-                previewMode === 'desktop' ? 'bg-blue-100' : 'bg-gray-100'
-              }`}
-              style={{ color: colors.text }}
-            >
-              <Monitor size={16} /> Desktop
-            </button>
-            <button
-              onClick={() => setPreviewMode('mobile')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 ${
-                previewMode === 'mobile' ? 'bg-blue-100' : 'bg-gray-100'
-              }`}
-              style={{ color: colors.text }}
-            >
-              <Smartphone size={16} /> Mobile
-            </button>
-            <a href="#" className="ml-auto text-sm font-semibold hover:underline" style={{ color: colors.primary }}>
-              Ampliar →
-            </a>
+        <div className="w-80 space-y-4 shrink-0">
+          {/* Preview Header */}
+          <div className="bg-white rounded-lg p-4" style={{ borderColor: colors.border, border: '1px solid' }}>
+            <p className="text-sm font-semibold mb-3" style={{ color: colors.text }}>
+              Prévia do anúncio
+            </p>
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => setPreviewMode('desktop')}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 ${
+                  previewMode === 'desktop'
+                    ? 'bg-blue-100'
+                    : 'bg-gray-100'
+                }`}
+                style={{ color: colors.text }}
+              >
+                <Monitor size={16} /> Desktop
+              </button>
+              <button
+                onClick={() => setPreviewMode('mobile')}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 ${
+                  previewMode === 'mobile'
+                    ? 'bg-blue-100'
+                    : 'bg-gray-100'
+                }`}
+                style={{ color: colors.text }}
+              >
+                <Smartphone size={16} /> Mobile
+              </button>
+              <a href="#" className="ml-auto text-sm font-semibold hover:underline" style={{ color: colors.primary }}>
+                Ampliar →
+              </a>
+            </div>
+            <p className="text-xs text-right" style={{ color: colors.textSecondary }}>
+              Exemplo ilustrativo
+            </p>
           </div>
 
-          {/* Preview Box */}
+          {/* Preview Card */}
           <div
-            className="bg-white rounded-lg p-6 space-y-6 overflow-y-auto"
+            className="bg-white rounded-lg p-6 space-y-4 overflow-y-auto"
             style={{
               borderColor: colors.border,
               border: '1px solid',
-              minHeight: '600px',
-              maxHeight: '700px',
+              maxHeight: '600px',
             }}
           >
-            {/* App Header */}
-            <div className="flex items-start gap-4 pb-4 border-b" style={{ borderColor: colors.border }}>
+            {/* Header */}
+            <div className="flex items-start gap-3 pb-4 border-b" style={{ borderColor: colors.border }}>
               <div
-                className="w-16 h-16 rounded-lg flex items-center justify-center text-xl font-bold text-white shrink-0"
+                className="w-14 h-14 rounded-lg flex items-center justify-center text-xl font-bold text-white shrink-0"
                 style={{ backgroundColor: colors.primary }}
               >
                 {(formData.name || 'A')?.charAt(0).toUpperCase()}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-lg line-clamp-2" style={{ color: colors.text }}>
-                  {formData.name || 'Nome do aplicativo'}
+              <div>
+                <p className="font-bold text-sm" style={{ color: colors.text }}>
+                  {formData.name || 'FlowPilot'}
                 </p>
-                <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                  Por {profile.full_name || 'Seu nome'}
-                  {formData.category && ` · ${formData.category}`}
+                <p className="text-xs" style={{ color: colors.textSecondary }}>
+                  Por FlowPilot · {formData.category || 'Automação'}
                 </p>
               </div>
             </div>
 
-            {/* Short Description */}
+            {/* Description */}
             {formData.shortDesc && (
-              <div>
-                <p className="text-sm font-semibold mb-1" style={{ color: colors.primary }}>
-                  Descrição
-                </p>
-                <p className="text-sm" style={{ color: colors.text }}>
-                  {formData.shortDesc}
-                </p>
-              </div>
+              <p className="text-sm font-semibold" style={{ color: colors.text }}>
+                {formData.shortDesc}
+              </p>
             )}
 
-            {/* Diferencial */}
-            {formData.differentiation && (
-              <div>
-                <p className="text-sm font-semibold mb-1" style={{ color: colors.primary }}>
-                  O que torna único
-                </p>
-                <p className="text-sm" style={{ color: colors.text }}>
-                  {formData.differentiation}
-                </p>
-              </div>
-            )}
-
-            {/* Benefícios */}
-            {(formData.benefit1 || formData.benefit2) && (
-              <div>
-                <p className="text-sm font-semibold mb-2" style={{ color: colors.primary }}>
-                  Benefícios
-                </p>
-                <div className="space-y-2">
-                  {formData.benefit1 && (
-                    <p className="text-sm flex gap-2">
-                      <Check size={16} style={{ color: colors.primary }} className="shrink-0" />
-                      <span style={{ color: colors.text }}>{formData.benefit1}</span>
-                    </p>
-                  )}
-                  {formData.benefit2 && (
-                    <p className="text-sm flex gap-2">
-                      <Check size={16} style={{ color: colors.primary }} className="shrink-0" />
-                      <span style={{ color: colors.text }}>{formData.benefit2}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Imagens */}
+            {/* Features */}
             {formData.images && formData.images.length > 0 && (
-              <div>
-                <p className="text-sm font-semibold mb-2" style={{ color: colors.primary }}>
-                  Galeria ({formData.images.length})
-                </p>
-                <div className="space-y-2">
-                  {formData.images.slice(0, 2).map((img: any, i: number) => (
-                    <img
-                      key={i}
-                      src={img.url}
-                      alt={img.name}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                  ))}
-                  {formData.images.length > 2 && (
-                    <p className="text-xs" style={{ color: colors.textSecondary }}>
-                      +{formData.images.length - 2} mais imagens
-                    </p>
-                  )}
-                </div>
+              <div className="space-y-2">
+                <img
+                  src={formData.images[0].url}
+                  alt="Preview"
+                  className="w-full h-24 object-cover rounded-lg"
+                />
               </div>
             )}
+
+            {/* Checklist */}
+            <div className="space-y-1 text-xs pt-2" style={{ color: colors.textSecondary }}>
+              <p className="font-semibold" style={{ color: colors.text }}>O que você pode fazer</p>
+              {formData.benefit1 && (
+                <div className="flex gap-2">
+                  <Check size={14} style={{ color: colors.primary }} className="shrink-0" />
+                  <span>{formData.benefit1}</span>
+                </div>
+              )}
+              {formData.benefit2 && (
+                <div className="flex gap-2">
+                  <Check size={14} style={{ color: colors.primary }} className="shrink-0" />
+                  <span>{formData.benefit2}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Actions */}
-      <div className="border-t bg-white px-6 py-4 flex items-center justify-between" style={{ borderColor: colors.border }}>
+      <div className="bg-white border-t px-8 py-4 flex items-center justify-between" style={{ borderColor: colors.border }}>
         <button
           onClick={() => router.back()}
-          className="text-sm font-semibold"
-          style={{ color: colors.text }}
+          className="px-4 py-2 rounded-lg text-sm font-semibold border"
+          style={{ borderColor: colors.border, color: colors.text }}
         >
           ← Voltar
         </button>
@@ -411,7 +390,7 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
         <div className="flex items-center gap-3">
           <button
             onClick={handleSaveDraft}
-            className="px-4 py-2 rounded-lg text-sm font-semibold border"
+            className="px-6 py-2 rounded-lg text-sm font-semibold border"
             style={{ borderColor: colors.border, color: colors.text }}
           >
             Salvar e sair
@@ -432,8 +411,9 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
 function BasicInfoTab({ formData, onChange }: any) {
   return (
     <div className="space-y-6">
+      {/* Row 1 */}
       <div>
-        <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>
+        <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
           Nome do aplicativo *
         </label>
         <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
@@ -449,9 +429,15 @@ function BasicInfoTab({ formData, onChange }: any) {
         />
       </div>
 
+      {/* Row 2: Categoria + Subcategoria */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Categoria *</label>
+          <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+            Categoria *
+          </label>
+          <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+            Escolha a categoria principal do seu aplicativo.
+          </p>
           <select
             value={formData.category || ''}
             onChange={(e) => onChange('category', e.target.value)}
@@ -464,7 +450,12 @@ function BasicInfoTab({ formData, onChange }: any) {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Subcategoria</label>
+          <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+            Subcategoria
+          </label>
+          <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+            Uma subcategoria mais específica.
+          </p>
           <input
             type="text"
             value={formData.subcategory || ''}
@@ -476,10 +467,13 @@ function BasicInfoTab({ formData, onChange }: any) {
         </div>
       </div>
 
+      {/* Row 3: Descrição curta */}
       <div>
-        <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Descrição curta *</label>
+        <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+          Descrição curta *
+        </label>
         <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
-          Uma frase que seja exibida no seu anúncio.
+          Uma frase que seja exibida em destaque no seu anúncio.
         </p>
         <input
           type="text"
@@ -491,8 +485,11 @@ function BasicInfoTab({ formData, onChange }: any) {
         />
       </div>
 
+      {/* Row 4: Chamada complementar */}
       <div>
-        <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Chamada complementar</label>
+        <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+          Chamada complementar
+        </label>
         <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
           Opcional. Uma linha de apoio que reforça o valor do seu app.
         </p>
@@ -506,8 +503,11 @@ function BasicInfoTab({ formData, onChange }: any) {
         />
       </div>
 
+      {/* Row 5: Diferencial do produto */}
       <div>
-        <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Diferencial do produto *</label>
+        <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+          Diferencial do produto *
+        </label>
         <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
           Explique o que torna seu aplicativo único.
         </p>
@@ -521,8 +521,11 @@ function BasicInfoTab({ formData, onChange }: any) {
         />
       </div>
 
+      {/* Row 6: Benefícios em duas linhas */}
       <div>
-        <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Benefícios em duas linhas *</label>
+        <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+          Benefícios em duas linhas *
+        </label>
         <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
           Destaque os principais benefícios para seus clientes.
         </p>
@@ -545,42 +548,101 @@ function BasicInfoTab({ formData, onChange }: any) {
           />
         </div>
       </div>
+
+      {/* Row 7: Visão geral sections (Alternativas, Integrações, Ideal para, Website) */}
+      <div className="pt-4 border-t" style={{ borderColor: colors.border }}>
+        <h3 className="text-lg font-bold mb-4" style={{ color: colors.text }}>
+          Visão geral
+        </h3>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+              Alternativas a
+            </label>
+            <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+              Os clientes podem comparar seu app com até 3 alternativas conhecidas.
+            </p>
+            <select
+              className="w-full px-4 py-2 rounded-lg border text-sm"
+              style={{ borderColor: colors.border, color: colors.text }}
+            >
+              <option>Selecione até 3 alternativas</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+              Integrações
+            </label>
+            <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+              Seus aplicativos se conectam com outras ferramentas.
+            </p>
+            <div className="flex gap-2">
+              <button className="px-3 py-1 rounded text-sm bg-gray-200" style={{ color: colors.text }}>
+                Slack ✕
+              </button>
+              <button className="px-3 py-1 rounded text-sm bg-gray-200" style={{ color: colors.text }}>
+                Notion ✕
+              </button>
+              <button className="px-3 py-1 rounded text-sm bg-gray-200" style={{ color: colors.text }}>
+                Gmail ✕
+              </button>
+              <select className="px-4 py-1 rounded border text-sm" style={{ borderColor: colors.border }}>
+                <option>+ Adicionar</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+              Ideal para
+            </label>
+            <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+              Qual perfil se beneficia mais com seu app.
+            </p>
+            <div className="flex gap-2">
+              <button className="px-3 py-1 rounded text-sm bg-gray-200" style={{ color: colors.text }}>
+                Pequenas empresas ✕
+              </button>
+              <button className="px-3 py-1 rounded text-sm bg-gray-200" style={{ color: colors.text }}>
+                Agências ✕
+              </button>
+              <select className="px-4 py-1 rounded border text-sm" style={{ borderColor: colors.border }}>
+                <option>+ Adicionar</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+              Website do produto
+            </label>
+            <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+              Informe o site oficial do seu produto.
+            </p>
+            <input
+              type="url"
+              placeholder="https://flowpilot.example"
+              className="w-full px-4 py-2 rounded-lg border text-sm"
+              style={{ borderColor: colors.border, color: colors.text }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs" style={{ color: colors.textSecondary }}>
+        * Campos obrigatórios
+      </p>
     </div>
   )
 }
 
-function FeaturesTab({ formData, onChange }: any) {
+function PlaceholderTab() {
   return (
-    <div className="space-y-6 text-center py-12">
-      <AlertCircle size={48} style={{ color: '#999', margin: '0 auto' }} />
-      <p style={{ color: '#666' }}>Funcionalidades em desenvolvimento</p>
-    </div>
-  )
-}
-
-function HistoryTab({ formData, onChange }: any) {
-  return (
-    <div className="space-y-6 text-center py-12">
-      <AlertCircle size={48} style={{ color: '#999', margin: '0 auto' }} />
-      <p style={{ color: '#666' }}>História do produto em desenvolvimento</p>
-    </div>
-  )
-}
-
-function SignalsTab({ formData, onChange }: any) {
-  return (
-    <div className="space-y-6 text-center py-12">
-      <AlertCircle size={48} style={{ color: '#999', margin: '0 auto' }} />
-      <p style={{ color: '#666' }}>Sinais de confiança em desenvolvimento</p>
-    </div>
-  )
-}
-
-function FaqTab({ formData, onChange }: any) {
-  return (
-    <div className="space-y-6 text-center py-12">
-      <AlertCircle size={48} style={{ color: '#999', margin: '0 auto' }} />
-      <p style={{ color: '#666' }}>Perguntas frequentes em desenvolvimento</p>
+    <div className="text-center py-12">
+      <AlertCircle size={48} style={{ color: '#999', margin: '0 auto' }} className="mb-4" />
+      <p style={{ color: colors.textSecondary }}>Esta aba está em desenvolvimento</p>
     </div>
   )
 }
