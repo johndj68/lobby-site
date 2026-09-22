@@ -4,13 +4,10 @@
  * Reaproveita a paleta escura já usada em app/admin/marketplace/solicitacoes
  * (SubmissionsClient.tsx) para manter as duas telas consistentes entre si.
  *
- * Importante: o catálogo público real (tabela `applications`, que alimenta a
- * home) e o pipeline de submissão (`app_drafts`/`app_submissions`, usado pela
- * central de revisão) ainda não são conectados no banco — não existe rotina
- * que, ao aprovar uma submissão, publique de fato o app em `applications`.
- * Este arquivo trabalha em cima do pipeline de submissão (mesma fonte da
- * central de revisão), não do catálogo público, e essa distinção é
- * documentada na própria página.
+ * app_drafts (pipeline de submissão, dono = created_by) e applications
+ * (catálogo público real, lido por app/page.tsx) são ligados por
+ * app_drafts.application_id — populado por /api/admin/apps/[draftId]/publish.
+ * Um draft sem application_id ainda nunca foi publicado de fato.
  */
 
 export const MARKETPLACE_COLORS = {
@@ -37,7 +34,18 @@ export interface AppDraftRow {
   category: string | null
   status: AppDraftStatus
   created_at: string
+  updated_at?: string
   created_by: string
+  application_id?: string | null
+}
+
+export interface ApplicationRow {
+  id: string
+  slug: string
+  is_published: boolean
+  suspended_at: string | null
+  suspended_reason: string | null
+  updated_at: string
 }
 
 export interface SubmissionRow {
@@ -63,7 +71,7 @@ export interface PlanRow {
  *  em app_submissions.status (o endpoint de review só sincroniza
  *  app_drafts.status quando a decisão é "approve"). */
 export interface DerivedAppStatus {
-  key: 'rascunho' | 'aguardando_analise' | 'ajustes_solicitados' | 'rejeitado' | 'aprovado' | 'publicado'
+  key: 'rascunho' | 'aguardando_analise' | 'ajustes_solicitados' | 'rejeitado' | 'aprovado' | 'publicado' | 'suspenso'
   label: string
   color: string
 }
@@ -88,6 +96,59 @@ export function deriveAppStatus(draftStatus: AppDraftStatus, latestSubmission: S
       return { key: 'rascunho', label: 'Rascunho, não enviado', color: MARKETPLACE_COLORS.textSecondary }
   }
 }
+
+export interface PublicationStatus {
+  key: 'nao_publicado' | 'publicado' | 'suspenso'
+  label: string
+  color: string
+}
+
+/** Estado de PUBLICAÇÃO — independente do estado de revisão (deriveAppStatus).
+ *  Vem só de applications: sem linha = nunca publicado; suspended_at setado
+ *  = suspenso (histórico preservado, applications continua existindo). */
+export function derivePublicationStatus(application: ApplicationRow | null): PublicationStatus {
+  if (!application) return { key: 'nao_publicado', label: 'Não publicado', color: MARKETPLACE_COLORS.textSecondary }
+  if (application.suspended_at) return { key: 'suspenso', label: 'Suspenso', color: MARKETPLACE_COLORS.error }
+  if (application.is_published) return { key: 'publicado', label: 'Publicado', color: MARKETPLACE_COLORS.success }
+  return { key: 'nao_publicado', label: 'Não publicado', color: MARKETPLACE_COLORS.textSecondary }
+}
+
+export interface ReviewStatus {
+  key: 'rascunho' | 'aguardando_analise' | 'em_analise' | 'ajustes_solicitados' | 'rejeitado' | 'aprovado' | 'nova_versao_em_analise'
+  label: string
+  color: string
+}
+
+/** Estado de REVISÃO — status da submissão mais recente. Quando o app já
+ *  está publicado e a submissão mais recente é posterior à que foi
+ *  publicada (e ainda está em fluxo), mostra "Nova versão em análise" em
+ *  vez do estado cru — a versão pública não muda só por isso (seção 8). */
+export function deriveReviewStatus(
+  latestSubmission: SubmissionRow | null,
+  isCurrentlyPublished: boolean,
+  publishedSubmissionId: string | null,
+): ReviewStatus {
+  if (!latestSubmission) return { key: 'rascunho', label: 'Rascunho', color: MARKETPLACE_COLORS.textSecondary }
+
+  const inFlight = latestSubmission.status === 'pending' || latestSubmission.status === 'changes_requested'
+  if (isCurrentlyPublished && inFlight && latestSubmission.id !== publishedSubmissionId) {
+    return { key: 'nova_versao_em_analise', label: 'Nova versão em análise', color: MARKETPLACE_COLORS.primary }
+  }
+  switch (latestSubmission.status) {
+    case 'pending':
+      return { key: 'aguardando_analise', label: 'Aguardando análise', color: MARKETPLACE_COLORS.warning }
+    case 'changes_requested':
+      return { key: 'ajustes_solicitados', label: 'Ajustes solicitados', color: MARKETPLACE_COLORS.warning }
+    case 'rejected':
+      return { key: 'rejeitado', label: 'Rejeitado', color: MARKETPLACE_COLORS.error }
+    case 'approved':
+      return { key: 'aprovado', label: 'Aprovado', color: MARKETPLACE_COLORS.success }
+    default:
+      return { key: 'rascunho', label: 'Rascunho', color: MARKETPLACE_COLORS.textSecondary }
+  }
+}
+
+export const ORIGIN_LABEL = { lobby: 'LOBBY · Produto próprio', partner: 'Parceiro' } as const
 
 /** Resume as ofertas (app_plans) de um app: nenhuma, uma (com rótulo do tipo
  *  de cobrança) ou "Múltiplas ofertas" quando há mais de um plano — nunca

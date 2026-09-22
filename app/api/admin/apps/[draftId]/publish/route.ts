@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { checkPublishEligibility, isAllowedImageUrl, logAppAdminEvent } from '@/lib/services/app-publish'
 
 /** "MailCraft #2" -> "mailcraft-2". Sem acento, sem espaço, sem duplo hífen. */
 function slugify(name: string): string {
@@ -12,27 +12,9 @@ function slugify(name: string): string {
   return base || 'app'
 }
 
-/**
- * applications.logo_url/preview_image_url viram <Image> na home (app/page.tsx),
- * e next/image só aceita hosts declarados em next.config.ts (images.remotePatterns
- * — hoje só o storage do Supabase). Uma URL de outro host não quebra a escrita
- * aqui, mas derruba a home inteira com 500 (visto ao vivo com um dado de teste
- * apontando pra via.placeholder.com). Preferível cair pra null a publicar algo
- * que derruba a home pública.
- */
-function isAllowedImageUrl(url: string | null | undefined): boolean {
-  if (!url) return false
-  try {
-    const allowedHost = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname
-    return new URL(url).hostname === allowedHost
-  } catch {
-    return false
-  }
-}
-
 /** Gera um slug único em applications.slug, tentando "-2", "-3"... antes de
  *  cair num sufixo aleatório. */
-async function uniqueSlug(supabase: SupabaseClient, name: string): Promise<string> {
+async function uniqueSlug(supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>, name: string): Promise<string> {
   const base = slugify(name)
   for (let i = 0; i < 20; i++) {
     const candidate = i === 0 ? base : `${base}-${i + 1}`
@@ -45,10 +27,7 @@ async function uniqueSlug(supabase: SupabaseClient, name: string): Promise<strin
 /**
  * Publica um app do marketplace: seta app_drafts.status='published' E
  * sincroniza public.applications — a tabela que app/page.tsx (home) e o
- * catálogo público realmente leem. Antes desta rota existir, "aprovar" só
- * marcava app_drafts.status='approved'; nada chegava a 'published', e
- * nada nunca escrevia em applications — um app aprovado nunca aparecia
- * de fato pro público. Ver app_drafts.application_id (FK 1:1 nova).
+ * catálogo público realmente leem. Ver app_drafts.application_id (FK 1:1).
  */
 export async function POST(
   req: NextRequest,
@@ -71,56 +50,29 @@ export async function POST(
     .eq('id', draftId)
     .single()
   if (!draft) return NextResponse.json({ error: 'Aplicativo não encontrado.' }, { status: 404 })
-  // Já publicado E já sincronizado com o catálogo público — nada a fazer.
-  // (Se status='published' mas application_id ainda for null, é um publish
-  // anterior que falhou na etapa de sincronizar applications — deixa cair
-  // pras validações abaixo pra tentar de novo, em vez de travar num 409.)
-  if (draft.status === 'published' && draft.application_id) {
-    return NextResponse.json({ error: 'Este aplicativo já está publicado.' }, { status: 409 })
+
+  // A verdade sobre "publicado" é applications.is_published/suspended_at —
+  // não app_drafts.status (esse só marca que o app já passou por um publish
+  // alguma vez; suspender NUNCA mexe nele, de propósito, pra preservar
+  // histórico). Checar status aqui bloquearia republicar um app suspenso
+  // fora do fluxo de "Reativar" incorretamente ou vice-versa.
+  if (draft.application_id) {
+    const { data: existingApplication } = await supabase
+      .from('applications')
+      .select('is_published, suspended_at')
+      .eq('id', draft.application_id)
+      .single()
+    if (existingApplication?.suspended_at) {
+      return NextResponse.json({ error: 'Este aplicativo está suspenso. Use "Reativar" para publicá-lo de novo.' }, { status: 409 })
+    }
+    if (existingApplication?.is_published) {
+      return NextResponse.json({ error: 'Este aplicativo já está publicado.' }, { status: 409 })
+    }
   }
 
-  // 1) Versão aprovada — pega a submissão mais recente.
-  const { data: submissions } = await supabase
-    .from('app_submissions')
-    .select('id, status')
-    .eq('app_draft_id', draftId)
-    .order('submitted_at', { ascending: false })
-    .limit(1)
-  const latestSubmission = submissions?.[0]
-  if (!latestSubmission || latestSubmission.status !== 'approved') {
-    return NextResponse.json({ error: 'O aplicativo precisa ter uma versão aprovada na revisão antes de ser publicado.' }, { status: 400 })
-  }
-
-  // 2) Ausência de bloqueios — issues de severidade "blocker" ainda não resolvidas.
-  const { data: blockers } = await supabase
-    .from('review_issues')
-    .select('id')
-    .eq('submission_id', latestSubmission.id)
-    .eq('severity', 'blocker')
-    .is('resolved_at', null)
-  if (blockers && blockers.length > 0) {
-    return NextResponse.json({ error: `Existem ${blockers.length} bloqueio(s) de revisão não resolvido(s).` }, { status: 400 })
-  }
-
-  // 3) Configuração comercial válida — pelo menos uma oferta cadastrada.
-  const { data: plans } = await supabase
-    .from('app_plans')
-    .select('id, price, billing_period, currency')
-    .eq('app_draft_id', draftId)
-    .not('billing_period', 'is', null)
-  if (!plans || plans.length === 0) {
-    return NextResponse.json({ error: 'Cadastre pelo menos uma oferta (plano/preço) antes de publicar.' }, { status: 400 })
-  }
-
-  // 4) Entrega ou ativação disponível.
-  const { data: activationConfig } = await supabase
-    .from('app_activation_config')
-    .select('id, activation_link, support_email')
-    .eq('app_draft_id', draftId)
-    .maybeSingle()
-  if (!activationConfig || (!activationConfig.activation_link && !activationConfig.support_email)) {
-    return NextResponse.json({ error: 'Configure a entrega/ativação do aplicativo (link ou e-mail de suporte) antes de publicar.' }, { status: 400 })
-  }
+  const eligibility = await checkPublishEligibility(supabase, draftId)
+  if (!eligibility.ok) return NextResponse.json({ error: eligibility.error }, { status: 400 })
+  const { latestSubmission, plans } = eligibility
 
   // Nome público do parceiro — company_name se tiver, senão o nome da pessoa.
   const { data: partnerProfile } = await supabase
@@ -154,6 +106,9 @@ export async function POST(
     is_free: singlePlan ? (singlePlan.price === null || singlePlan.price === 0) : false,
     is_published: true,
     is_lobby_made: false,
+    suspended_at: null,
+    suspended_by: null,
+    suspended_reason: null,
     updated_at: new Date().toISOString(),
   }
 
@@ -197,6 +152,15 @@ export async function POST(
     .from('app_submissions')
     .update({ published_at: new Date().toISOString() })
     .eq('id', latestSubmission.id)
+
+  await logAppAdminEvent(supabase, {
+    appDraftId: draftId,
+    applicationId,
+    actorId: user.id,
+    action: 'publish',
+    previousStatus: draft.status,
+    newStatus: 'published',
+  })
 
   return NextResponse.json({ ok: true, app: draft.name, submissionId: latestSubmission.id, applicationId })
 }

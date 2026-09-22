@@ -50,7 +50,7 @@ interface Props {
 
 const NAV_TABS = [
   { label: 'Visão geral', href: '/admin/marketplace', enabled: true },
-  { label: 'Aplicativos', href: '/admin/marketplace/aplicativos', enabled: false },
+  { label: 'Aplicativos', href: '/admin/marketplace/aplicativos', enabled: true },
   { label: 'Solicitações', href: '/admin/marketplace/solicitacoes', enabled: true },
   { label: 'Ofertas', href: '/admin/marketplace/ofertas', enabled: false },
   { label: 'Destaques', href: '/admin/marketplace/destaques', enabled: false },
@@ -122,12 +122,21 @@ export default function MarketplaceClient({
     return map
   }, [plans])
 
-  const rows = useMemo(() => drafts.map(d => ({
-    draft: d,
-    status: deriveAppStatus(d.status, latestSubmissionByDraft.get(d.id) ?? null),
-    offer: summarizeOffer(plansByDraft.get(d.id) ?? []),
-    partner: personName(people, d.created_by),
-  })), [drafts, latestSubmissionByDraft, plansByDraft, people])
+  const rows = useMemo(() => drafts.map(d => {
+    type WithApplications = AppDraftRow & { applications?: { is_published: boolean; suspended_at: string | null } | { is_published: boolean; suspended_at: string | null }[] | null }
+    const dApplications = (d as WithApplications).applications
+    const application = Array.isArray(dApplications) ? (dApplications[0] ?? null) : (dApplications ?? null)
+    let status = deriveAppStatus(d.status, latestSubmissionByDraft.get(d.id) ?? null)
+    // Suspensão vive em applications, não em app_drafts.status (de propósito
+    // — suspender preserva o histórico de que o app já foi aprovado/publicado).
+    if (application?.suspended_at) status = { key: 'suspenso', label: 'Suspenso', color: C.error }
+    return {
+      draft: d,
+      status,
+      offer: summarizeOffer(plansByDraft.get(d.id) ?? []),
+      partner: personName(people, d.created_by),
+    }
+  }), [drafts, latestSubmissionByDraft, plansByDraft, people])
 
   const appsPublicados = rows.filter(r => r.status.key === 'publicado').length
   const aguardandoAnalise = rows.filter(r => r.status.key === 'aguardando_analise').length
@@ -233,16 +242,13 @@ export default function MarketplaceClient({
               )}
             </div>
 
-            <button
-              type="button"
-              disabled
-              title="A gestão completa de aplicativos (/admin/marketplace/aplicativos) ainda não foi implementada."
-              aria-disabled="true"
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
+            <Link
+              href="/admin/marketplace/aplicativos"
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
               style={{ background: C.primary }}
             >
               Gerenciar aplicativos
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -290,7 +296,7 @@ export default function MarketplaceClient({
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide" style={{ color: C.textSecondary }}>Situação atual</p>
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <MetricCard icon={Grid3x3} title="Apps publicados" value={String(appsPublicados)}
-            sub="Status do pipeline de submissão" href="#apps-tabela" />
+            sub="Status do pipeline de submissão" href="/admin/marketplace/aplicativos?publicacao=publicado" />
           <MetricCard icon={Clock} title="Aguardando análise" value={String(aguardandoAnalise)}
             sub="Solicitações ativas" href="/admin/marketplace/solicitacoes" />
           <span className="col-span-2 sm:col-span-1 lg:hidden" />
@@ -340,7 +346,7 @@ export default function MarketplaceClient({
                 {aprovadosNaoPublicados > 0 && (
                   <AlertItem icon={Grid3x3} color={C.primary}
                     title={`${aprovadosNaoPublicados} app${aprovadosNaoPublicados > 1 ? 's' : ''} aprovado${aprovadosNaoPublicados > 1 ? 's' : ''} aguardando publicação`}
-                    desc="Aprovados na revisão, ainda não publicados." href="#apps-tabela" cta="Ver aplicativos" />
+                    desc="Aprovados na revisão, ainda não publicados." href="/admin/marketplace/aplicativos?publicacao=nao_publicado&revisao=aprovado" cta="Ver aplicativos" />
                 )}
               </ul>
             )}
@@ -442,8 +448,8 @@ export default function MarketplaceClient({
                                 <Rocket size={11} aria-hidden="true" /> Publicar
                               </button>
                             )}
-                            <Link href="/admin/marketplace/solicitacoes" className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: C.primary }}>
-                              Ver solicitações <ChevronRight size={12} aria-hidden="true" />
+                            <Link href={`/admin/marketplace/aplicativos/${r.draft.id}`} className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: C.primary }}>
+                              Gerenciar <ChevronRight size={12} aria-hidden="true" />
                             </Link>
                           </div>
                         </td>
@@ -487,18 +493,19 @@ export default function MarketplaceClient({
                             <Rocket size={11} aria-hidden="true" /> Publicar
                           </button>
                         )}
-                        <Link href="/admin/marketplace/solicitacoes" className="font-semibold" style={{ color: C.primary }}>Ver solicitações →</Link>
+                        <Link href={`/admin/marketplace/aplicativos/${r.draft.id}`} className="font-semibold" style={{ color: C.primary }}>Gerenciar →</Link>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {filteredRows.length > visibleRows.length && (
-                <p className="mt-3 text-xs" style={{ color: C.textSecondary }}>
-                  Mostrando {visibleRows.length} de {filteredRows.length}. A listagem completa com paginação será implementada em /admin/marketplace/aplicativos.
-                </p>
-              )}
+              <div className="mt-3 flex items-center justify-between">
+                {filteredRows.length > visibleRows.length && (
+                  <p className="text-xs" style={{ color: C.textSecondary }}>Mostrando {visibleRows.length} de {filteredRows.length}.</p>
+                )}
+                <Link href="/admin/marketplace/aplicativos" className="ml-auto text-xs font-semibold" style={{ color: C.primary }}>Ver todos os aplicativos →</Link>
+              </div>
             </>
           )}
         </section>

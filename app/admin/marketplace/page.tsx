@@ -26,7 +26,7 @@ export default async function MarketplacePage({
     await Promise.all([
       supabase
         .from('app_drafts')
-        .select('id, name, short_description, logo_url, category, status, created_at, created_by')
+        .select('id, name, short_description, logo_url, category, status, created_at, created_by, application_id, applications(is_published, suspended_at)')
         .order('created_at', { ascending: false }),
       supabase
         .from('app_submissions')
