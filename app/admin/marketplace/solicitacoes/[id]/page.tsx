@@ -30,12 +30,15 @@ export default async function SubmissionDetailPage({
   }
 
   // Load submission
+  // Nota: reviewer_id referencia auth.users, não profiles — não dá pra
+  // embutir "reviewer:reviewer_id(full_name)" (sem FK declarada pra
+  // profiles, o PostgREST rejeita o join com PGRST200 e a query inteira
+  // falha, o que fazia esta página 404 pra qualquer submissão).
   const { data: submission } = await supabase
     .from('app_submissions')
     .select(`
       *,
-      app_drafts(id, name, short_description, logo_url, created_by),
-      reviewer:reviewer_id(full_name)
+      app_drafts(id, name, short_description, logo_url, created_by)
     `)
     .eq('id', id)
     .single()
