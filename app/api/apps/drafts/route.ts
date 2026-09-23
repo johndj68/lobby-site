@@ -9,6 +9,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Bloqueio administrativo de novos cadastros de app (/admin/marketplace/parceiros)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('marketplace_new_apps_blocked')
+    .eq('id', user.id)
+    .single()
+  if (profile?.marketplace_new_apps_blocked) {
+    return NextResponse.json({ error: 'Novos aplicativos estão temporariamente bloqueados para esta conta. Entre em contato com o suporte da LOBBY.' }, { status: 403 })
+  }
+
   // Create new draft
   const { data, error } = await supabase
     .from('app_drafts')

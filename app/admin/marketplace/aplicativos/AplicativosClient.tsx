@@ -65,7 +65,7 @@ const NAV_TABS = [
   { label: 'Ofertas', href: '/admin/marketplace/ofertas', enabled: false },
   { label: 'Destaques', href: '/admin/marketplace/destaques', enabled: false },
   { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: false },
-  { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: false },
+  { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
 ]
 
 const REVIEW_OPTIONS: { value: string; label: string }[] = [

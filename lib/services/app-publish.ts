@@ -77,18 +77,20 @@ export function isAllowedImageUrl(url: string | null | undefined): boolean {
 export async function logAppAdminEvent(
   supabase: SupabaseClient,
   event: {
-    appDraftId: string
-    applicationId: string | null
+    appDraftId?: string | null
+    applicationId?: string | null
+    partnerId?: string | null
     actorId: string
-    action: 'publish' | 'suspend' | 'reactivate'
+    action: 'publish' | 'suspend' | 'reactivate' | 'block_new_apps' | 'unblock_new_apps'
     reason?: string | null
     previousStatus: string
     newStatus: string
   },
 ) {
   await supabase.from('app_admin_events').insert({
-    app_draft_id: event.appDraftId,
-    application_id: event.applicationId,
+    app_draft_id: event.appDraftId ?? null,
+    application_id: event.applicationId ?? null,
+    partner_id: event.partnerId ?? null,
     actor_id: event.actorId,
     action: event.action,
     reason: event.reason ?? null,

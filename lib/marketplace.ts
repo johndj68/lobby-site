@@ -106,7 +106,7 @@ export interface PublicationStatus {
 /** Estado de PUBLICAÇÃO — independente do estado de revisão (deriveAppStatus).
  *  Vem só de applications: sem linha = nunca publicado; suspended_at setado
  *  = suspenso (histórico preservado, applications continua existindo). */
-export function derivePublicationStatus(application: ApplicationRow | null): PublicationStatus {
+export function derivePublicationStatus(application: Pick<ApplicationRow, 'is_published' | 'suspended_at'> | null): PublicationStatus {
   if (!application) return { key: 'nao_publicado', label: 'Não publicado', color: MARKETPLACE_COLORS.textSecondary }
   if (application.suspended_at) return { key: 'suspenso', label: 'Suspenso', color: MARKETPLACE_COLORS.error }
   if (application.is_published) return { key: 'publicado', label: 'Publicado', color: MARKETPLACE_COLORS.success }
@@ -124,7 +124,7 @@ export interface ReviewStatus {
  *  publicada (e ainda está em fluxo), mostra "Nova versão em análise" em
  *  vez do estado cru — a versão pública não muda só por isso (seção 8). */
 export function deriveReviewStatus(
-  latestSubmission: SubmissionRow | null,
+  latestSubmission: Pick<SubmissionRow, 'id' | 'status'> | null,
   isCurrentlyPublished: boolean,
   publishedSubmissionId: string | null,
 ): ReviewStatus {
