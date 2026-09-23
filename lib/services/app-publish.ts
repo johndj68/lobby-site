@@ -80,8 +80,14 @@ export async function logAppAdminEvent(
     appDraftId?: string | null
     applicationId?: string | null
     partnerId?: string | null
+    planId?: string | null
+    promotionId?: string | null
     actorId: string
-    action: 'publish' | 'suspend' | 'reactivate' | 'block_new_apps' | 'unblock_new_apps'
+    action:
+      | 'publish' | 'suspend' | 'reactivate' | 'block_new_apps' | 'unblock_new_apps'
+      // /admin/marketplace/ofertas
+      | 'create_offer' | 'update_plan_price' | 'pause_offer' | 'resume_offer' | 'archive_offer'
+      | 'create_promotion' | 'update_promotion' | 'pause_promotion' | 'cancel_promotion' | 'reactivate_promotion'
     reason?: string | null
     previousStatus: string
     newStatus: string
@@ -91,6 +97,8 @@ export async function logAppAdminEvent(
     app_draft_id: event.appDraftId ?? null,
     application_id: event.applicationId ?? null,
     partner_id: event.partnerId ?? null,
+    plan_id: event.planId ?? null,
+    promotion_id: event.promotionId ?? null,
     actor_id: event.actorId,
     action: event.action,
     reason: event.reason ?? null,

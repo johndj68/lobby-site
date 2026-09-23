@@ -36,7 +36,7 @@ const NAV_TABS = [
   { label: 'Visão geral', href: '/admin/marketplace', enabled: true },
   { label: 'Aplicativos', href: '/admin/marketplace/aplicativos', enabled: true },
   { label: 'Solicitações', href: '/admin/marketplace/solicitacoes', enabled: true },
-  { label: 'Ofertas', href: '/admin/marketplace/ofertas', enabled: false },
+  { label: 'Ofertas', href: '/admin/marketplace/ofertas', enabled: true },
   { label: 'Destaques', href: '/admin/marketplace/destaques', enabled: false },
   { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: false },
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
