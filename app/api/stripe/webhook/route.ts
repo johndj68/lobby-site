@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { captureException } from '@/lib/monitoring'
 import { sendEmail, buildCreditReceiptEmailHtml } from '@/lib/notifications'
 import { completeWebhookJob, retryWebhookJob } from '@/lib/webhook-queue'
+import { confirmReservationOrFlagConflict } from '@/lib/services/campaigns'
+import { logAppAdminEvent } from '@/lib/services/app-publish'
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? ''
 
@@ -40,6 +42,10 @@ export async function POST(req: NextRequest) {
         await handlePaymentFailed(event.data.object as Stripe.PaymentIntent)
         break
 
+      case 'charge.refunded':
+        await handleChargeRefunded(event.data.object as Stripe.Charge)
+        break
+
       default:
         // Unhandled event type — acknowledge so Stripe doesn't retry
         break
@@ -62,6 +68,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (!purchaseId) {
     // Could be a different product — not a credit purchase
     console.warn('[stripe/webhook] checkout.session.completed without purchase_id in metadata. session:', session.id)
+    return
+  }
+
+  if (session.metadata?.kind === 'campaign') {
+    await handleCampaignCheckoutCompleted(session, purchaseId)
     return
   }
 
@@ -165,6 +176,13 @@ async function handlePaymentFailed(intent: Stripe.PaymentIntent) {
   if (!purchaseId) return
 
   const admin = createAdminClient()
+
+  if (intent.metadata?.kind === 'campaign') {
+    await admin.from('campaign_purchases').update({ status: 'failed' }).eq('id', purchaseId).eq('status', 'pending')
+    console.info('[stripe/webhook] Campaign payment failed for purchase:', purchaseId)
+    return
+  }
+
   await admin
     .from('credit_purchases')
     .update({ status: 'failed' })
@@ -172,4 +190,87 @@ async function handlePaymentFailed(intent: Stripe.PaymentIntent) {
     .eq('status', 'pending')
 
   console.info('[stripe/webhook] Payment failed for purchase:', purchaseId)
+}
+
+/**
+ * Confirmação de pagamento de campanha de destaque patrocinado — separado
+ * do fluxo de créditos (seção 12: pagamento da publicidade nunca vira o
+ * mesmo sistema do pagamento de compras de app). Idempotente: redelivery
+ * de um evento já processado não duplica confirmação nem reenvia e-mail.
+ * Se a capacidade sumiu entre o hold e a confirmação, marca "pago" mas
+ * grava a pendência de conciliação em vez de fingir que entrou no ar.
+ */
+async function handleCampaignCheckoutCompleted(session: Stripe.Checkout.Session, purchaseId: string) {
+  const admin = createAdminClient()
+  const campaignId = session.metadata?.campaign_id
+  if (!campaignId) {
+    console.warn('[stripe/webhook] campaign checkout without campaign_id:', session.id)
+    return
+  }
+
+  const { data: existing } = await admin.from('campaign_purchases').select('status').eq('id', purchaseId).single()
+  if (existing?.status === 'paid') {
+    console.info('[stripe/webhook] Redelivery of an already-confirmed campaign purchase — skipping:', purchaseId)
+    return
+  }
+
+  await admin
+    .from('campaign_purchases')
+    .update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent?.id ?? null),
+    })
+    .eq('id', purchaseId)
+
+  const confirmed = await confirmReservationOrFlagConflict(admin, campaignId)
+
+  await logAppAdminEvent(admin, {
+    campaignId,
+    actorId: null, // sem usuário humano nesta chamada (service role) — mesmo espírito do responsible_user_id omitido em confirm_credit_purchase_webhook
+    action: confirmed.ok ? 'confirm_payment' : 'payment_capacity_conflict',
+    reason: confirmed.ok ? null : confirmed.error,
+    previousStatus: 'pendente',
+    newStatus: confirmed.ok ? 'pago' : 'pago_com_pendencia_de_conciliacao',
+  })
+
+  const { data: campaign } = await admin.from('sponsored_campaigns').select('app_draft_id').eq('id', campaignId).single()
+  if (campaign?.app_draft_id) {
+    const { data: draft } = await admin.from('app_drafts').select('created_by').eq('id', campaign.app_draft_id).single()
+    if (draft?.created_by) {
+      const { data: ownerProfile } = await admin.from('profiles').select('email').eq('id', draft.created_by).single()
+      if (ownerProfile?.email) {
+        const html = confirmed.ok
+          ? '<p>Pagamento confirmado! Sua campanha de destaque patrocinado entra na fila de veiculação assim que o período começar.</p>'
+          : '<p>Seu pagamento foi confirmado, mas a vaga do espaço expirou antes da confirmação. Nosso time vai entrar em contato para reagendar ou reembolsar.</p>'
+        sendEmail(ownerProfile.email, '[LOBBY] Pagamento da campanha confirmado', html).catch(err => console.error('[stripe/webhook] email error', err))
+      }
+    }
+  }
+
+  console.info('[stripe/webhook] Campaign purchase confirmed:', purchaseId, confirmed.ok ? 'ok' : 'capacity conflict')
+}
+
+/** Reembolso confirmado pelo provedor — só agora status vira "refunded"
+ *  (nunca antes, seção 20). Redelivery é idempotente via .eq('refund_status'). */
+async function handleChargeRefunded(charge: Stripe.Charge) {
+  const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
+  if (!paymentIntentId) return
+
+  const admin = createAdminClient()
+  const { data: purchase } = await admin
+    .from('campaign_purchases')
+    .select('id, refund_status')
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .maybeSingle()
+  if (!purchase) return // não é uma cobrança de campanha
+  if (purchase.refund_status === 'refunded') return // redelivery — já processado
+
+  await admin
+    .from('campaign_purchases')
+    .update({ status: 'refunded', refund_status: 'refunded', refunded_at: new Date().toISOString() })
+    .eq('id', purchase.id)
+
+  console.info('[stripe/webhook] Campaign refund confirmed:', purchase.id)
 }

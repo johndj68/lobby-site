@@ -82,12 +82,20 @@ export async function logAppAdminEvent(
     partnerId?: string | null
     planId?: string | null
     promotionId?: string | null
-    actorId: string
+    campaignId?: string | null
+    /** null quando a ação vem de um processo sistêmico sem usuário humano
+     *  (ex.: webhook do Stripe rodando como service_role). */
+    actorId: string | null
     action:
       | 'publish' | 'suspend' | 'reactivate' | 'block_new_apps' | 'unblock_new_apps'
       // /admin/marketplace/ofertas
       | 'create_offer' | 'update_plan_price' | 'pause_offer' | 'resume_offer' | 'archive_offer'
       | 'create_promotion' | 'update_promotion' | 'pause_promotion' | 'cancel_promotion' | 'reactivate_promotion'
+      // /admin/marketplace/destaques
+      | 'create_campaign' | 'submit_creative' | 'review_creative_approve' | 'review_creative_changes' | 'review_creative_reject'
+      | 'promote_creative' | 'reserve_capacity' | 'confirm_payment' | 'payment_capacity_conflict' | 'grant_exemption'
+      | 'refund_campaign' | 'pause_campaign' | 'resume_campaign' | 'cancel_campaign' | 'reschedule_campaign'
+      | 'duplicate_campaign' | 'update_space' | 'update_package'
     reason?: string | null
     previousStatus: string
     newStatus: string
@@ -99,7 +107,8 @@ export async function logAppAdminEvent(
     partner_id: event.partnerId ?? null,
     plan_id: event.planId ?? null,
     promotion_id: event.promotionId ?? null,
-    actor_id: event.actorId,
+    campaign_id: event.campaignId ?? null,
+    actor_id: event.actorId ?? null,
     action: event.action,
     reason: event.reason ?? null,
     previous_status: event.previousStatus,

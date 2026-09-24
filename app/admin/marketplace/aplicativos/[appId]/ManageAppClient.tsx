@@ -165,9 +165,9 @@ export default function ManageAppClient({
                 <div title="O editor do parceiro só é acessível pela conta do próprio parceiro hoje" className="flex items-center justify-between rounded-xl border p-3 text-xs font-semibold opacity-40" style={{ borderColor: C.border, color: C.textSecondary }}>
                   Editar rascunho <ExternalLink size={13} aria-hidden="true" />
                 </div>
-                <div title="Gestão de campanhas patrocinadas ainda não implementada (/admin/marketplace/destaques)" className="flex items-center justify-between rounded-xl border p-3 text-xs font-semibold opacity-40" style={{ borderColor: C.border, color: C.textSecondary }}>
+                <Link href={`/admin/marketplace/destaques?app=${draft.id}`} className="flex items-center justify-between rounded-xl border p-3 text-xs font-semibold" style={{ borderColor: C.border, color: C.primary }}>
                   Gerenciar destaque <ExternalLink size={13} aria-hidden="true" />
-                </div>
+                </Link>
               </div>
             </div>
           )}

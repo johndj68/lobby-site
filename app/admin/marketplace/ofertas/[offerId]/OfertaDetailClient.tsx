@@ -246,9 +246,9 @@ function ResumoTab({ app, offer, partnerName, origin, publication, review, avail
             Ver página pública <ExternalLink size={13} aria-hidden="true" />
           </div>
         )}
-        <div title='Destaque patrocinado: a participação no carrossel patrocinado possui contratação e programação próprias (área ainda não implementada em /admin/marketplace/destaques)' className="flex items-center justify-between rounded-xl border p-3 text-xs font-semibold opacity-40" style={{ borderColor: C.border, color: C.textSecondary }}>
+        <Link href={`/admin/marketplace/destaques?app=${app.id}`} title="Destaque patrocinado tem contratação e programação próprias, separadas de promoções de preço." className="flex items-center justify-between rounded-xl border p-3 text-xs font-semibold" style={{ borderColor: C.border, color: C.primary }}>
           Destaque patrocinado <ExternalLink size={13} aria-hidden="true" />
-        </div>
+        </Link>
       </div>
       <PreviaComercial offer={offer} />
     </div>
@@ -517,10 +517,10 @@ function PromocoesTab({ offerId, offerPrice, currency, billingPeriod, promotions
         </ul>
       )}
 
-      <div title='Destaque patrocinado: a participação no carrossel patrocinado possui contratação e programação próprias (área ainda não implementada em /admin/marketplace/destaques)'
-        className="rounded-xl border p-3 text-xs opacity-60" style={{ borderColor: C.border, color: C.textSecondary }}>
-        Destaque patrocinado tem contratação e programação próprias, separadas de promoções de preço.
-      </div>
+      <Link href="/admin/marketplace/destaques" title="Ir para a gestão de campanhas de destaque patrocinado"
+        className="block rounded-xl border p-3 text-xs" style={{ borderColor: C.border, color: C.textSecondary }}>
+        Destaque patrocinado tem contratação e programação próprias, separadas de promoções de preço. <span style={{ color: C.primary }}>Gerenciar campanhas →</span>
+      </Link>
     </div>
   )
 }
