@@ -411,8 +411,8 @@ export default function TeamClient({ draft }: TeamClientProps) {
           ← Voltar para ativação
         </button>
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push(`/dashboard/meus-app/novo/${draft.id}/revisao`)} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ borderColor: colors.border, color: colors.text }}>
-            Pular por enquanto
+          <button onClick={() => router.push(`/dashboard/meus-app`)} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ borderColor: colors.border, color: colors.text }}>
+            Voltar aos meus apps
           </button>
           <button onClick={() => router.push(`/dashboard/meus-app/novo/${draft.id}/revisao`)} className="px-6 py-2 rounded-lg text-white text-sm font-semibold flex items-center gap-2" style={{ backgroundColor: colors.primary }}>
             Continuar para revisão <ChevronRight size={16} />

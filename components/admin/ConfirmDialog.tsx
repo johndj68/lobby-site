@@ -68,7 +68,10 @@ export default function ConfirmDialog({
         <h2 className="text-lg font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
           {title}
         </h2>
-        <p className="mt-2 break-words text-sm leading-relaxed text-white/50">{description}</p>
+        {/* div, não <p>: description já recebe JSX de bloco (ex.: <div><p/><label/></div>
+            em ManageAppClient/OfertasClient) — <p> só aceita conteúdo de fraseado e
+            aninhar bloco nele quebra o HTML (erro de hidratação). */}
+        <div className="mt-2 break-words text-sm leading-relaxed text-white/50">{description}</div>
 
         {/* Botões de ação: Cancelar à esquerda, Confirmar à direita */}
         <div className="mt-6 flex gap-3">

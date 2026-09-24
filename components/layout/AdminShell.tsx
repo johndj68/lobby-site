@@ -12,7 +12,7 @@ import {
   LogOut, Menu, X, Bell, Settings, Wrench,
   FolderOpen, Plus, ExternalLink, Briefcase,
   CheckCheck, Clock, ArrowRight, Users, MessageCircle,
-  UserPlus, Wallet, Coins, BarChart3, Contact,
+  UserPlus, Wallet, Coins, BarChart3, Contact, Store,
 } from 'lucide-react'
 // Cliente Supabase: autenticação e acesso ao banco de dados em tempo real
 import { createClient } from '@/lib/supabase'
@@ -59,6 +59,7 @@ interface AdminShellProps {
 const navItems = [
   { icon: LayoutDashboard, label: 'Visão geral',        href: '/admin'                      },
   { icon: MessageSquare,   label: 'Solicitações',       href: '/admin/solicitacoes'         },
+  { icon: Store,           label: 'Marketplace',        href: '/admin/marketplace'          },
   { icon: Download,        label: 'Leads',              href: '/admin/leads'                },
   { icon: Briefcase,       label: 'Projetos',           href: '/admin/projetos'             },
   { icon: Users,           label: 'Proj. de clientes',  href: '/admin/projetos-clientes'    },
