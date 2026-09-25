@@ -19,6 +19,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Novos aplicativos estão temporariamente bloqueados para esta conta. Entre em contato com o suporte da LOBBY.' }, { status: 403 })
   }
 
+  // url: enviado pelo fluxo "importar pelo site" (NovoAppClient) — nunca era
+  // gravado aqui, então nenhum rascunho carregava sinal real de origem por
+  // URL (a etapa "Começar" não tinha como distinguir import de manual).
+  // req.json() pode falhar em corpo vazio (fluxo manual não manda nada).
+  const body = await req.json().catch(() => ({}))
+  const url = typeof body?.url === 'string' && body.url.trim() ? body.url.trim() : null
+
   // Create new draft
   const { data, error } = await supabase
     .from('app_drafts')
@@ -26,6 +33,7 @@ export async function POST(req: NextRequest) {
       created_by: user.id,
       stage: 1,
       status: 'draft',
+      website_url: url,
     })
     .select('id')
     .single()

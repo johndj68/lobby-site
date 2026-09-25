@@ -6,6 +6,7 @@ export interface StepCompletion {
   step2: boolean // Produto e mídia — informações básicas + mídia sem bloqueio
   step3: boolean // Oferta e planos — ao menos 1 plano válido
   review: ReviewResult
+  plansCount: number
 }
 
 /** Conclusão real das 4 etapas do editor, a partir do MESMO motor de
@@ -29,5 +30,6 @@ export async function getStepCompletion(supabase: SupabaseClient, draft: Record<
     step2: byId.get('basicInfo')?.status === 'complete' && byId.get('media')?.status === 'complete',
     step3: byId.get('offer')?.status === 'complete',
     review,
+    plansCount: plans?.length ?? 0,
   }
 }
