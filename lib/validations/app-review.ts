@@ -11,6 +11,10 @@ export interface ReviewIssue {
   action?: 'edit' | 'upload' | 'add'
   editRoute?: string
   editTab?: string
+  /** id real do elemento no destino — a correção direta rola até ele e
+   *  move o foco, em vez de só abrir a etapa. Ausente quando não há um
+   *  campo único (ex.: "adicione um plano" abre o diálogo, não um input). */
+  editField?: string
 }
 
 export interface ReviewChecklistItem {
@@ -44,6 +48,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'Nome do aplicativo é obrigatório',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-name',
     })
   }
 
@@ -55,6 +60,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'Descrição breve é obrigatória',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-short',
     })
   }
 
@@ -66,6 +72,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'Descrição completa é obrigatória',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-full',
     })
   }
 
@@ -77,6 +84,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'Categoria é obrigatória',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-category',
     })
   }
 
@@ -88,6 +96,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'URL do aplicativo é obrigatória',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-url',
     })
   }
 
@@ -114,6 +123,7 @@ export function validateMedia(draft: any): ReviewChecklistItem {
       action: 'upload',
       editRoute: 'editar',
       editTab: 'media',
+      editField: 'f-logo',
     })
   }
 
@@ -126,6 +136,7 @@ export function validateMedia(draft: any): ReviewChecklistItem {
       action: 'upload',
       editRoute: 'editar',
       editTab: 'media',
+      editField: 'f-gallery',
     })
   }
 
@@ -153,6 +164,7 @@ export function validateFeatures(draft: any): ReviewChecklistItem {
       action: 'edit',
       editRoute: 'editar',
       editTab: 'features',
+      editField: 'f-features',
     })
   }
 
@@ -178,8 +190,7 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
       severity: 'blocked',
       message: 'Mínimo 1 plano é obrigatório',
       action: 'add',
-      editRoute: 'editar',
-      editTab: 'offer',
+      editRoute: 'planos',
     })
   }
 
@@ -191,6 +202,7 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
         field: `plan_${idx}_name`,
         severity: 'blocked',
         message: `Plano ${idx + 1}: nome obrigatório`,
+        editRoute: 'planos',
       })
     }
     if (plan.price === null || plan.price === undefined) {
@@ -199,6 +211,7 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
         field: `plan_${idx}_price`,
         severity: 'blocked',
         message: `Plano ${idx + 1}: preço obrigatório`,
+        editRoute: 'planos',
       })
     }
   })
@@ -210,8 +223,7 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
     status: issues.length === 0 ? 'complete' : 'pending',
     issues,
     summary: issues.length === 0 ? `${plans?.length} plano(s) configurado(s)` : `${issues.length} pendência(s)`,
-    editRoute: 'editar',
-    editTab: 'offer',
+    editRoute: 'planos',
   }
 }
 
@@ -274,7 +286,7 @@ export function calculateReview(draft: any, plans: any[], config: any, teamMembe
     validateOfferAndPlans(plans),
     validateActivation(config, plans),
     validateOptionalSection(draft.history, 'História do produto', '📚', 'history'),
-    validateOptionalSection(draft.benefits, 'Sinais de confiança', '⭐', 'signals'),
+    validateOptionalSection(draft.trust_signals, 'Sinais de confiança', '⭐', 'signals'),
     validateOptionalSection(draft.faq, 'Perguntas frequentes', '❓', 'faq'),
   ]
 
@@ -286,7 +298,10 @@ export function calculateReview(draft: any, plans: any[], config: any, teamMembe
     id: 'team',
     name: 'Equipe',
     icon: '👥',
-    status: 'complete', // Equipe é sempre opcional
+    // Equipe nunca bloqueia o envio (sempre opcional), mas o status ainda
+    // deve refletir se tem dado real — sem isso "Sem colaboradores" aparecia
+    // com o mesmo selo verde de "preenchido", contradizendo o resumo.
+    status: hasTeam ? 'complete' : 'optional',
     issues: teamIssues,
     summary: hasTeam ? `${(teamMembers?.length || 0) + (teamInvitations?.length || 0)} colaborador(es)` : 'Sem colaboradores (opcional)',
     editRoute: 'equipe',

@@ -13,12 +13,11 @@ export async function GET(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    // Load draft
+    // Load draft — RLS (dono ou app_team_members) decide o acesso.
     const { data: draft } = await supabase
       .from('app_drafts')
       .select('*')
       .eq('id', appId)
-      .eq('created_by', user.id)
       .single()
 
     if (!draft) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -29,12 +28,15 @@ export async function GET(
       .select('*')
       .eq('app_draft_id', appId)
 
-    // Load activation config
+    // Load activation config — maybeSingle: a maioria dos rascunhos ainda
+    // não passou pela etapa de ativação, então 0 linhas é o caso comum, não
+    // um erro. .single() aqui derrubava a revisão inteira (500) pra
+    // qualquer app que ainda não tivesse configurado ativação.
     const { data: config } = await supabase
       .from('app_activation_config')
       .select('*')
       .eq('app_draft_id', appId)
-      .single()
+      .maybeSingle()
 
     // Load team
     const { data: members } = await supabase

@@ -12,8 +12,15 @@ interface DashboardLayoutWrapperProps {
 export default function DashboardLayoutWrapper({ children, user, profile }: DashboardLayoutWrapperProps) {
   const pathname = usePathname()
 
-  // Don't render DashboardShell for editor routes
-  if (pathname.startsWith('/dashboard/meus-app/novo/') && pathname.includes('/editar')) {
+  // Fluxo de cadastro/edição de app (começar/editar/planos/ativação/equipe/
+  // revisão) usa seu próprio cabeçalho em largura total (EditorChrome) —
+  // sem a sidebar do dashboard. Antes só /editar era excluído aqui; as
+  // outras etapas (novas ou já existentes) ficavam com a sidebar por cima
+  // do próprio layout de tela cheia dessas páginas (dois cabeçalhos
+  // empilhados). novo/layout.tsx já documenta essa intenção pro fluxo
+  // inteiro — isto só faz o wrapper cumprir o que ele já assume.
+  const isEditorFlow = pathname === '/dashboard/meus-app/novo' || pathname.startsWith('/dashboard/meus-app/novo/')
+  if (isEditorFlow) {
     return <>{children}</>
   }
 

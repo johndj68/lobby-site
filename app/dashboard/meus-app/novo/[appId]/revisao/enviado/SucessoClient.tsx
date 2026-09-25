@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { CheckCircle, ChevronRight } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
+import { SUBMISSION_STATUS_LABELS } from '@/lib/marketplace'
 
 interface SucessoClientProps {
   draft: any
@@ -34,7 +35,7 @@ export default function SucessoClient({ draft, submission }: SucessoClientProps)
           <h1 className="text-2xl font-bold mb-2" style={{ color: colors.text }}>Aplicativo enviado para análise</h1>
 
           <p className="text-sm mb-6" style={{ color: colors.textSecondary }}>
-            Recebemos seu cadastro. Você pode acompanhar o andamento e eventuais solicitações de ajuste pelo painel.
+            Você pode acompanhar o andamento e as mensagens da equipe pelo painel.
           </p>
 
           <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
@@ -52,24 +53,24 @@ export default function SucessoClient({ draft, submission }: SucessoClientProps)
             </div>
             <div className="border-t pt-2" style={{ borderColor: colors.border }}>
               <p className="text-xs" style={{ color: colors.textSecondary }}>Estado</p>
-              <p className="text-sm font-semibold" style={{ color: colors.primary }}>Em análise</p>
+              <p className="text-sm font-semibold" style={{ color: colors.primary }}>{SUBMISSION_STATUS_LABELS[submission.status] ?? submission.status}</p>
             </div>
           </div>
 
           <div className="space-y-2">
             <button
-              onClick={() => router.push(`/dashboard/meus-app/novo/${draft.id}/revisao`)}
-              className="w-full py-2 px-4 rounded-lg text-sm font-semibold border"
-              style={{ borderColor: colors.border, color: colors.text }}
-            >
-              Ver versão enviada
-            </button>
-            <button
-              onClick={() => router.push('/dashboard/meus-app')}
+              onClick={() => router.push(`/dashboard/meus-app/${draft.id}`)}
               className="w-full py-2 px-4 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2"
               style={{ backgroundColor: colors.primary }}
             >
-              Voltar aos meus aplicativos <ChevronRight size={16} />
+              Acompanhar análise <ChevronRight size={16} />
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/meus-app')}
+              className="w-full py-2 px-4 rounded-lg text-sm font-semibold border"
+              style={{ borderColor: colors.border, color: colors.text }}
+            >
+              Voltar aos meus aplicativos
             </button>
           </div>
 
