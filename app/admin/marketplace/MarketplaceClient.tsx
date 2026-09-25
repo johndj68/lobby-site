@@ -53,8 +53,8 @@ const NAV_TABS = [
   { label: 'Aplicativos', href: '/admin/marketplace/aplicativos', enabled: true },
   { label: 'Solicitações', href: '/admin/marketplace/solicitacoes', enabled: true },
   { label: 'Ofertas', href: '/admin/marketplace/ofertas', enabled: true },
-  { label: 'Destaques', href: '/admin/marketplace/destaques', enabled: false },
-  { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: false },
+  { label: 'Destaques', href: '/admin/marketplace/destaques', enabled: true },
+  { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: true },
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
 ]
 
@@ -541,16 +541,16 @@ export default function MarketplaceClient({
                       <p className="text-xs" style={{ color: C.textSecondary }}>
                         {formatDateTimeBR(c.starts_at)} a {formatDateTimeBR(c.ends_at)} · {c.is_paid ? 'Paga' : 'Sem cobrança configurada'}
                       </p>
-                      <p className="mt-1 text-[11px]" style={{ color: C.textSecondary }}>Métricas ainda não disponíveis (sem tracking de impressões/cliques).</p>
+                      <Link href={`/admin/marketplace/destaques/${c.id}`} className="mt-1 inline-block text-[11px] font-semibold" style={{ color: C.primary }}>Ver desempenho →</Link>
                     </li>
                   )
                 })}
               </ul>
             )}
-            <button type="button" disabled title="Página de gestão de campanhas (/admin/marketplace/destaques) ainda não implementada."
-              className="mt-4 inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-white opacity-50 cursor-not-allowed" style={{ background: C.primary }}>
+            <Link href="/admin/marketplace/destaques"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-white" style={{ background: C.primary }}>
               Gerenciar campanhas <ExternalLink size={12} aria-hidden="true" />
-            </button>
+            </Link>
           </section>
 
           <section className="rounded-2xl border p-5" style={{ background: C.card, borderColor: C.border }}>

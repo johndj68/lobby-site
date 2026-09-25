@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { checkPublishEligibility, isAllowedImageUrl, logAppAdminEvent } from '@/lib/services/app-publish'
-
-/** "MailCraft #2" -> "mailcraft-2". Sem acento, sem espaço, sem duplo hífen. */
-function slugify(name: string): string {
-  const base = name
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-+|-+$)/g, '')
-  return base || 'app'
-}
+import { checkPublishEligibility, isAllowedImageUrl, logAppAdminEvent, slugify } from '@/lib/services/app-publish'
 
 /** Gera um slug único em applications.slug, tentando "-2", "-3"... antes de
  *  cair num sufixo aleatório. */
@@ -46,7 +36,7 @@ export async function POST(
 
   const { data: draft } = await supabase
     .from('app_drafts')
-    .select('id, name, status, created_by, application_id, short_description, full_description, logo_url, category, media_gallery')
+    .select('id, name, status, created_by, application_id, short_description, full_description, logo_url, category, category_id, media_gallery')
     .eq('id', draftId)
     .single()
   if (!draft) return NextResponse.json({ error: 'Aplicativo não encontrado.' }, { status: 404 })
@@ -97,6 +87,7 @@ export async function POST(
     description: draft.full_description,
     short_description: draft.short_description,
     category: draft.category || 'Outros',
+    category_id: draft.category_id ?? null,
     developer_name: developerName,
     logo_url: safeLogoUrl,
     preview_image_url: safePreviewUrl,

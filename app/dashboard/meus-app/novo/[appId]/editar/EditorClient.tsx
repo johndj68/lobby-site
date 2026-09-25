@@ -6,6 +6,7 @@ import { ChevronRight, Check, AlertCircle, Monitor, Smartphone, X, Zap } from 'l
 import { colors } from '@/lib/design-tokens'
 import BackButton from '@/components/ui/BackButton'
 import MediaTab from './tabs/MediaTab'
+import CategoryPicker from '@/components/vendor/CategoryPicker'
 
 interface User {
   id: string
@@ -21,6 +22,7 @@ interface Profile {
 interface Draft {
   id: string
   data?: any
+  category_id?: string | null
   stage: number
   status: string
   created_by: string
@@ -48,7 +50,7 @@ const TABS: { id: Tab; label: string; icon?: string }[] = [
 export default function EditorClient({ draft, user, profile }: EditorClientProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('basico')
-  const [formData, setFormData] = useState(draft.data || {})
+  const [formData, setFormData] = useState({ ...(draft.data || {}), category_id: draft.category_id ?? draft.data?.category_id ?? null })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop')
@@ -77,6 +79,22 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
   const handleFieldChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }))
     setSaved(false)
+  }
+
+  /** category_id é coluna própria de app_drafts (não vive no blob `data`) —
+   *  grava direto no PATCH existente pra ficar disponível pro checklist de
+   *  revisão (calculateReview lê draft.category_id) e pro publish. */
+  const handleCategoryChange = async (categoryId: string | null, label?: string | null) => {
+    setFormData((prev: any) => ({ ...prev, category_id: categoryId, category: label ?? null }))
+    try {
+      await fetch(`/api/apps/drafts/${draft.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category_id: categoryId }),
+      })
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   const handleSaveDraft = async () => {
@@ -244,7 +262,7 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
         {/* Left: Form */}
         <div className="flex-1 min-w-0">
           <div className="bg-white rounded-lg p-8" style={{ borderColor: colors.border, border: '1px solid' }}>
-            {activeTab === 'basico' && <BasicInfoTab formData={formData} onChange={handleFieldChange} />}
+            {activeTab === 'basico' && <BasicInfoTab formData={formData} onChange={handleFieldChange} onCategoryChange={handleCategoryChange} />}
             {activeTab === 'midia' && <MediaTab formData={formData} onChange={handleFieldChange} appId={draft.id} />}
             {activeTab === 'funcionalidades' && <PlaceholderTab />}
             {activeTab === 'historia' && <PlaceholderTab />}
@@ -382,7 +400,7 @@ export default function EditorClient({ draft, user, profile }: EditorClientProps
   )
 }
 
-function BasicInfoTab({ formData, onChange }: any) {
+function BasicInfoTab({ formData, onChange, onCategoryChange }: any) {
   return (
     <div className="space-y-6">
       {/* Row 1 */}
@@ -403,61 +421,15 @@ function BasicInfoTab({ formData, onChange }: any) {
         />
       </div>
 
-      {/* Row 2: Categoria + Subcategoria */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
-            Categoria *
-          </label>
-          <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
-            Escolha ou escreva a categoria principal do seu aplicativo.
-          </p>
-          <input
-            list="categoria-list"
-            type="text"
-            value={formData.category || ''}
-            onChange={(e) => onChange('category', e.target.value)}
-            placeholder="Ex: Automação, CRM, Produtividade"
-            className="w-full px-4 py-2 rounded-lg border text-sm"
-            style={{ borderColor: colors.border, color: colors.text }}
-          />
-          <datalist id="categoria-list">
-            <option value="Automação" />
-            <option value="CRM" />
-            <option value="Produtividade" />
-            <option value="Análise de Dados" />
-            <option value="Marketing" />
-            <option value="Vendas" />
-            <option value="RH" />
-            <option value="Contabilidade" />
-            <option value="Financeiro" />
-            <option value="E-commerce" />
-            <option value="Educação" />
-            <option value="Saúde" />
-            <option value="Logística" />
-            <option value="Comunicação" />
-            <option value="Design" />
-            <option value="Desenvolvimento" />
-            <option value="SEO" />
-            <option value="Segurança" />
-          </datalist>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
-            Subcategoria
-          </label>
-          <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
-            Uma subcategoria mais específica.
-          </p>
-          <input
-            type="text"
-            value={formData.subcategory || ''}
-            onChange={(e) => onChange('subcategory', e.target.value)}
-            placeholder="Fluxos de trabalho"
-            className="w-full px-4 py-2 rounded-lg border text-sm"
-            style={{ borderColor: colors.border, color: colors.text }}
-          />
-        </div>
+      {/* Row 2: Categoria (com subcategoria em cascata) */}
+      <div>
+        <label className="block text-sm font-semibold mb-1" style={{ color: colors.text }}>
+          Categoria *
+        </label>
+        <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+          Escolha a categoria (e, se fizer sentido, uma subcategoria mais específica) do seu aplicativo.
+        </p>
+        <CategoryPicker value={formData.category_id ?? null} onChange={onCategoryChange} />
       </div>
 
       {/* Row 3: Descrição curta */}
