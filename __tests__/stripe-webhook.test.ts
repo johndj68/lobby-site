@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 
 // ── Mock all external dependencies before the module under test loads ─────────
 
@@ -23,6 +23,8 @@ vi.mock('@/lib/monitoring', () => ({
   captureException: vi.fn(),
 }))
 
+import { createAdminClient } from '@/lib/supabase-admin'
+
 // ── Lazy-import POST after env vars and mocks are in place ────────────────────
 
 let POST: (req: Request) => Promise<Response>
@@ -37,6 +39,13 @@ beforeAll(async () => {
 
 afterEach(() => {
   vi.clearAllMocks()
+})
+
+// Baseline so completeWebhookJob/retryWebhookJob (called unconditionally by
+// the route on every request) always get a working admin client — tests that
+// care about specific table responses still override via mockReturnValue.
+beforeEach(() => {
+  vi.mocked(createAdminClient).mockReturnValue(makeAdmin() as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -211,7 +220,7 @@ describe('POST /api/stripe/webhook', () => {
       expect(vi.mocked(sendEmail)).not.toHaveBeenCalled()
     })
 
-    it('retorna 200 com handlerError quando RPC falha', async () => {
+    it('retorna 200 e enfileira para nova tentativa quando RPC falha', async () => {
       const { stripe }          = await import('@/lib/stripe')
       const { createAdminClient } = await import('@/lib/supabase-admin')
       const admin = makeAdmin()
@@ -221,7 +230,7 @@ describe('POST /api/stripe/webhook', () => {
       const res  = await POST(makeReq())
       const body = await res.json()
       expect(res.status).toBe(200)
-      expect(body.handlerError).toBe(true)
+      expect(body.queued_for_retry).toBe(true)
     })
 
     it('não reenvia e-mail de recibo em redelivery de evento já confirmado (status já "paid" antes da RPC)', async () => {

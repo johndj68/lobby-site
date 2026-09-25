@@ -63,7 +63,7 @@ export async function retryWebhookJob(eventId: string) {
     .eq('event_id', eventId)
     .single() as any
 
-  if (fetchError) {
+  if (fetchError || !job) {
     console.error('[webhook-queue] Failed to fetch job for retry:', fetchError)
     return
   }
