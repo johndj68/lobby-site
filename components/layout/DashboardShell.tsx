@@ -10,7 +10,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Download, FolderKanban, MessageSquarePlus,
   User, LogOut, Bell, Menu, X, Plus,
-  ChevronDown, HelpCircle, Sparkles, ArrowRight, MessageCircle, Coins, History,
+  ChevronDown, HelpCircle, Sparkles, ArrowRight, MessageCircle, Coins, History, LayoutGrid,
 } from 'lucide-react'
 // Cliente Supabase: autenticação e acesso ao banco de dados em tempo real
 import { createClient } from '@/lib/supabase'
@@ -32,6 +32,7 @@ const navItems = [
   { icon: LayoutDashboard,   label: 'Dashboard',         href: '/dashboard'            },
   { icon: Download,          label: 'Meus downloads',    href: '/dashboard/downloads'  },
   { icon: FolderKanban,      label: 'Projetos',          href: '/dashboard/projetos'   },
+  { icon: LayoutGrid,        label: 'Meus apps',         href: '/dashboard/meus-app', matchPrefix: true },
   { icon: History,           label: 'Histórico',         href: '/dashboard/historico'  },
   { icon: Coins,             label: 'Meus créditos',     href: '/dashboard/creditos'   },
   { icon: MessageCircle,     label: 'Mensagens',         href: '/dashboard/mensagens'  },
@@ -167,9 +168,12 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
           <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-[#5D6475]">Menu</p>
           <div className="space-y-0.5">
             {/* Renderiza cada item de navegação */}
-            {navItems.map(({ icon: Icon, label, href }) => {
-              // Compara a rota atual com o href para destacar o item ativo
-              const isActive = pathname === href
+            {navItems.map(({ icon: Icon, label, href, matchPrefix }) => {
+              // Compara a rota atual com o href para destacar o item ativo.
+              // matchPrefix: item cobre uma área com sub-rotas (ex.: Meus
+              // apps também ativo em /dashboard/meus-app/[id]) em vez de só
+              // a rota exata.
+              const isActive = matchPrefix ? pathname.startsWith(href) : pathname === href
               return (
                 <Link
                   key={label}
