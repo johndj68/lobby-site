@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { sendEmail } from '@/lib/notifications'
+import { SUBMISSION_STATUS_LABELS } from '@/lib/marketplace'
+
+const DECIDABLE_STATUSES = ['pending', 'in_review']
 
 export async function PATCH(
   req: NextRequest,
@@ -25,13 +28,12 @@ export async function PATCH(
 
   const { action, public_feedback, internal_notes } = await req.json()
 
-  const validActions = ['approve', 'reject', 'request_changes']
+  const validActions = ['approve', 'reject', 'request_changes', 'save_analysis']
   if (!validActions.includes(action)) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   }
 
   try {
-    // Get submission & app
     const { data: submission } = await supabase
       .from('app_submissions')
       .select('*, app_drafts(created_by, name)')
@@ -40,15 +42,69 @@ export async function PATCH(
 
     if (!submission) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    // Determine new status
+    /* "Salvar análise" — só grava o rascunho de trabalho (mensagem/nota
+     * ainda não enviadas). Nunca muda status, nunca dispara e-mail. Só faz
+     * sentido enquanto a submissão ainda pode ser decidida — depois disso
+     * public_feedback/internal_notes já são a decisão registrada, e editar
+     * o rascunho não teria mais efeito nenhum (reabrir não é suportado). */
+    if (action === 'save_analysis') {
+      if (!DECIDABLE_STATUSES.includes(submission.status)) {
+        return NextResponse.json({
+          error: 'Esta solicitação já foi decidida — não há mais o que salvar.',
+          status: submission.status,
+        }, { status: 409 })
+      }
+      const { data: saved, error: saveErr } = await supabase
+        .from('app_submissions')
+        .update({ draft_message: public_feedback ?? null, draft_internal_notes: internal_notes ?? null })
+        .eq('id', id)
+        .select()
+        .single()
+      if (saveErr) {
+        console.error('[review save_analysis]', saveErr)
+        return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
+      }
+      return NextResponse.json(saved)
+    }
+
+    // Decisão (approve/reject/request_changes) — só é permitida enquanto a
+    // submissão está pending/in_review. Uma vez decidida, o registro fica
+    // congelado: sem essa checagem, reabrir a aba e clicar de novo
+    // sobrescreveria (ou duplicaria e-mail de) uma decisão já tomada por
+    // outro admin.
+    if (!DECIDABLE_STATUSES.includes(submission.status)) {
+      return NextResponse.json({
+        error: `Esta solicitação já foi decidida (${SUBMISSION_STATUS_LABELS[submission.status] ?? submission.status}). Recarregue a página.`,
+        status: submission.status,
+      }, { status: 409 })
+    }
+
     let newStatus: string
     if (action === 'approve') newStatus = 'approved'
     else if (action === 'reject') newStatus = 'rejected'
-    else if (action === 'request_changes') newStatus = 'changes_requested'
-    else return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    else newStatus = 'changes_requested'
 
-    // Update submission
-    const { data: updated, error: updateErr } = await supabase
+    // Aprovação exige checklist sem bloqueios pendentes — revalidado aqui
+    // porque o botão desabilitado no cliente é só UX, não garantia; alguém
+    // pode registrar uma pendência bloqueante entre o carregamento da
+    // página e o clique em Aprovar.
+    if (action === 'approve') {
+      const { count: blockerCount } = await supabase
+        .from('review_issues')
+        .select('id', { count: 'exact', head: true })
+        .eq('submission_id', id)
+        .eq('severity', 'blocker')
+        .is('resolved_at', null)
+      if ((blockerCount ?? 0) > 0) {
+        return NextResponse.json({ error: 'Há pendências bloqueantes no checklist — resolva-as antes de aprovar.' }, { status: 400 })
+      }
+    }
+
+    // Update condicionado ao status ainda ser decidível: fecha a corrida
+    // entre dois admins decidindo a mesma submissão quase ao mesmo tempo —
+    // o segundo PATCH não encontra linha pra atualizar (0 rows) em vez de
+    // sobrescrever silenciosamente a decisão do primeiro.
+    const { data: updatedRows, error: updateErr } = await supabase
       .from('app_submissions')
       .update({
         status: newStatus,
@@ -56,15 +112,26 @@ export async function PATCH(
         reviewed_at: new Date().toISOString(),
         public_feedback,
         internal_notes,
+        draft_message: null,
+        draft_internal_notes: null,
       })
       .eq('id', id)
+      .in('status', DECIDABLE_STATUSES)
       .select()
-      .single()
 
     if (updateErr) {
       console.error('[review]', updateErr)
       return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
     }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      const { data: fresh } = await supabase.from('app_submissions').select('status').eq('id', id).single()
+      return NextResponse.json({
+        error: `Outro administrador já decidiu esta solicitação (${SUBMISSION_STATUS_LABELS[fresh?.status ?? ''] ?? fresh?.status}). Recarregue a página.`,
+        status: fresh?.status,
+      }, { status: 409 })
+    }
+    const updated = updatedRows[0]
 
     // If approved, update app status
     if (action === 'approve') {

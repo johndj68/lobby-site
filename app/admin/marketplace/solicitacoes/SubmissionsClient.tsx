@@ -1,17 +1,18 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Search, RotateCcw, Clock, Zap, AlertCircle, CheckCircle, XCircle,
-  ExternalLink, Grid3x3, AlertTriangle,
+  ExternalLink, AlertTriangle,
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import AdminShell from '@/components/layout/AdminShell'
 import MarketplaceTabs from '@/components/admin/MarketplaceTabs'
+import AppLogo from '@/components/admin/AppLogo'
 import Pagination from '@/components/ui/Pagination'
-import { MARKETPLACE_COLORS as C, formatDateTimeBR } from '@/lib/marketplace'
+import { MARKETPLACE_COLORS as C, formatDateTimeBR, SUBMISSION_STATUS_LABELS, SUBMISSION_STATUS_COLORS } from '@/lib/marketplace'
 
 export interface SubmissionRow {
   id: string
@@ -39,12 +40,8 @@ interface Props {
   filters: Filters
 }
 
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  pending: { label: 'Aguardando análise', icon: Clock, color: C.warning },
-  in_review: { label: 'Em análise', icon: Zap, color: C.primary },
-  changes_requested: { label: 'Aguardando ajustes', icon: AlertCircle, color: C.warning },
-  approved: { label: 'Aprovado', icon: CheckCircle, color: C.success },
-  rejected: { label: 'Rejeitado', icon: XCircle, color: C.error },
+const STATUS_ICON: Record<string, React.ElementType> = {
+  pending: Clock, in_review: Zap, changes_requested: AlertCircle, approved: CheckCircle, rejected: XCircle,
 }
 
 export default function SubmissionsClient({
@@ -271,42 +268,14 @@ function IndicatorCard({ icon: Icon, label, value, color, onClick, active }: {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status]
-  if (!cfg) return <span className="text-xs" style={{ color: C.textSecondary }}>—</span>
-  const Icon = cfg.icon
+  const label = SUBMISSION_STATUS_LABELS[status]
+  if (!label) return <span className="text-xs" style={{ color: C.textSecondary }}>—</span>
+  const Icon = STATUS_ICON[status]
+  const color = SUBMISSION_STATUS_COLORS[status]
   return (
-    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${cfg.color}22`, color: cfg.color }}>
-      <Icon size={11} aria-hidden="true" /> {cfg.label}
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${color}22`, color }}>
+      <Icon size={11} aria-hidden="true" /> {label}
     </span>
-  )
-}
-
-/** Logo do app com fallback visual: mesmo ícone genérico usado em Aplicativos
- *  quando não há logo, e também quando a URL existe mas falha ao carregar.
- *  Além do onError (falhas de rede normais), confere `complete`+`naturalWidth`
- *  no mount: uma imagem bloqueada de forma síncrona (ex.: CSP, como o logo de
- *  teste "https://via.placeholder.com/200" fora do img-src permitido) já
- *  chega com erro resolvido antes do React terminar de montar o listener de
- *  onError, então o evento nunca dispara — sem essa checagem o <img> quebrado
- *  fica na tela. Nunca inventa uma imagem no lugar. */
-function AppLogo({ url }: { url: string | null }) {
-  const [errored, setErrored] = useState(false)
-  const imgRef = useRef<HTMLImageElement>(null)
-
-  useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current.naturalWidth === 0) setErrored(true)
-  }, [url])
-
-  if (!url || errored) {
-    return (
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: C.header }}>
-        <Grid3x3 size={14} style={{ color: C.textSecondary }} aria-hidden="true" />
-      </div>
-    )
-  }
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img ref={imgRef} src={url} alt="" onError={() => setErrored(true)} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
   )
 }
 

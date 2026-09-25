@@ -148,6 +148,37 @@ export function deriveReviewStatus(
   }
 }
 
+/** Status de uma app_submissions individual — usado tanto na listagem
+ *  (/admin/marketplace/solicitacoes) quanto no detalhe de análise. Não é o
+ *  mesmo domínio de ReviewStatus acima: aquele combina o app_draft inteiro
+ *  (rascunho/publicado/nova versão); este é o status cru de UMA submissão.
+ *  'in_review' nunca ocorre hoje — não está no CHECK constraint de
+ *  app_submissions.status — mas existe na UI para quando for adotado. */
+export const SUBMISSION_STATUS_LABELS: Record<string, string> = {
+  pending: 'Aguardando análise',
+  in_review: 'Em análise',
+  changes_requested: 'Aguardando ajustes',
+  approved: 'Aprovado',
+  rejected: 'Rejeitado',
+}
+
+export const SUBMISSION_STATUS_COLORS: Record<string, string> = {
+  pending: MARKETPLACE_COLORS.warning,
+  in_review: MARKETPLACE_COLORS.primary,
+  changes_requested: MARKETPLACE_COLORS.warning,
+  approved: MARKETPLACE_COLORS.success,
+  rejected: MARKETPLACE_COLORS.error,
+}
+
+/** Uma submissão só pode ser decidida (aprovar/rejeitar/pedir ajustes)
+ *  enquanto está pending ou in_review. changes_requested/approved/rejected
+ *  já carregam uma decisão registrada — reabrir não é algo o backend
+ *  suporta hoje (sem coluna/estado para isso), então o detalhe de análise
+ *  trata qualquer status fora desses dois como somente-consulta. */
+export function isSubmissionDecidable(status: string): boolean {
+  return status === 'pending' || status === 'in_review'
+}
+
 export const ORIGIN_LABEL = { lobby: 'LOBBY · Produto próprio', partner: 'Parceiro' } as const
 
 /** Resume as ofertas (app_plans) de um app: nenhuma, uma (com rótulo do tipo
