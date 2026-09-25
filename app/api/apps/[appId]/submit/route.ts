@@ -111,6 +111,7 @@ export async function POST(
           short_description: draft.short_description,
           full_description: draft.full_description,
           category: draft.category,
+          category_id: draft.category_id,
           logo_url: draft.logo_url,
           media_gallery: draft.media_gallery,
           features: draft.features,

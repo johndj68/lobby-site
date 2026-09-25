@@ -11,6 +11,7 @@
  *  6. Footer                — (do layout.tsx)
  */
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import MarketplaceHero from '@/components/sections/MarketplaceHero'
 import MarketplaceCategoriesSection from '@/components/sections/MarketplaceCategoriesSection'
@@ -18,6 +19,8 @@ import SponsoredCarouselSection from '@/components/sections/SponsoredCarouselSec
 import PromotionsSection from '@/components/sections/PromotionsSection'
 import ExploreAllAppsSection from '@/components/sections/ExploreAllAppsSection'
 import { computeCampaignEligibility } from '@/lib/services/campaigns'
+
+export interface HomeCategory { id: string; parent_id: string | null; name: string; slug: string; icon: string | null; show_in_nav: boolean }
 
 export const metadata: Metadata = {
   title: 'LOBBY — Marketplace de Apps e Ferramentas',
@@ -32,9 +35,18 @@ async function loadMarketplaceData() {
     // Fetch all published applications
     const { data: apps = [] } = await supabase
       .from('applications')
-      .select('id, name, slug, description, short_description, category, developer_name, logo_url, preview_image_url, price, billing_period, is_lobby_made')
+      .select('id, name, slug, description, short_description, category, category_id, developer_name, logo_url, preview_image_url, price, billing_period, is_lobby_made')
       .eq('is_published', true)
       .order('created_at', { ascending: false })
+
+    // Categorias reais ativas (raiz + subcategorias) — a home só integra no
+    // que já existe (seções de categoria + filtro do grid), sem página
+    // pública dedicada por categoria (decisão confirmada).
+    const { data: categories = [] } = await supabase
+      .from('app_categories')
+      .select('id, parent_id, name, slug, icon, show_in_nav')
+      .eq('status', 'active')
+      .order('display_order', { ascending: true })
 
     // Campanhas de destaque patrocinado — candidatas via SQL (aprovada,
     // ativa, no período, com anúncio aprovado), elegibilidade final
@@ -146,23 +158,42 @@ async function loadMarketplaceData() {
       apps: apps || [],
       campaigns: campaigns || [],
       promotions: promotions || [],
+      categories: (categories || []) as HomeCategory[],
     }
   } catch (error) {
     console.error('Error loading marketplace data:', error)
-    return { apps: [], campaigns: [], promotions: [] }
+    return { apps: [], campaigns: [], promotions: [], categories: [] as HomeCategory[] }
   }
 }
 
-export default async function HomePage() {
-  const { apps, campaigns, promotions } = await loadMarketplaceData()
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ categoria?: string }> }) {
+  const sp = await searchParams
+  const { apps, campaigns, promotions, categories } = await loadMarketplaceData()
+
+  // Slug pode ter mudado (seção 10) — se não bate com nenhuma categoria
+  // ativa, tenta o histórico de redirects antes de cair no "Todos".
+  let initialCategorySlug: string | null = sp.categoria ?? null
+  if (initialCategorySlug && !categories.some(c => c.slug === initialCategorySlug)) {
+    const supabase = await createServerSupabaseClient()
+    const { data: redirectRow } = await supabase
+      .from('category_slug_redirects')
+      .select('category_id')
+      .eq('old_slug', initialCategorySlug)
+      .maybeSingle()
+    const target = redirectRow ? categories.find(c => c.id === redirectRow.category_id) : null
+    if (target) redirect(`/?categoria=${target.slug}#explore-apps`)
+    initialCategorySlug = null
+  }
+
+  const navCategories = categories.filter(c => !c.parent_id && c.show_in_nav)
 
   return (
     <>
       <MarketplaceHero />
-      <MarketplaceCategoriesSection />
+      <MarketplaceCategoriesSection categories={navCategories} />
       <SponsoredCarouselSection campaigns={campaigns} />
       <PromotionsSection promotions={promotions} />
-      <ExploreAllAppsSection initialApps={apps} />
+      <ExploreAllAppsSection initialApps={apps} categories={categories} initialCategorySlug={initialCategorySlug} />
     </>
   )
 }

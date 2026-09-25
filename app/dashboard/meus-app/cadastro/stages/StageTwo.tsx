@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
+import CategoryPicker from '@/components/vendor/CategoryPicker'
 
 interface StageTwoProps {
   draft: any
@@ -14,7 +15,7 @@ interface StageTwoProps {
 export default function StageTwo({ draft, onUpdate, onSave, draftId }: StageTwoProps) {
   const [formData, setFormData] = useState({
     full_description: draft.full_description || '',
-    category: draft.category || '',
+    category_id: draft.category_id || null,
     target_audience: draft.target_audience || '',
     support_email: draft.support_email || '',
     documentation_url: draft.documentation_url || '',
@@ -31,6 +32,12 @@ export default function StageTwo({ draft, onUpdate, onSave, draftId }: StageTwoP
 
   const handleBlur = async () => {
     await onSave(formData)
+  }
+
+  const handleCategoryChange = async (categoryId: string | null) => {
+    setFormData((prev) => ({ ...prev, category_id: categoryId }))
+    onUpdate({ ...draft, category_id: categoryId })
+    await onSave({ category_id: categoryId })
   }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,22 +102,7 @@ export default function StageTwo({ draft, onUpdate, onSave, draftId }: StageTwoP
         <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>
           Categoria *
         </label>
-        <select
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          className="w-full px-4 py-3 rounded-lg border"
-          style={{ borderColor: colors.border, color: colors.text }}
-        >
-          <option value="">Selecione uma categoria</option>
-          <option value="ia">Inteligência Artificial</option>
-          <option value="automacao">Automação</option>
-          <option value="marketing">Marketing</option>
-          <option value="financeiro">Gestão e Finanças</option>
-          <option value="dados">Dados e BI</option>
-          <option value="seguranca">Segurança</option>
-        </select>
+        <CategoryPicker value={formData.category_id} onChange={handleCategoryChange} />
       </div>
 
       {/* Target Audience */}

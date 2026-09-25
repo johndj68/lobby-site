@@ -69,7 +69,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
     })
   }
 
-  if (!draft.category?.trim()) {
+  if (!draft.category_id) {
     issues.push({
       section: 'basicInfo',
       field: 'category',

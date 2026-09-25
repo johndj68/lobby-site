@@ -13,7 +13,7 @@ interface AppCard {
   name: string
   logo_url?: string
   preview_image_url?: string
-  category: string
+  category_id?: string | null
   developer_name: string
   short_description?: string
   price?: number
@@ -21,14 +21,7 @@ interface AppCard {
   is_lobby_made?: boolean
 }
 
-const CATEGORIES = [
-  'Todos',
-  'Inteligência artificial',
-  'Automação',
-  'Marketing',
-  'Produtividade',
-  'Dados',
-]
+interface Category { id: string; parent_id: string | null; name: string; slug: string; icon: string | null; show_in_nav: boolean }
 
 const SORT_OPTIONS = [
   { label: 'Mais recentes', value: 'newest' },
@@ -38,22 +31,33 @@ const SORT_OPTIONS = [
 
 export default function ExploreAllAppsSection({
   initialApps = [],
+  categories = [],
+  initialCategorySlug = null,
 }: {
   initialApps?: AppCard[]
+  categories?: Category[]
+  initialCategorySlug?: string | null
 }) {
-  const [apps, setApps] = useState<AppCard[]>(initialApps)
-  const [selectedCategory, setSelectedCategory] = useState('Todos')
+  const [apps] = useState<AppCard[]>(initialApps)
+  const categoryById = new Map(categories.map(c => [c.id, c]))
+  const initialMatch = initialCategorySlug ? categories.find(c => c.slug === initialCategorySlug) : null
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialMatch?.id ?? 'todos')
   const [sortBy, setSortBy] = useState('newest')
   const [isLoading, setIsLoading] = useState(false)
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [displayed, setDisplayed] = useState(8)
 
-  // Filter and sort
+  const categoryChips = [{ id: 'todos', name: 'Todos' }, ...categories.filter(c => !c.parent_id && c.show_in_nav)]
+
+  // Filter and sort — categoria-pai selecionada inclui apps das subcategorias
+  // dela (união sem duplicar: cada app só tem um category_id — seção 7).
   const filtered = apps
-    .filter(
-      (app) =>
-        selectedCategory === 'Todos' || app.category === selectedCategory
-    )
+    .filter((app) => {
+      if (selectedCategory === 'todos') return true
+      if (app.category_id === selectedCategory) return true
+      const cat = app.category_id ? categoryById.get(app.category_id) : null
+      return cat?.parent_id === selectedCategory
+    })
     .sort((a, b) => {
       if (sortBy === 'price-asc') {
         return (a.price ?? 0) - (b.price ?? 0)
@@ -86,30 +90,28 @@ export default function ExploreAllAppsSection({
           <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
             {/* Categories */}
             <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-0 w-full lg:w-auto">
-              {CATEGORIES.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => {
-                    setSelectedCategory(category)
-                    setDisplayed(8)
-                  }}
-                  className="px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-colors text-sm"
-                  style={{
-                    backgroundColor:
-                      selectedCategory === category ? colors.primary : colors.background,
-                    color:
-                      selectedCategory === category ? 'white' : colors.text,
-                    borderColor:
-                      selectedCategory === category
-                        ? colors.primary
-                        : colors.border,
-                    border:
-                      selectedCategory === category ? 'none' : `1px solid ${colors.border}`,
-                  }}
-                >
-                  {category}
-                </button>
-              ))}
+              {categoryChips.map((chip) => {
+                const selectedParentId = selectedCategory !== 'todos' ? categoryById.get(selectedCategory)?.parent_id : null
+                const active = selectedCategory === chip.id || selectedParentId === chip.id
+                return (
+                  <button
+                    key={chip.id}
+                    onClick={() => {
+                      setSelectedCategory(chip.id)
+                      setDisplayed(8)
+                    }}
+                    className="px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-colors text-sm"
+                    style={{
+                      backgroundColor: active ? colors.primary : colors.background,
+                      color: active ? 'white' : colors.text,
+                      borderColor: active ? colors.primary : colors.border,
+                      border: active ? 'none' : `1px solid ${colors.border}`,
+                    }}
+                  >
+                    {chip.name}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Sort dropdown */}
@@ -205,15 +207,17 @@ export default function ExploreAllAppsSection({
                   {/* Content */}
                   <div className="flex-1 p-4 flex flex-col gap-3">
                     {/* Category */}
-                    <div
-                      className="text-xs font-semibold px-2 py-1 rounded-full w-fit"
-                      style={{
-                        backgroundColor: `${colors.primary}15`,
-                        color: colors.primary,
-                      }}
-                    >
-                      {app.category}
-                    </div>
+                    {app.category_id && categoryById.get(app.category_id) && (
+                      <div
+                        className="text-xs font-semibold px-2 py-1 rounded-full w-fit"
+                        style={{
+                          backgroundColor: `${colors.primary}15`,
+                          color: colors.primary,
+                        }}
+                      >
+                        {categoryById.get(app.category_id)?.name}
+                      </div>
+                    )}
 
                     {/* Name and developer */}
                     <div>

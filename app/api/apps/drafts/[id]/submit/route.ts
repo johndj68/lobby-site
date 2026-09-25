@@ -24,7 +24,7 @@ export async function POST(
   }
 
   // Validate required fields
-  const required = ['name', 'short_description', 'full_description', 'category', 'support_email']
+  const required = ['name', 'short_description', 'full_description', 'category_id', 'support_email']
   for (const field of required) {
     if (!draft[field as keyof typeof draft]) {
       return NextResponse.json(

@@ -1,5 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+/** "MailCraft #2" -> "mailcraft-2". Sem acento, sem espaço, sem duplo hífen.
+ *  Compartilhado entre publish/route.ts (slug de app) e lib/services/categories.ts
+ *  (slug de categoria) — mesma normalização, nunca duplicada. */
+export function slugify(name: string): string {
+  const base = name
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-+|-+$)/g, '')
+  return base || 'app'
+}
+
 export interface PublishEligibility {
   ok: true
   latestSubmission: { id: string; status: string }
@@ -83,6 +95,7 @@ export async function logAppAdminEvent(
     planId?: string | null
     promotionId?: string | null
     campaignId?: string | null
+    categoryId?: string | null
     /** null quando a ação vem de um processo sistêmico sem usuário humano
      *  (ex.: webhook do Stripe rodando como service_role). */
     actorId: string | null
@@ -96,6 +109,10 @@ export async function logAppAdminEvent(
       | 'promote_creative' | 'reserve_capacity' | 'confirm_payment' | 'payment_capacity_conflict' | 'grant_exemption'
       | 'refund_campaign' | 'pause_campaign' | 'resume_campaign' | 'cancel_campaign' | 'reschedule_campaign'
       | 'duplicate_campaign' | 'update_space' | 'update_package'
+      // /admin/marketplace/categorias
+      | 'create_category' | 'update_category' | 'move_category' | 'reorder_categories'
+      | 'toggle_category_status' | 'toggle_category_nav' | 'delete_category'
+      | 'reclassify_app' | 'reclassify_apps_bulk'
     reason?: string | null
     previousStatus: string
     newStatus: string
@@ -108,6 +125,7 @@ export async function logAppAdminEvent(
     plan_id: event.planId ?? null,
     promotion_id: event.promotionId ?? null,
     campaign_id: event.campaignId ?? null,
+    category_id: event.categoryId ?? null,
     actor_id: event.actorId ?? null,
     action: event.action,
     reason: event.reason ?? null,

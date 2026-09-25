@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Grid3x3, Copy, PauseCircle, PlayCircle, StopCircle,
-  Info, History as HistoryIcon, Loader2, CheckCircle2, XCircle, MessageSquare, CreditCard, Upload,
+  Info, History as HistoryIcon, Loader2, CheckCircle2, XCircle, MessageSquare, CreditCard, Upload, Monitor, Smartphone,
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import AdminShell from '@/components/layout/AdminShell'
@@ -154,7 +154,7 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
         <div className="rounded-2xl border p-5" style={{ background: C.card, borderColor: C.border }}>
           {tab === 'Prévia' && <PreviaTab liveCreative={liveCreative} pendingCreative={pendingCreative} app={app} />}
           {tab === 'Configuração' && (
-            <ConfiguracaoTab campaign={campaign} draftCreative={draftCreative} pendingCreative={pendingCreative} liveCreative={liveCreative}
+            <ConfiguracaoTab campaign={campaign} app={app} draftCreative={draftCreative} pendingCreative={pendingCreative} liveCreative={liveCreative}
               spaceOptions={spaceOptions} packageOptions={packageOptions} purchases={purchases} isLeader={!!profile?.is_leader}
               onChanged={() => router.refresh()} />
           )}
@@ -204,14 +204,21 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
   )
 }
 
+/** Monta o item aceito por SponsoredCarouselSection a partir de campos soltos
+ *  (rascunho ainda não salvo) ou de uma versão já persistida — usada tanto
+ *  pela prévia ao vivo da aba Configuração quanto pela aba Prévia. */
+function buildPreviewItem(app: AppInfo, fields: { title: string; description: string; imageUrl: string; imageAlt: string; ctaLabel: string }) {
+  return {
+    id: 'preview', application_id: app.id, title: fields.title, description: fields.description,
+    campaign_image_url: fields.imageUrl || undefined, image_alt: fields.imageAlt || undefined, cta_label: fields.ctaLabel || undefined,
+    cta_href: undefined, creative_id: null, starts_at: new Date().toISOString(), ends_at: new Date().toISOString(),
+    application: [{ id: app.id, name: app.name, slug: app.applicationSlug ?? '', category: '', logo_url: app.logoUrl ?? undefined }],
+  }
+}
+
 function PreviaTab({ liveCreative, pendingCreative, app }: { liveCreative: Creative | null; pendingCreative: Creative | null; app: AppInfo }) {
   function toCarouselItem(c: Creative) {
-    return {
-      id: 'preview', application_id: app.id, title: c.title ?? '', description: c.description ?? '',
-      campaign_image_url: c.imageUrl ?? undefined, image_alt: c.imageAlt ?? undefined, cta_label: c.ctaLabel ?? undefined,
-      cta_href: c.ctaHref ?? undefined, creative_id: null, starts_at: new Date().toISOString(), ends_at: new Date().toISOString(),
-      application: [{ id: app.id, name: app.name, slug: app.applicationSlug ?? '', category: '', logo_url: app.logoUrl ?? undefined }],
-    }
+    return buildPreviewItem(app, { title: c.title ?? '', description: c.description ?? '', imageUrl: c.imageUrl ?? '', imageAlt: c.imageAlt ?? '', ctaLabel: c.ctaLabel ?? '' })
   }
   return (
     <div className="space-y-6">
@@ -238,10 +245,11 @@ function PreviaTab({ liveCreative, pendingCreative, app }: { liveCreative: Creat
   )
 }
 
-function ConfiguracaoTab({ campaign, draftCreative, pendingCreative, liveCreative, spaceOptions, packageOptions, purchases, isLeader, onChanged }: {
-  campaign: CampaignInfo; draftCreative: Creative | null; pendingCreative: Creative | null; liveCreative: Creative | null
+function ConfiguracaoTab({ campaign, app, draftCreative, pendingCreative, liveCreative, spaceOptions, packageOptions, purchases, isLeader, onChanged }: {
+  campaign: CampaignInfo; app: AppInfo; draftCreative: Creative | null; pendingCreative: Creative | null; liveCreative: Creative | null
   spaceOptions: SpaceRef[]; packageOptions: PackageOption[]; purchases: Purchase[]; isLeader: boolean; onChanged: () => void
 }) {
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop')
   const editable = draftCreative ?? liveCreative
   const [form, setForm] = useState({
     title: editable?.title ?? '', description: editable?.description ?? '', imageUrl: editable?.imageUrl ?? '',
@@ -336,10 +344,14 @@ function ConfiguracaoTab({ campaign, draftCreative, pendingCreative, liveCreativ
     onChanged()
   }
 
+  const previewItem = buildPreviewItem(app, form)
+
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Anúncio</h3>
+    <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      {/* Coluna esquerda: formulário do anúncio, organizado com rótulo + texto de apoio por campo */}
+      <div className="space-y-6">
+        <SectionHeader title="Anúncio" subtitle="O que aparece pro comprador no carrossel — título, imagem e chamada." />
+
         {pendingCreative && (
           <div className="rounded-xl border p-3 text-sm" style={{ borderColor: C.warning }}>
             <p style={{ color: C.text }}>Versão v{pendingCreative.version} em análise — decisão pendente.</p>
@@ -353,14 +365,24 @@ function ConfiguracaoTab({ campaign, draftCreative, pendingCreative, liveCreativ
         {!canEditCreative ? (
           <p className="text-xs" style={{ color: C.textSecondary }}>Há uma versão em análise — decida sobre ela antes de editar novamente.</p>
         ) : (
-          <>
-            <Field label="Título"><input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} /></Field>
-            <Field label="Descrição"><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} /></Field>
-            <Field label="Imagem">
-              <div className="flex items-center gap-2">
-                {form.imageUrl && (
+          <div className="space-y-5 rounded-2xl border p-5" style={{ borderColor: C.border, background: C.header }}>
+            <Field label="Título" hint="Frase curta e direta — é o que mais chama atenção no anúncio.">
+              <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ex: Crie fluxos visuais sem programar"
+                className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+            </Field>
+            <Field label="Descrição" hint="Uma ou duas linhas complementando o título.">
+              <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Automatize tarefas e conecte suas ferramentas."
+                className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+            </Field>
+            <Field label="Imagem" hint="Formato 16:9, mínimo 800×450 — reaproveita a validação/compressão real de upload.">
+              <div className="flex items-center gap-3">
+                {form.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={form.imageUrl} alt="" className="h-16 w-24 rounded-lg object-cover" style={{ borderColor: C.border }} />
+                  <img src={form.imageUrl} alt="" className="h-16 w-24 rounded-lg border object-cover" style={{ borderColor: C.border }} />
+                ) : (
+                  <div className="flex h-16 w-24 items-center justify-center rounded-lg border border-dashed" style={{ borderColor: C.border, color: C.textSecondary }}>
+                    <Upload size={16} aria-hidden="true" />
+                  </div>
                 )}
                 <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold" style={{ borderColor: C.border, color: C.text }}>
                   {uploading ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <Upload size={13} aria-hidden="true" />} Enviar imagem
@@ -368,70 +390,111 @@ function ConfiguracaoTab({ campaign, draftCreative, pendingCreative, liveCreativ
                 </label>
               </div>
             </Field>
-            <Field label="Texto alternativo da imagem"><input value={form.imageAlt} onChange={e => setForm({ ...form, imageAlt: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} /></Field>
-            <Field label="Texto do botão"><input value={form.ctaLabel} onChange={e => setForm({ ...form, ctaLabel: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} /></Field>
-            <p className="text-xs" style={{ color: C.textSecondary }}>Destino do botão: gerado automaticamente a partir do aplicativo selecionado — nunca um link livre.</p>
-            <div className="flex gap-2">
+            <Field label="Texto alternativo da imagem" hint="Descrição curta pra leitores de tela.">
+              <input value={form.imageAlt} onChange={e => setForm({ ...form, imageAlt: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+            </Field>
+            <Field label="Texto do botão" hint="Chamada de ação — o destino é sempre a página do aplicativo, gerado automaticamente.">
+              <input value={form.ctaLabel} onChange={e => setForm({ ...form, ctaLabel: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+            </Field>
+
+            <div className="flex flex-wrap items-center gap-2 border-t pt-4" style={{ borderColor: C.border }}>
               <button onClick={saveCreative} disabled={saving} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: C.primary }}>
                 {saving ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null} Salvar rascunho
               </button>
               <button onClick={submitForReview} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Enviar para revisão</button>
             </div>
-          </>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Espaço, pacote e período</h3>
-        <Field label="Espaço de exibição">
-          <select value={spaceId} onChange={e => { setSpaceId(e.target.value); setPackageId('') }} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }}>
-            <option value="" style={{ color: 'black' }}>Selecione…</option>
-            {spaceOptions.map(s => <option key={s.id} value={s.id} style={{ color: 'black' }}>{s.name}</option>)}
-          </select>
-        </Field>
-        <Field label="Pacote">
-          <select value={packageId} onChange={e => setPackageId(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }}>
-            <option value="" style={{ color: 'black' }}>Selecione…</option>
-            {packageOptions.filter(p => !spaceId || p.spaceId === spaceId).map(p => <option key={p.id} value={p.id} style={{ color: 'black' }}>{p.name} — {p.price != null ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: p.currency }).format(p.price) : 'sem preço'}</option>)}
-          </select>
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Início"><input type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} /></Field>
-          <Field label="Término"><input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} /></Field>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={saveConfig} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Salvar configuração</button>
-          <button onClick={reserve} className="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.primary, color: C.primary }}>Reservar espaço</button>
-        </div>
-
-        <h3 className="mt-2 text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Pagamento</h3>
-        {purchases.length === 0 ? <EmptyState icon={CreditCard} text="Nenhuma cobrança criada ainda." /> : (
-          <ul className="space-y-2">
-            {purchases.map(p => (
-              <li key={p.id} className="rounded-xl border p-3 text-xs" style={{ borderColor: C.border, color: C.text }}>
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: p.currency }).format(p.amount)} · {p.status} ({p.kind}) · {formatDateTimeBR(p.createdAt)}
-                {p.isentoReason && <span> · Motivo: {p.isentoReason}</span>}
-                {p.refundStatus && <span> · Reembolso: {p.refundStatus}</span>}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <button onClick={checkout} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ background: C.primary }}>Gerar cobrança (Stripe)</button>
-          {isLeader && !showExempt && <button onClick={() => setShowExempt(true)} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Conceder isenção</button>}
-        </div>
-        {showExempt && (
-          <div className="space-y-2 rounded-xl border p-3" style={{ borderColor: C.border }}>
-            <label className="block text-xs font-medium" style={{ color: C.text }}>Motivo da isenção
-              <textarea value={exemptReason} onChange={e => setExemptReason(e.target.value)} rows={2} className="mt-1 w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
-            </label>
-            <div className="flex gap-2">
-              <button onClick={grantExemption} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: C.primary }}>Confirmar isenção</button>
-              <button onClick={() => setShowExempt(false)} className="rounded-lg border px-3 py-1.5 text-xs" style={{ borderColor: C.border, color: C.text }}>Cancelar</button>
-            </div>
           </div>
         )}
+
+        <SectionHeader title="Espaço, pacote e período" subtitle="Onde e por quanto tempo a campanha roda." />
+        <div className="space-y-4 rounded-2xl border p-5" style={{ borderColor: C.border, background: C.header }}>
+          <Field label="Espaço de exibição">
+            <select value={spaceId} onChange={e => { setSpaceId(e.target.value); setPackageId('') }} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }}>
+              <option value="" style={{ color: 'black' }}>Selecione…</option>
+              {spaceOptions.map(s => <option key={s.id} value={s.id} style={{ color: 'black' }}>{s.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Pacote">
+            <select value={packageId} onChange={e => setPackageId(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }}>
+              <option value="" style={{ color: 'black' }}>Selecione…</option>
+              {packageOptions.filter(p => !spaceId || p.spaceId === spaceId).map(p => <option key={p.id} value={p.id} style={{ color: 'black' }}>{p.name} — {p.price != null ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: p.currency }).format(p.price) : 'sem preço'}</option>)}
+            </select>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Início"><input type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} /></Field>
+            <Field label="Término"><input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} /></Field>
+          </div>
+          <div className="flex flex-wrap gap-2 border-t pt-4" style={{ borderColor: C.border }}>
+            <button onClick={saveConfig} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Salvar configuração</button>
+            <button onClick={reserve} className="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.primary, color: C.primary }}>Reservar espaço</button>
+          </div>
+        </div>
+
+        <SectionHeader title="Pagamento" subtitle="Cobrança real via Stripe, ou isenção autorizada." />
+        <div className="space-y-3 rounded-2xl border p-5" style={{ borderColor: C.border, background: C.header }}>
+          {purchases.length === 0 ? <EmptyState icon={CreditCard} text="Nenhuma cobrança criada ainda." /> : (
+            <ul className="space-y-2">
+              {purchases.map(p => (
+                <li key={p.id} className="rounded-xl border p-3 text-xs" style={{ borderColor: C.border, color: C.text }}>
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: p.currency }).format(p.amount)} · {p.status} ({p.kind}) · {formatDateTimeBR(p.createdAt)}
+                  {p.isentoReason && <span> · Motivo: {p.isentoReason}</span>}
+                  {p.refundStatus && <span> · Reembolso: {p.refundStatus}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button onClick={checkout} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ background: C.primary }}>Gerar cobrança (Stripe)</button>
+            {isLeader && !showExempt && <button onClick={() => setShowExempt(true)} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Conceder isenção</button>}
+          </div>
+          {showExempt && (
+            <div className="space-y-2 rounded-xl border p-3" style={{ borderColor: C.border }}>
+              <label className="block text-xs font-medium" style={{ color: C.text }}>Motivo da isenção
+                <textarea value={exemptReason} onChange={e => setExemptReason(e.target.value)} rows={2} className="mt-1 w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+              </label>
+              <div className="flex gap-2">
+                <button onClick={grantExemption} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: C.primary }}>Confirmar isenção</button>
+                <button onClick={() => setShowExempt(false)} className="rounded-lg border px-3 py-1.5 text-xs" style={{ borderColor: C.border, color: C.text }}>Cancelar</button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Coluna direita: prévia ao vivo, atualiza a cada tecla — mesmo padrão
+          do editor de app do parceiro (split-pane form + prévia), adaptado
+          ao tema escuro do admin. */}
+      <div className="lg:sticky lg:top-6 lg:self-start space-y-3">
+        <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+          <p className="mb-3 text-sm font-semibold" style={{ color: C.text }}>Prévia do anúncio</p>
+          <div className="mb-3 flex items-center gap-2">
+            <button type="button" onClick={() => setPreviewMode('desktop')}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold"
+              style={previewMode === 'desktop' ? { background: `${C.primary}22`, color: C.primary } : { color: C.textSecondary }}>
+              <Monitor size={14} aria-hidden="true" /> Desktop
+            </button>
+            <button type="button" onClick={() => setPreviewMode('mobile')}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold"
+              style={previewMode === 'mobile' ? { background: `${C.primary}22`, color: C.primary } : { color: C.textSecondary }}>
+              <Smartphone size={14} aria-hidden="true" /> Mobile
+            </button>
+            <span className="ml-auto text-[11px]" style={{ color: C.textSecondary }}>Prévia privada</span>
+          </div>
+          <div className="mx-auto overflow-hidden rounded-xl border transition-all" style={{ borderColor: C.border, maxWidth: previewMode === 'mobile' ? 360 : '100%' }}>
+            <SponsoredCarouselSection campaigns={[previewItem]} isPreview />
+          </div>
+          <p className="mt-2 text-[11px]" style={{ color: C.textSecondary }}>Atualiza conforme você edita — nenhuma impressão ou clique real é gerado aqui.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div>
+      <h3 className="text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>{title}</h3>
+      <p className="mt-0.5 text-xs" style={{ color: C.textSecondary }}>{subtitle}</p>
     </div>
   )
 }
@@ -489,8 +552,14 @@ function DesempenhoTab({ campaignId }: { campaignId: string }) {
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block text-xs font-medium" style={{ color: C.text }}>{label}<div className="mt-1">{children}</div></label>
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="block text-xs font-medium" style={{ color: C.text }}>
+      {label}
+      {hint && <span className="mt-0.5 block text-[11px] font-normal" style={{ color: C.textSecondary }}>{hint}</span>}
+      <div className="mt-1.5">{children}</div>
+    </label>
+  )
 }
 function Badge({ color, label }: { color: string; label: string }) {
   return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: `${color}22`, color }}>{label}</span>
