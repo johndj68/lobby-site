@@ -102,7 +102,7 @@ export default function AcompanharClient({ app, publication, review, latestSubmi
                 </a>
               )}
               {latestSubmission && (
-                <Link href={`/dashboard/meus-app/${app.id}/previa`}
+                <Link href={`/dashboard/meus-app/${app.id}/previa?v=submission&submissionId=${latestSubmission.id}`}
                   className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>
                   <Eye size={14} aria-hidden="true" /> Abrir prévia privada
                 </Link>

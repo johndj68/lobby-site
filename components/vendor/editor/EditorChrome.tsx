@@ -41,18 +41,18 @@ export default function EditorChrome({ appId, appName, breadcrumbLabel, currentS
       <div className="flex items-center justify-between px-4 py-2.5 sm:px-8">
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="shrink-0">
-            <Image src="/logowhite.svg" alt="LOBBY" width={110} height={28} className="h-6 w-auto object-contain" priority />
+            <Image src="/logowhite.svg" alt="LOBBY" width={280} height={72} className="h-16 w-auto object-contain" priority />
           </Link>
-          <span className="hidden rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide sm:inline" style={{ background: colors.backgroundAlt, color: colors.textSecondary }}>
+          <span className="hidden rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide sm:inline" style={{ background: colors.backgroundAlt, color: colors.textSecondary }}>
             Parceiros
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <Link href={`/dashboard/meus-app/${appId}`} className="hidden text-xs font-semibold sm:inline" style={{ color: colors.text }}>
+        <div className="flex items-center gap-5">
+          <Link href={`/dashboard/meus-app/${appId}`} className="hidden text-sm font-semibold sm:inline" style={{ color: colors.text }}>
             Voltar aos meus aplicativos
           </Link>
-          <Link href="/dashboard/suporte" className="flex items-center gap-1 text-xs font-semibold" style={{ color: colors.textSecondary }}>
-            <HelpCircle size={13} aria-hidden="true" /> <span className="hidden sm:inline">Ajuda</span>
+          <Link href="/dashboard/suporte" className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: colors.textSecondary }}>
+            <HelpCircle size={16} aria-hidden="true" /> <span className="hidden sm:inline">Ajuda</span>
           </Link>
         </div>
       </div>

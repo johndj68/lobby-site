@@ -367,7 +367,7 @@ function SecondaryMenu({ row }: { row: AppRow }) {
   const action = primaryAction(row)
   const detailsHref = `/dashboard/meus-app/${row.id}`
   const editHref = `/dashboard/meus-app/novo/${row.id}/editar`
-  const previewHref = `/dashboard/meus-app/${row.id}/previa`
+  const previewHref = `/dashboard/meus-app/${row.id}/previa?v=submission&submissionId=${row.latestSubmissionId}`
   const showDetailsInMenu = action.href !== detailsHref
   const showEditInMenu = row.canEdit && action.href !== editHref
   const showPreview = !!row.latestSubmissionId

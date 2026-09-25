@@ -113,7 +113,7 @@ export default function ReviewClient({ draft, vendorName, review, completion, ca
             <h1 className="text-2xl font-bold sm:text-3xl" style={{ color: colors.text, fontFamily: 'Space Grotesk, sans-serif' }}>Revise antes de enviar</h1>
             <p className="mt-1 text-sm" style={{ color: colors.textSecondary }}>Confira as informações do seu aplicativo e envie para análise da equipe LOBBY.</p>
           </div>
-          <Link href={`/dashboard/meus-app/${draft.id}/previa`}
+          <Link href={`/dashboard/meus-app/${draft.id}/previa?v=draft`}
             className="inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: colors.primary, color: colors.primary }}>
             <Eye size={14} aria-hidden="true" /> Visualizar anúncio
           </Link>
