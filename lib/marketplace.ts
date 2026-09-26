@@ -256,6 +256,21 @@ export function formatDateTimeBR(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { timeZone: TIMEZONE, dateStyle: 'short', timeStyle: 'short' })
 }
 
+/** "24 de setembro de 2026" — usado pra agrupar a linha do tempo por dia
+ *  (sempre no fuso de Brasília, igual a todo o resto da tela). */
+export function formatDateLongBR(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', { timeZone: TIMEZONE, day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+/** Chave estável (YYYY-MM-DD no fuso de Brasília) pra agrupar eventos do
+ *  mesmo dia sem depender de string formatada (evita agrupar errado por
+ *  causa de vírgula/acentuação regional). */
+export function dateKeyBR(iso: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(iso))
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? '00'
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
 export function formatRelativeTime(iso: string): string {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
   if (s < 60) return 'agora'

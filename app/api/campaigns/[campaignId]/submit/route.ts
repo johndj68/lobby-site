@@ -47,6 +47,7 @@ export async function POST(
     appDraftId: campaign.app_draft_id, applicationId: campaign.application_id, campaignId,
     actorId: user.id, action: 'submit_creative', reason: null,
     previousStatus: latest.review_status, newStatus: 'em_revisao',
+    creativeId: latest.id,
   })
 
   return NextResponse.json({ ok: true })

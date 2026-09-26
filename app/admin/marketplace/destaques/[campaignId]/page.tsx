@@ -26,7 +26,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   const [
     { data: creatives }, { data: reservation }, { data: purchases }, { data: partner },
-    { data: spaces }, { data: packages }, { data: events },
+    { data: spaces }, { data: packages },
   ] = await Promise.all([
     supabase.from('ad_creatives').select('*').eq('campaign_id', campaignId).order('version', { ascending: false }),
     supabase.from('ad_reservations').select('*').eq('campaign_id', campaignId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
@@ -34,16 +34,14 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
     draft ? supabase.from('profiles').select('id, full_name, email, company_name, role, marketplace_new_apps_blocked').eq('id', draft.created_by).single() : Promise.resolve({ data: null }),
     supabase.from('ad_spaces').select('id, name, slug, description, accepted_formats, is_active').eq('is_active', true),
     supabase.from('ad_packages').select('id, name, space_id, price, currency, duration_days, description, cancellation_policy, pause_policy').eq('status', 'active'),
-    supabase.from('app_admin_events').select('id, action, reason, previous_status, new_status, actor_id, created_at').eq('campaign_id', campaignId).order('created_at', { ascending: false }),
   ])
-
-  // Um único mapa de atores serve tanto o histórico (app_admin_events) quanto
-  // o "responsável" de cada versão do criativo (ad_creatives.reviewer_id) —
-  // mesma tabela, mesma regra de exibição, nunca duas buscas equivalentes.
+  // O histórico de auditoria (app_admin_events) agora é buscado pela própria
+  // aba Histórico via /api/admin/campaigns/[id]/events — com busca, filtro,
+  // ordenação e paginação no backend (seção 5). Aqui só sobra o mapa de
+  // revisores dos criativos (ad_creatives.reviewer_id).
   const creativeReviewerIds = [...new Set((creatives ?? []).map(c => c.reviewer_id).filter(Boolean))] as string[]
-  const actorIds = [...new Set([...(events ?? []).map(e => e.actor_id), ...creativeReviewerIds].filter(Boolean))] as string[]
-  const { data: actors } = actorIds.length
-    ? await supabase.from('profiles').select('id, full_name, email').in('id', actorIds)
+  const { data: actors } = creativeReviewerIds.length
+    ? await supabase.from('profiles').select('id, full_name, email').in('id', creativeReviewerIds)
     : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
   const actorMap = new Map((actors ?? []).map(a => [a.id, a.full_name || a.email || 'Usuário removido']))
 
@@ -102,7 +100,6 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         id: p.id, amount: p.amount, currency: p.currency, kind: p.kind, status: p.status,
         isentoReason: p.isento_reason, refundStatus: p.refund_status, createdAt: p.created_at, paidAt: p.paid_at,
       }))}
-      events={(events ?? []).map(e => ({ ...e, actorName: e.actor_id ? (actorMap.get(e.actor_id) ?? 'Usuário removido') : 'Sistema' }))}
     />
   )
 }

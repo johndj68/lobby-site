@@ -24,11 +24,11 @@ export async function POST(
 
   const { data: campaign } = await supabase
     .from('sponsored_campaigns')
-    .select('id, cancelled_at, app_draft_id, application_id')
+    .select('id, cancelled_at, paused_at, app_draft_id, application_id')
     .eq('id', campaignId)
     .single()
   if (!campaign) return NextResponse.json({ error: 'Campanha não encontrada.' }, { status: 404 })
-  if (campaign.cancelled_at) return NextResponse.json({ error: 'Campanha já está encerrada.' }, { status: 409 })
+  if (campaign.cancelled_at) return NextResponse.json({ error: 'Campanha já está cancelada.' }, { status: 409 })
 
   const { data: updated, error } = await supabase
     .from('sponsored_campaigns')
@@ -41,10 +41,15 @@ export async function POST(
 
   await supabase.from('ad_reservations').update({ status: 'released' }).eq('campaign_id', campaignId).in('status', ['held', 'confirmed'])
 
+  // "Cancelada" (encerramento manual) é um estado de elegibilidade diferente
+  // de "Encerrada" (fim natural do período contratado) — usar 'encerrada'
+  // aqui era o bug real por trás da divergência entre o cabeçalho e o
+  // histórico. previousStatus vem de paused_at, igual pause/resume já fazem,
+  // nunca do valor ambíguo "ativa_ou_pausada" que só existia por preguiça.
   await logAppAdminEvent(supabase, {
     appDraftId: campaign.app_draft_id, applicationId: campaign.application_id, campaignId,
     actorId: user.id, action: 'cancel_campaign', reason: reason.trim(),
-    previousStatus: 'ativa_ou_pausada', newStatus: 'encerrada',
+    previousStatus: campaign.paused_at ? 'pausada' : 'ativa', newStatus: 'cancelada',
   })
 
   return NextResponse.json({ ok: true })

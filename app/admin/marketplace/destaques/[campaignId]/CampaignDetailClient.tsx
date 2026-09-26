@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, Copy, PauseCircle, PlayCircle, StopCircle,
+  ArrowLeft, Copy, PauseCircle, PlayCircle, Ban,
   Info, History as HistoryIcon, Loader2, CheckCircle2, XCircle, MessageSquare, CreditCard, Upload, Monitor, Smartphone, Tablet,
   Maximize2, ExternalLink, Settings, AlertTriangle, FileText, Grid3x3, Image as ImageIcon, Lock, Trash2, Eye,
   RotateCcw, Download, MousePointerClick, Percent, TrendingUp, TrendingDown, Minus, ArrowUpDown, BarChart3, ChevronRight,
+  PlusCircle, CalendarClock, CalendarCheck, Undo2, Star, ShieldCheck, Search,
+  X, AlertCircle, Inbox,
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import Link from 'next/link'
@@ -17,11 +19,16 @@ import MarketplaceTabs from '@/components/admin/MarketplaceTabs'
 import AppLogo from '@/components/admin/AppLogo'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
+import Pagination from '@/components/ui/Pagination'
 import SponsoredCarouselSection from '@/components/sections/SponsoredCarouselSection'
-import { MARKETPLACE_COLORS as C, formatDateTimeBR, ORIGIN_LABEL, type PublicationStatus } from '@/lib/marketplace'
+import { MARKETPLACE_COLORS as C, formatDateTimeBR, formatDateLongBR, dateKeyBR, ORIGIN_LABEL, type PublicationStatus } from '@/lib/marketplace'
 import { getCreativeReviewBadge, type CampaignStatusBadge } from '@/lib/services/campaign-labels'
 import type { EligibilityResult } from '@/lib/services/campaigns'
 import { fillDays, type DesempenhoPeriod, type DayPoint } from '@/lib/services/campaign-metrics'
+import {
+  getActionMeta, getStatusLabel, isDateRangeStatus, isLegacyCancelMislabel, parseChangedFields, parseDuplicateSource,
+  originLabel, CATEGORY_OPTIONS, CATEGORY_LABEL, TONE_COLOR, type EventCategory, type EventOrigin, type FieldChange,
+} from '@/lib/services/campaign-events'
 
 interface CampaignInfo { id: string; internalName: string | null; startsAt: string; endsAt: string; spaceId: string | null; packageId: string | null; pausedReason: string | null; createdAt: string; updatedAt: string }
 interface AppInfo { id: string; name: string; logoUrl: string | null; applicationSlug: string | null }
@@ -36,7 +43,6 @@ interface Creative {
   reviewedAt: string | null; isLive: boolean; reviewerName: string | null; createdAt: string
 }
 interface Purchase { id: string; amount: number; currency: string; kind: string; status: string; isentoReason: string | null; refundStatus: string | null; createdAt: string; paidAt: string | null }
-interface EventItem { id: string; action: string; reason: string | null; previous_status: string | null; new_status: string | null; actorName: string; created_at: string }
 
 interface Props {
   user: SupabaseUser
@@ -55,22 +61,13 @@ interface Props {
   packageOptions: PackageOption[]
   creatives: Creative[]
   purchases: Purchase[]
-  events: EventItem[]
   latestReservation: ReservationInfo | null
 }
 
 const TABS = ['Prévia', 'Configuração', 'Desempenho', 'Histórico'] as const
 type Tab = typeof TABS[number]
-const ACTION_LABEL: Record<string, string> = {
-  create_campaign: 'Campanha criada', submit_creative: 'Anúncio enviado para revisão', review_creative_approve: 'Anúncio aprovado',
-  review_creative_changes: 'Ajustes solicitados', review_creative_reject: 'Anúncio rejeitado', reserve_capacity: 'Espaço reservado',
-  confirm_payment: 'Pagamento confirmado', payment_capacity_conflict: 'Pagamento confirmado com pendência de conciliação',
-  grant_exemption: 'Isenção concedida', refund_campaign: 'Reembolso solicitado', pause_campaign: 'Exibição pausada',
-  resume_campaign: 'Exibição retomada', cancel_campaign: 'Campanha encerrada', reschedule_campaign: 'Reagendada', duplicate_campaign: 'Duplicada',
-  update_campaign_config: 'Configuração atualizada',
-}
 
-export default function CampaignDetailClient({ user, profile, campaign, app, origin, partnerName, publication, review, payment, eligibility, space, pkg, spaceOptions, packageOptions, creatives, purchases, events, latestReservation }: Props) {
+export default function CampaignDetailClient({ user, profile, campaign, app, origin, partnerName, publication, review, payment, eligibility, space, pkg, spaceOptions, packageOptions, creatives, purchases, latestReservation }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -91,6 +88,14 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
   const [busy, setBusy] = useState(false)
   const [confirmKind, setConfirmKind] = useState<'pause' | 'resume' | 'cancel' | null>(null)
   const [reason, setReason] = useState('')
+  // Versão específica que a aba Histórico pediu pra abrir na Prévia — nunca
+  // a versão ao vivo por padrão quando o pedido veio de um evento histórico
+  // (seção 10: nunca abrir o criativo atual como se fosse o da versão).
+  const [previewCreativeId, setPreviewCreativeId] = useState<string | null>(null)
+  function goToPreview(creativeId?: string) {
+    setPreviewCreativeId(creativeId ?? null)
+    setTab('Prévia')
+  }
 
   const liveCreative = creatives.find(c => c.isLive) ?? null
   const pendingCreative = creatives.find(c => c.reviewStatus === 'em_revisao') ?? null
@@ -113,7 +118,7 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
     if (!confirmKind) return
     if ((confirmKind === 'pause' || confirmKind === 'cancel') && !reason.trim()) { toast.error('Informe o motivo.'); return }
     const body = confirmKind === 'resume' ? undefined : { reason: reason.trim() }
-    const label = confirmKind === 'pause' ? 'pausada' : confirmKind === 'resume' ? 'retomada' : 'encerrada'
+    const label = confirmKind === 'pause' ? 'pausada' : confirmKind === 'resume' ? 'retomada' : 'cancelada'
     const ok = await runAction(`/api/admin/campaigns/${campaign.id}/${confirmKind}`, body, `Campanha ${label}.`)
     if (ok) setConfirmKind(null)
   }
@@ -143,18 +148,18 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
                   ID: {campaign.id.slice(0, 8)}… <Copy size={11} aria-hidden="true" />
                 </button>
                 <p className="mt-1 text-xs" style={{ color: C.textSecondary }}>
-                  {origin === 'lobby' ? ORIGIN_LABEL.lobby : `${ORIGIN_LABEL.partner} · ${partnerName}`} · Atualizado em {formatDateTimeBR(campaign.updatedAt)}
+                  {origin === 'lobby' ? ORIGIN_LABEL.lobby : `${ORIGIN_LABEL.partner} · ${partnerName}`} · Configuração atualizada em {formatDateTimeBR(campaign.updatedAt)}
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge color={publication.color} label={publication.label} />
-              <Badge color={review.color} label={review.label} />
-              <Badge color={payment.color} label={payment.label} />
-              <Badge color={eligibility.color} label={eligibility.label} />
+              <Badge prefix="App" color={publication.color} label={publication.label} />
+              <Badge prefix="Criativo" color={review.color} label={review.label} />
+              <Badge prefix="Financeiro" color={payment.color} label={payment.label} />
+              <Badge prefix="Campanha" {...campaignLifecycleBadge(eligibility)} />
               {(eligibility.key === 'em_exibicao' || eligibility.key === 'programada') && <ActionButton icon={PauseCircle} label="Pausar" onClick={() => { setReason(''); setConfirmKind('pause') }} />}
               {eligibility.key === 'pausada' && <ActionButton icon={PlayCircle} label="Retomar" onClick={() => setConfirmKind('resume')} primary />}
-              {eligibility.key !== 'cancelada' && eligibility.key !== 'encerrada' && <ActionButton icon={StopCircle} label="Encerrar" onClick={() => { setReason(''); setConfirmKind('cancel') }} />}
+              {eligibility.key !== 'cancelada' && eligibility.key !== 'encerrada' && <ActionButton icon={Ban} label="Cancelar campanha" onClick={() => { setReason(''); setConfirmKind('cancel') }} />}
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-4 text-xs sm:grid-cols-4" style={{ borderColor: C.border }}>
@@ -163,7 +168,7 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
             <Info2 label="Período (horário de Brasília)" value={`${formatDateTimeBR(campaign.startsAt)} — ${formatDateTimeBR(campaign.endsAt)}${
               eligibility.key === 'programada' ? ' · agendada, ainda não começou' : eligibility.key === 'encerrada' ? ' · período encerrado' : ''
             }`} />
-            <Info2 label="Atualizado" value={formatDateTimeBR(campaign.updatedAt)} />
+            <Info2 label="Configuração atualizada" value={formatDateTimeBR(campaign.updatedAt)} />
           </div>
           {campaign.pausedReason && (
             <p className="mt-3 rounded-lg border p-2.5 text-xs" style={{ borderColor: C.warning, color: C.text, background: 'rgba(245,158,11,0.08)' }}>Motivo da pausa: {campaign.pausedReason}</p>
@@ -197,45 +202,35 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
         </div>
 
         <div className="rounded-2xl border p-5" style={{ background: C.card, borderColor: C.border }}>
-          {tab === 'Prévia' && <PreviaTab campaign={campaign} app={app} space={space} creatives={creatives} onGoToConfig={() => setTab('Configuração')} />}
+          {tab === 'Prévia' && <PreviaTab campaign={campaign} app={app} space={space} creatives={creatives} onGoToConfig={() => setTab('Configuração')} initialCreativeId={previewCreativeId} />}
           {tab === 'Configuração' && (
             <ConfiguracaoTab campaign={campaign} app={app} partnerName={partnerName} origin={origin} draftCreative={draftCreative} pendingCreative={pendingCreative} liveCreative={liveCreative}
               space={space} pkg={pkg} spaceOptions={spaceOptions} packageOptions={packageOptions} purchases={purchases} isLeader={!!profile?.is_leader}
               publication={publication} eligibility={eligibility} latestReservation={latestReservation}
-              onChanged={() => router.refresh()} onGoToPreview={() => setTab('Prévia')} />
+              onChanged={() => router.refresh()} onGoToPreview={() => goToPreview()} />
           )}
           {tab === 'Desempenho' && (
             <DesempenhoTab campaign={campaign} space={space} pkg={pkg} eligibility={eligibility}
-              liveCreative={liveCreative} onGoToConfig={() => setTab('Configuração')} onGoToPreview={() => setTab('Prévia')} onGoToHistory={() => setTab('Histórico')} />
+              liveCreative={liveCreative} onGoToConfig={() => setTab('Configuração')} onGoToPreview={() => goToPreview()} onGoToHistory={() => setTab('Histórico')} />
           )}
           {tab === 'Histórico' && (
-            events.length === 0 ? <EmptyState icon={HistoryIcon} text="Nenhuma ação registrada ainda para esta campanha." /> : (
-              <ul className="space-y-2">
-                {events.map(e => (
-                  <li key={e.id} className="rounded-xl border p-3 text-sm" style={{ borderColor: C.border }}>
-                    <p style={{ color: C.text }}>{ACTION_LABEL[e.action] ?? e.action} por {e.actorName}</p>
-                    {e.reason && <p className="mt-1 text-xs" style={{ color: C.textSecondary }}>Motivo: {e.reason}</p>}
-                    {(e.previous_status || e.new_status) && <p className="mt-1 text-xs" style={{ color: C.textSecondary }}>{e.previous_status} → {e.new_status}</p>}
-                    <p className="mt-1 text-xs" style={{ color: C.textSecondary }}>{formatDateTimeBR(e.created_at)}</p>
-                  </li>
-                ))}
-              </ul>
-            )
+            <HistoricoTab campaign={campaign} creatives={creatives}
+              onGoToConfig={() => setTab('Configuração')} onGoToPreview={goToPreview} />
           )}
         </div>
       </div>
 
       <ConfirmDialog
         open={!!confirmKind} onOpenChange={next => !busy && setConfirmKind(next ? confirmKind : null)}
-        icon={confirmKind === 'pause' ? PauseCircle : confirmKind === 'resume' ? PlayCircle : StopCircle}
+        icon={confirmKind === 'pause' ? PauseCircle : confirmKind === 'resume' ? PlayCircle : Ban}
         variant={confirmKind === 'resume' ? 'neutral' : 'destructive'}
-        title={confirmKind === 'pause' ? 'Pausar exibição?' : confirmKind === 'resume' ? 'Retomar exibição?' : 'Encerrar campanha?'}
+        title={confirmKind === 'pause' ? 'Pausar exibição?' : confirmKind === 'resume' ? 'Retomar exibição?' : 'Cancelar campanha?'}
         description={
           <div className="space-y-3">
             <p>
               {confirmKind === 'pause' && 'Deixa de participar do carrossel imediatamente. Período e reserva não são alterados automaticamente.'}
               {confirmKind === 'resume' && 'Revalida revisão, pagamento e reserva antes de voltar a exibir.'}
-              {confirmKind === 'cancel' && 'Pagamentos e histórico são preservados — nada é apagado.'}
+              {confirmKind === 'cancel' && 'Encerramento definitivo antes do fim do período contratado. Pagamentos e histórico são preservados — nada é apagado.'}
             </p>
             {(confirmKind === 'pause' || confirmKind === 'cancel') && (
               <label className="block text-xs font-medium" style={{ color: C.text }}>Motivo
@@ -244,7 +239,7 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
             )}
           </div>
         }
-        confirmLabel={confirmKind === 'pause' ? 'Pausar' : confirmKind === 'resume' ? 'Retomar' : 'Encerrar'}
+        confirmLabel={confirmKind === 'pause' ? 'Pausar' : confirmKind === 'resume' ? 'Retomar' : 'Cancelar campanha'}
         confirmingLabel={<><Loader2 size={15} className="animate-spin" />Aplicando…</>}
         busy={busy}
         onConfirm={confirmLifecycle}
@@ -295,12 +290,25 @@ function ViewportButton({ icon: Icon, label, active, onClick }: { icon: React.El
   )
 }
 
-function PreviaTab({ campaign, app, space, creatives, onGoToConfig }: {
+function PreviaTab({ campaign, app, space, creatives, onGoToConfig, initialCreativeId }: {
   campaign: CampaignInfo; app: AppInfo; space: SpaceRef | null; creatives: Creative[]; onGoToConfig: () => void
+  /** Versão pedida por outra aba (Histórico → "Ver detalhes" → "Abrir
+   *  prévia") — só aplicada uma vez; depois disso o usuário volta a
+   *  controlar o seletor normalmente (seção 10). */
+  initialCreativeId?: string | null
 }) {
   const sorted = [...creatives].sort((a, b) => b.version - a.version)
   const defaultCreative = sorted.find(c => c.isLive) ?? sorted[0] ?? null
   const [selectedId, setSelectedId] = useState<string | null>(defaultCreative?.id ?? null)
+  // Ajuste de estado durante a renderização (padrão oficial do React pra
+  // "resetar/aplicar estado quando uma prop muda") em vez de useEffect — só
+  // aplica a versão pedida pelo Histórico uma vez, sem disparar um efeito
+  // encadeado extra.
+  const [appliedInitialId, setAppliedInitialId] = useState<string | null>(null)
+  if (initialCreativeId && initialCreativeId !== appliedInitialId) {
+    setAppliedInitialId(initialCreativeId)
+    if (sorted.some(c => c.id === initialCreativeId)) setSelectedId(initialCreativeId)
+  }
   const [viewport, setViewport] = useState<Viewport>('desktop')
   const [expanded, setExpanded] = useState(false)
   const [ctaInfo, setCtaInfo] = useState<{ href: string; valid: boolean } | null>(null)
@@ -1582,8 +1590,12 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     </label>
   )
 }
-function Badge({ color, label }: { color: string; label: string }) {
-  return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: `${color}22`, color }}>{label}</span>
+function Badge({ color, label, prefix }: { color: string; label: string; prefix?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: `${color}22`, color }}>
+      {prefix && <span className="font-medium opacity-80">{prefix}:</span>} {label}
+    </span>
+  )
 }
 
 /** Estado real do CICLO DE VIDA da campanha — dimensão própria, separada de
@@ -1610,4 +1622,548 @@ function Info2({ label, value }: { label: string; value: string }) {
 }
 function EmptyState({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
   return <div className="flex flex-col items-center gap-2 py-10 text-center"><Icon size={20} style={{ color: C.textSecondary }} aria-hidden="true" /><p className="text-sm" style={{ color: C.textSecondary }}>{text}</p></div>
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Aba Histórico — auditoria somente leitura de app_admin_events.
+ * Busca/filtro/ordenação/paginação sempre no backend (seção 5), nunca
+ * reescreve eventos (seção 13), nunca reconstrói valores que não foram
+ * registrados (seção 9). Ver /api/admin/campaigns/[id]/events{,/export}.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+interface HistoryEventItem {
+  id: string; action: string; reason: string | null; previousStatus: string | null; newStatus: string | null
+  createdAt: string; actorId: string | null; actorName: string; actorOrigin: EventOrigin
+  creativeId: string | null; internalNote: string | null; fieldChanges: FieldChange[] | null
+}
+interface HistorySummary {
+  campaignCreatedAt: string; totalEvents: number
+  lastActivity: (Pick<HistoryEventItem, 'createdAt' | 'action' | 'actorId' | 'actorName' | 'actorOrigin'>) | null
+  lastCreativeDecision: { createdAt: string; action: string } | null
+}
+interface ActorOption { id: string; name: string }
+interface EventsResponse { items: HistoryEventItem[]; total: number; page: number; pageSize: number; summary: HistorySummary; actorOptions: ActorOption[]; fetchedAt: string }
+
+const HISTORY_PAGE_SIZE = 15
+const CREATIVE_ACTIONS = new Set(['submit_creative', 'review_creative_approve', 'review_creative_changes', 'review_creative_reject'])
+
+const ACTION_ICON: Record<string, React.ElementType> = {
+  create_campaign: PlusCircle, submit_creative: Upload, review_creative_approve: CheckCircle2, review_creative_changes: MessageSquare,
+  review_creative_reject: XCircle, promote_creative: Star, reserve_capacity: CalendarCheck, confirm_payment: CreditCard,
+  payment_capacity_conflict: AlertTriangle, grant_exemption: ShieldCheck, refund_campaign: Undo2, pause_campaign: PauseCircle,
+  resume_campaign: PlayCircle, cancel_campaign: Ban, reschedule_campaign: CalendarClock, duplicate_campaign: Copy,
+  update_campaign_config: Settings, update_space: Settings, update_package: Settings,
+}
+
+/** Heurística de fallback só pra eventos LEGADOS (gravados antes da coluna
+ *  `creative_id` existir em app_admin_events) — aproxima por proximidade de
+ *  horário (submit → created_at da versão; revisão → reviewed_at). Eventos
+ *  novos já têm o vínculo real (`item.creativeId`, ver resolveEventCreative
+ *  abaixo) e nunca passam por aqui. */
+function findLegacyMatchedCreative(action: string, createdAt: string, creatives: Creative[]): { creative: Creative; approximate: boolean } | null {
+  if (!CREATIVE_ACTIONS.has(action)) return null
+  const eventTs = new Date(createdAt).getTime()
+  const candidates = creatives
+    .map(c => ({ c, ts: action === 'submit_creative' ? c.createdAt : c.reviewedAt }))
+    .filter((x): x is { c: Creative; ts: string } => !!x.ts)
+    .map(x => ({ creative: x.c, diff: Math.abs(new Date(x.ts).getTime() - eventTs) }))
+    .sort((a, b) => a.diff - b.diff)
+  const best = candidates[0]
+  if (!best || best.diff > 5 * 60 * 1000) return null
+  return { creative: best.creative, approximate: best.diff > 2000 }
+}
+
+/** Versão do criativo de um evento — sempre exata quando `creativeId` está
+ *  gravado (seção 10: nunca a versão ao vivo por padrão); só cai na
+ *  heurística de horário pra eventos gravados antes dessa coluna existir. */
+function resolveEventCreative(item: Pick<HistoryEventItem, 'action' | 'createdAt' | 'creativeId'>, creatives: Creative[]): { creative: Creative; exact: boolean; approximate: boolean } | null {
+  if (item.creativeId) {
+    const creative = creatives.find(c => c.id === item.creativeId)
+    return creative ? { creative, exact: true, approximate: false } : null
+  }
+  const legacy = findLegacyMatchedCreative(item.action, item.createdAt, creatives)
+  return legacy ? { creative: legacy.creative, exact: false, approximate: legacy.approximate } : null
+}
+
+function HistoricoTab({ campaign, creatives, onGoToConfig, onGoToPreview }: {
+  campaign: CampaignInfo; creatives: Creative[]; onGoToConfig: () => void; onGoToPreview: (creativeId?: string) => void
+}) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const [qDraft, setQDraft] = useState(searchParams.get('hq') ?? '')
+  const [q, setQ] = useState(searchParams.get('hq') ?? '')
+  const [category, setCategoryState] = useState<EventCategory | 'todos'>((searchParams.get('htype') as EventCategory) || 'todos')
+  const [actor, setActorState] = useState(searchParams.get('hactor') ?? 'todos')
+  const [from, setFromState] = useState(searchParams.get('hfrom') ?? '')
+  const [to, setToState] = useState(searchParams.get('hto') ?? '')
+  const [sort, setSortState] = useState<'recentes' | 'antigos'>(searchParams.get('hsort') === 'antigos' ? 'antigos' : 'recentes')
+  const [page, setPageState] = useState(Number(searchParams.get('hpage') ?? 0) || 0)
+
+  const [data, setData] = useState<EventsResponse | null>(null)
+  const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'error' | 'refreshing'>('loading')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedEvent, setSelectedEvent] = useState<HistoryEventItem | null>(null)
+  const [hasNewActivity, setHasNewActivity] = useState(false)
+  const requestIdRef = useRef(0)
+  const hasLoadedRef = useRef(false)
+  const latestTopIdRef = useRef<string | null>(null)
+
+  function updateQuery(updates: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams.toString())
+    next.set('tab', 'Histórico')
+    for (const [k, v] of Object.entries(updates)) { if (v === null || v === '' || v === 'todos') next.delete(k); else next.set(k, v) }
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }
+  // Busca com debounce — nunca uma requisição por tecla digitada.
+  useEffect(() => {
+    const t = setTimeout(() => { setQ(qDraft); setPageState(0); updateQuery({ hq: qDraft || null, hpage: null }) }, 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qDraft])
+
+  function setCategory(v: EventCategory | 'todos') { setCategoryState(v); setPageState(0); updateQuery({ htype: v === 'todos' ? null : v, hpage: null }) }
+  function setActor(v: string) { setActorState(v); setPageState(0); updateQuery({ hactor: v === 'todos' ? null : v, hpage: null }) }
+  function setFrom(v: string) { setFromState(v); setPageState(0); updateQuery({ hfrom: v || null, hpage: null }) }
+  function setTo(v: string) { setToState(v); setPageState(0); updateQuery({ hto: v || null, hpage: null }) }
+  function setSort(v: 'recentes' | 'antigos') { setSortState(v); setPageState(0); updateQuery({ hsort: v === 'recentes' ? null : v, hpage: null }) }
+  function setPage(p: number) { setPageState(p); updateQuery({ hpage: p > 0 ? String(p) : null }) }
+
+  const hasActiveFilters = !!q || category !== 'todos' || actor !== 'todos' || !!from || !!to
+  function clearFilters() {
+    setQDraft(''); setQ(''); setCategoryState('todos'); setActorState('todos'); setFromState(''); setToState(''); setSortState('recentes'); setPageState(0)
+    updateQuery({ hq: null, htype: null, hactor: null, hfrom: null, hto: null, hsort: null, hpage: null })
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    const myId = ++requestIdRef.current
+    setLoadState(hasLoadedRef.current ? 'refreshing' : 'loading')
+    setErrorMsg(null)
+    const qs = new URLSearchParams({ sort, page: String(page) })
+    if (q) qs.set('q', q)
+    if (category !== 'todos') qs.set('type', category)
+    if (actor !== 'todos') qs.set('actor', actor)
+    if (from) qs.set('from', from)
+    if (to) qs.set('to', to)
+    fetch(`/api/admin/campaigns/${campaign.id}/events?${qs.toString()}`)
+      .then(async res => {
+        const json = await res.json()
+        if (cancelled || myId !== requestIdRef.current) return
+        if (!res.ok) { setLoadState('error'); setErrorMsg(json.error || 'Falha ao carregar.'); return }
+        setData(json)
+        setLoadState('loaded')
+        hasLoadedRef.current = true
+        if (page === 0 && sort === 'recentes') latestTopIdRef.current = json.items[0]?.id ?? null
+        setHasNewActivity(false)
+      })
+      .catch(() => { if (cancelled || myId !== requestIdRef.current) return; setLoadState('error'); setErrorMsg('Falha de conexão.') })
+    return () => { cancelled = true }
+  }, [q, category, actor, from, to, sort, page, refreshKey, campaign.id])
+
+  // Detecta atividade nova sem deslocar a leitura (seção 15) — só checa
+  // quando dá pra comparar com segurança (topo da lista, mais recentes
+  // primeiro); nunca troca os dados sozinho, só mostra o aviso.
+  useEffect(() => {
+    if (page !== 0 || sort !== 'recentes' || loadState !== 'loaded') return
+    const interval = setInterval(async () => {
+      try {
+        const qs = new URLSearchParams({ sort: 'recentes', page: '0' })
+        if (q) qs.set('q', q)
+        if (category !== 'todos') qs.set('type', category)
+        if (actor !== 'todos') qs.set('actor', actor)
+        if (from) qs.set('from', from)
+        if (to) qs.set('to', to)
+        const res = await fetch(`/api/admin/campaigns/${campaign.id}/events?${qs.toString()}`)
+        if (!res.ok) return
+        const json: EventsResponse = await res.json()
+        const newestId = json.items[0]?.id ?? null
+        if (newestId && latestTopIdRef.current && newestId !== latestTopIdRef.current) setHasNewActivity(true)
+      } catch { /* verificação silenciosa — não interrompe a leitura */ }
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [page, sort, loadState, q, category, actor, from, to, campaign.id])
+
+  function exportCsv() {
+    const qs = new URLSearchParams({ sort })
+    if (q) qs.set('q', q)
+    if (category !== 'todos') qs.set('type', category)
+    if (actor !== 'todos') qs.set('actor', actor)
+    if (from) qs.set('from', from)
+    if (to) qs.set('to', to)
+    window.open(`/api/admin/campaigns/${campaign.id}/events/export?${qs.toString()}`, '_blank')
+  }
+
+  const items = data?.items ?? []
+  const totalPages = data ? Math.ceil(data.total / HISTORY_PAGE_SIZE) : 0
+  const groups: { key: string; label: string; items: HistoryEventItem[] }[] = []
+  for (const item of items) {
+    const key = dateKeyBR(item.createdAt)
+    const lastGroup = groups[groups.length - 1]
+    if (lastGroup?.key === key) lastGroup.items.push(item)
+    else groups.push({ key, label: formatDateLongBR(item.createdAt), items: [item] })
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Histórico da campanha</h2>
+          <p className="mt-1 text-sm" style={{ color: C.textSecondary }}>Consulte as alterações, decisões e movimentações deste destaque.</p>
+        </div>
+        <button type="button" onClick={exportCsv} disabled={!data || data.summary.totalEvents === 0}
+          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: C.primary }}>
+          <Download size={14} aria-hidden="true" /> Exportar histórico
+        </button>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[68fr_32fr]">
+        <div className="min-w-0 space-y-4">
+          {/* Filtros — sempre aplicados no backend (seção 5) */}
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border p-3" style={{ borderColor: C.border, background: C.header }}>
+            <div className="relative min-w-[180px] flex-1">
+              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.textSecondary }} aria-hidden="true" />
+              <input value={qDraft} onChange={e => setQDraft(e.target.value)} placeholder="Buscar no histórico" aria-label="Buscar por descrição, responsável ou identificador"
+                className="w-full rounded-lg border bg-transparent py-2 pl-8 pr-3 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+            </div>
+            <label className="sr-only" htmlFor="hist-type">Tipo de evento</label>
+            <select id="hist-type" value={category} onChange={e => setCategory(e.target.value as EventCategory | 'todos')}
+              className="rounded-lg border bg-transparent px-2.5 py-2 text-xs outline-none" style={{ borderColor: C.border, color: C.text, background: C.header }}>
+              {CATEGORY_OPTIONS.map(o => <option key={o.key} value={o.key} style={{ color: 'black' }}>{o.label}</option>)}
+            </select>
+            <label className="sr-only" htmlFor="hist-actor">Responsável</label>
+            <select id="hist-actor" value={actor} onChange={e => setActor(e.target.value)}
+              className="max-w-[160px] rounded-lg border bg-transparent px-2.5 py-2 text-xs outline-none" style={{ borderColor: C.border, color: C.text, background: C.header }}>
+              <option value="todos" style={{ color: 'black' }}>Responsável: todos</option>
+              {(data?.actorOptions ?? []).map(a => <option key={a.id} value={a.id} style={{ color: 'black' }}>{a.name}</option>)}
+            </select>
+            <div className="flex items-center gap-1">
+              <label className="sr-only" htmlFor="hist-from">Data inicial</label>
+              <input id="hist-from" type="date" value={from} onChange={e => setFrom(e.target.value)} aria-label="Período — data inicial"
+                className="rounded-lg border bg-transparent px-2 py-2 text-xs outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} />
+              <span style={{ color: C.textSecondary }}>—</span>
+              <label className="sr-only" htmlFor="hist-to">Data final</label>
+              <input id="hist-to" type="date" value={to} onChange={e => setTo(e.target.value)} aria-label="Período — data final"
+                className="rounded-lg border bg-transparent px-2 py-2 text-xs outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} />
+            </div>
+            <label className="sr-only" htmlFor="hist-sort">Ordenação</label>
+            <select id="hist-sort" value={sort} onChange={e => setSort(e.target.value as 'recentes' | 'antigos')}
+              className="rounded-lg border bg-transparent px-2.5 py-2 text-xs outline-none" style={{ borderColor: C.border, color: C.text, background: C.header }}>
+              <option value="recentes" style={{ color: 'black' }}>Mais recentes primeiro</option>
+              <option value="antigos" style={{ color: 'black' }}>Mais antigos primeiro</option>
+            </select>
+            {hasActiveFilters && (
+              <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-semibold" style={{ borderColor: C.border, color: C.textSecondary }}>
+                <X size={12} aria-hidden="true" /> Limpar filtros
+              </button>
+            )}
+          </div>
+
+          {hasNewActivity && (
+            <div className="flex items-center gap-2 rounded-xl border p-2.5 text-xs" style={{ borderColor: C.primary, color: C.text, background: `${C.primary}12` }}>
+              <Info size={13} style={{ color: C.primary }} aria-hidden="true" />
+              Há novas atividades registradas.
+              <button type="button" onClick={() => setRefreshKey(k => k + 1)} className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-white" style={{ background: C.primary }}>
+                <RotateCcw size={11} aria-hidden="true" /> Atualizar
+              </button>
+            </div>
+          )}
+
+          {loadState === 'error' && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border p-3 text-sm" style={{ borderColor: C.error, color: C.text }}>
+              <AlertTriangle size={16} style={{ color: C.error }} aria-hidden="true" />
+              {errorMsg ?? 'Não foi possível carregar o histórico.'}
+              <button type="button" onClick={() => setRefreshKey(k => k + 1)} className="ml-auto rounded-lg border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: C.border, color: C.text }}>Tentar novamente</button>
+            </div>
+          )}
+
+          {loadState === 'loading' && !data && (
+            <div className="space-y-3" aria-busy="true" aria-label="Carregando histórico">
+              {[0, 1, 2].map(i => <div key={i} className="h-20 animate-pulse rounded-2xl" style={{ background: C.header }} />)}
+            </div>
+          )}
+
+          {data && (
+            <>
+              <p className="text-xs" style={{ color: C.textSecondary }}>
+                {data.total} {data.total === 1 ? 'evento encontrado' : 'eventos encontrados'}
+                {loadState === 'refreshing' ? ' · atualizando…' : ''}
+              </p>
+
+              {data.summary.totalEvents === 0 ? (
+                <EmptyState icon={HistoryIcon} text="Nenhum evento registrado ainda para esta campanha." />
+              ) : data.total === 0 ? (
+                <div className="flex flex-col items-center gap-2 rounded-2xl border py-10 text-center" style={{ borderColor: C.border }}>
+                  <Inbox size={20} style={{ color: C.textSecondary }} aria-hidden="true" />
+                  <p className="text-sm font-semibold" style={{ color: C.text }}>Nenhum resultado para estes filtros.</p>
+                  <button type="button" onClick={clearFilters} className="text-xs font-semibold hover:underline" style={{ color: C.primary }}>Limpar filtros</button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {groups.map(group => (
+                    <div key={group.key}>
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: C.textSecondary }}>{group.label}</p>
+                      <div className="relative space-y-3 border-l pl-4" style={{ borderColor: C.border }}>
+                        {group.items.map(item => (
+                          <TimelineEventCard key={item.id} item={item} creatives={creatives} onDetails={() => setSelectedEvent(item)} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} variant="dark" className="pt-1" />
+              )}
+            </>
+          )}
+        </div>
+
+        <HistorySidebar summary={data?.summary ?? null} onGoToConfig={onGoToConfig} onGoToPreview={() => onGoToPreview()} />
+      </div>
+
+      {selectedEvent && (
+        <EventDetailDialog event={selectedEvent} creatives={creatives} onClose={() => setSelectedEvent(null)} onOpenPreview={onGoToPreview} />
+      )}
+    </div>
+  )
+}
+
+function TimelineEventCard({ item, creatives, onDetails }: { item: HistoryEventItem; creatives: Creative[]; onDetails: () => void }) {
+  const meta = getActionMeta(item.action)
+  const Icon = ACTION_ICON[item.action] ?? Info
+  const tone = TONE_COLOR[meta.tone]
+  const matched = resolveEventCreative(item, creatives)
+  const legacyMislabel = isLegacyCancelMislabel(item.action, item.newStatus)
+
+  const prevLabel = isDateRangeStatus(item.action) ? (item.previousStatus ? formatDateTimeBR(item.previousStatus) : null) : (item.previousStatus ? getStatusLabel(item.previousStatus).label : null)
+  const newLabel = isDateRangeStatus(item.action) ? (item.newStatus ? formatDateTimeBR(item.newStatus) : null) : (item.newStatus ? getStatusLabel(item.newStatus).label : null)
+
+  return (
+    <div className="relative">
+      <span className="absolute -left-[21px] top-0.5 flex h-6 w-6 items-center justify-center rounded-full" style={{ background: `${tone}22`, boxShadow: `0 0 0 4px ${C.card}` }}>
+        <Icon size={12} style={{ color: tone }} aria-hidden="true" />
+      </span>
+      <div className="rounded-2xl border p-3.5" style={{ borderColor: C.border, background: C.header }}>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold" style={{ color: C.text }}>{meta.label}</p>
+              <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${tone}18`, color: tone }}>{CATEGORY_LABEL[meta.category]}</span>
+            </div>
+            <p className="mt-0.5 text-xs" style={{ color: C.textSecondary }}>
+              {item.actorName} · {originLabel(item.actorOrigin)} · {formatDateTimeBR(item.createdAt)}
+            </p>
+          </div>
+          <button type="button" onClick={onDetails} className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold hover:underline" style={{ color: C.primary }}>
+            Ver detalhes <ChevronRight size={12} aria-hidden="true" />
+          </button>
+        </div>
+        {item.action === 'update_campaign_config' ? (
+          item.fieldChanges ? (
+            <p className="mt-2 text-xs" style={{ color: C.textSecondary }}>Campos alterados: {item.fieldChanges.map(f => f.label).join(', ')}.</p>
+          ) : parseChangedFields(item.reason) && (
+            <p className="mt-2 text-xs" style={{ color: C.textSecondary }}>Campos alterados: {parseChangedFields(item.reason)!.join(', ')}.</p>
+          )
+        ) : item.reason && (
+          <p className="mt-2 text-xs" style={{ color: C.textSecondary }}>
+            {(item.action === 'review_creative_changes' || item.action === 'review_creative_reject') ? 'Mensagem enviada ao parceiro: ' : 'Motivo: '}{item.reason}
+          </p>
+        )}
+        {(prevLabel || newLabel) && (
+          <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs" style={{ color: C.text }}>
+            {prevLabel && <span className="rounded-md px-1.5 py-0.5" style={{ background: `${C.textSecondary}18` }}>{prevLabel}</span>}
+            {prevLabel && newLabel && <ArrowRightSmall />}
+            {newLabel && <span className="rounded-md px-1.5 py-0.5 font-semibold" style={{ background: `${tone}18`, color: tone }}>{newLabel}</span>}
+            {legacyMislabel && <span className="text-[10px] font-normal" style={{ color: C.textSecondary }}>(registro legado — ver detalhes)</span>}
+          </p>
+        )}
+        {matched && <p className="mt-2 text-[11px]" style={{ color: C.textSecondary }}>Versão {matched.creative.version}{!matched.exact ? ' (associada por horário — registro legado)' : ''}</p>}
+      </div>
+    </div>
+  )
+}
+function ArrowRightSmall() { return <ChevronRight size={11} aria-hidden="true" style={{ color: C.textSecondary }} /> }
+
+function HistorySidebar({ summary, onGoToConfig, onGoToPreview }: { summary: HistorySummary | null; onGoToConfig: () => void; onGoToPreview: () => void }) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+        <p className="mb-3 text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Resumo do histórico</p>
+        {!summary ? (
+          <p className="text-xs" style={{ color: C.textSecondary }}>Carregando…</p>
+        ) : (
+          <div className="space-y-3 text-xs">
+            <Info2 label="Criação da campanha" value={formatDateTimeBR(summary.campaignCreatedAt)} />
+            {summary.lastActivity && (
+              <div>
+                <p style={{ color: C.textSecondary }}>Última atividade</p>
+                <p className="mt-0.5 font-medium" style={{ color: C.text }}>{formatDateTimeBR(summary.lastActivity.createdAt)}</p>
+                <p className="mt-0.5" style={{ color: C.textSecondary }}>{getActionMeta(summary.lastActivity.action).label} · {summary.lastActivity.actorName}</p>
+              </div>
+            )}
+            {summary.lastCreativeDecision && (
+              <Info2 label="Última decisão do criativo" value={`${getActionMeta(summary.lastCreativeDecision.action).label} · ${formatDateTimeBR(summary.lastCreativeDecision.createdAt)}`} />
+            )}
+            <Info2 label="Total de eventos" value={`${summary.totalEvents} (todo o histórico, ignora filtros ativos)`} />
+            <p className="border-t pt-2 text-[11px]" style={{ borderColor: C.border, color: C.textSecondary }}>
+              Algumas ações anteriores ao início da auditoria podem não estar disponíveis.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+        <p className="mb-1.5 flex items-center gap-1.5 text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>
+          <ShieldCheck size={14} style={{ color: C.primary }} aria-hidden="true" /> Registro de alterações
+        </p>
+        <p className="text-xs" style={{ color: C.textSecondary }}>Consulte quem realizou cada ação e os detalhes registrados no momento da alteração.</p>
+        <span className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: `${C.textSecondary}18`, color: C.textSecondary }}>
+          <Lock size={9} aria-hidden="true" /> Somente leitura
+        </span>
+      </div>
+
+      <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+        <p className="mb-2 text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Ações rápidas</p>
+        <div className="space-y-1.5">
+          <button type="button" onClick={onGoToConfig} className="flex w-full items-center justify-between text-xs font-semibold hover:underline" style={{ color: C.primary }}>Ver configuração <ChevronRight size={12} aria-hidden="true" /></button>
+          <button type="button" onClick={onGoToPreview} className="flex w-full items-center justify-between text-xs font-semibold hover:underline" style={{ color: C.primary }}>Abrir prévia <ChevronRight size={12} aria-hidden="true" /></button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DiffRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-3 gap-2 border-t py-1.5 text-xs first:border-t-0" style={{ borderColor: C.border }}>
+      <span style={{ color: C.textSecondary }}>{label}</span>
+      <span className="col-span-2" style={{ color: C.text }}>{value}</span>
+    </div>
+  )
+}
+
+function EventDetailDialog({ event, creatives, onClose, onOpenPreview }: {
+  event: HistoryEventItem; creatives: Creative[]; onClose: () => void; onOpenPreview: (creativeId?: string) => void
+}) {
+  const meta = getActionMeta(event.action)
+  const isDateRange = isDateRangeStatus(event.action)
+  const prev = event.previousStatus ? (isDateRange ? { label: formatDateTimeBR(event.previousStatus), raw: event.previousStatus, known: true } : getStatusLabel(event.previousStatus)) : null
+  const next = event.newStatus ? (isDateRange ? { label: formatDateTimeBR(event.newStatus), raw: event.newStatus, known: true } : getStatusLabel(event.newStatus)) : null
+  const legacyMislabel = isLegacyCancelMislabel(event.action, event.newStatus)
+  // Campos alterados: prefere o registro real (before/after gravados desde
+  // a migration de auditoria mais rica); só cai no parse de `reason` (só
+  // nomes de campo, sem valores) pra eventos gravados antes dela existir.
+  const realFieldChanges = event.fieldChanges
+  const legacyChangedFieldNames = !realFieldChanges ? parseChangedFields(event.reason) : null
+  const duplicateSource = parseDuplicateSource(event.reason)
+  const matched = resolveEventCreative(event, creatives)
+  const isPartnerMessage = event.action === 'review_creative_changes' || event.action === 'review_creative_reject'
+  const hasRawDetails = (prev && !prev.known) || (next && !next.known) || legacyMislabel
+
+  return (
+    <Dialog open onOpenChange={o => { if (!o) onClose() }}>
+      <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto border" style={{ background: C.card, borderColor: C.border, color: C.text }}>
+        <DialogTitle style={{ color: C.text }}>{meta.label}</DialogTitle>
+        <div className="space-y-1 text-sm">
+          <button type="button" onClick={() => { navigator.clipboard.writeText(event.id); toast.success('ID do evento copiado.') }}
+            className="inline-flex items-center gap-1 text-xs" style={{ color: C.textSecondary }}>
+            ID: {event.id.slice(0, 8)}… <Copy size={11} aria-hidden="true" />
+          </button>
+
+          <div className="mt-2 space-y-0 rounded-xl border" style={{ borderColor: C.border }}>
+            <DiffRow label="Categoria" value={CATEGORY_LABEL[meta.category]} />
+            <DiffRow label="Data e hora" value={`${formatDateTimeBR(event.createdAt)} (horário de Brasília)`} />
+            <DiffRow label="Responsável" value={`${event.actorName} · ${originLabel(event.actorOrigin)}`} />
+            {realFieldChanges ? (
+              <DiffRow label="Campos alterados" value={realFieldChanges.map(f => f.label).join(', ')} />
+            ) : legacyChangedFieldNames ? (
+              <DiffRow label="Campos alterados" value={legacyChangedFieldNames.join(', ')} />
+            ) : event.reason ? (
+              <DiffRow label={isPartnerMessage ? 'Mensagem ao parceiro' : 'Motivo'} value={event.reason} />
+            ) : null}
+            {prev && <DiffRow label="Estado anterior" value={prev.label} />}
+            {next && <DiffRow label="Estado posterior" value={next.label} />}
+            {matched && (
+              <div className="grid grid-cols-3 gap-2 border-t py-1.5 text-xs" style={{ borderColor: C.border }}>
+                <span style={{ color: C.textSecondary }}>Versão do criativo</span>
+                <span className="col-span-2 flex items-center gap-2" style={{ color: C.text }}>
+                  Versão {matched.creative.version}{!matched.exact && ' (associada por horário — registro legado, sem vínculo direto)'}
+                  <button type="button" onClick={() => { onClose(); onOpenPreview(matched.creative.id) }} className="inline-flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: C.primary }}>
+                    Abrir prévia <ExternalLink size={10} aria-hidden="true" />
+                  </button>
+                </span>
+              </div>
+            )}
+            {CREATIVE_ACTIONS.has(event.action) && !matched && (
+              <DiffRow label="Versão do criativo" value="Não identificada com segurança neste registro." />
+            )}
+            {event.internalNote && <DiffRow label="Nota interna" value={event.internalNote} />}
+            {duplicateSource && <DiffRow label="Referência relacionada" value={`Duplicada a partir da campanha ${duplicateSource.slice(0, 8)}…`} />}
+          </div>
+
+          {realFieldChanges && (
+            <div className="mt-3 overflow-x-auto rounded-xl border" style={{ borderColor: C.border }}>
+              <table className="w-full text-left text-xs">
+                <thead><tr style={{ color: C.textSecondary }}><th className="p-2 font-semibold">Campo</th><th className="p-2 font-semibold">Antes</th><th className="p-2 font-semibold">Depois</th></tr></thead>
+                <tbody>
+                  {realFieldChanges.map(f => (
+                    <tr key={f.field} className="border-t" style={{ borderColor: C.border, color: C.text }}>
+                      <td className="p-2">{f.label}</td>
+                      <td className="p-2">{f.before ?? 'Valor anterior não registrado'}</td>
+                      <td className="p-2">{f.after ?? 'Valor não registrado neste evento'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {legacyChangedFieldNames && (
+            <div className="mt-3 overflow-x-auto rounded-xl border" style={{ borderColor: C.border }}>
+              <table className="w-full text-left text-xs">
+                <thead><tr style={{ color: C.textSecondary }}><th className="p-2 font-semibold">Campo</th><th className="p-2 font-semibold">Antes</th><th className="p-2 font-semibold">Depois</th></tr></thead>
+                <tbody>
+                  {legacyChangedFieldNames.map(f => (
+                    <tr key={f} className="border-t" style={{ borderColor: C.border, color: C.text }}>
+                      <td className="p-2 capitalize">{f}</td>
+                      <td className="p-2" style={{ color: C.textSecondary }}>Valor anterior não registrado</td>
+                      <td className="p-2" style={{ color: C.textSecondary }}>Valor não registrado neste evento</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="p-2 text-[11px]" style={{ color: C.textSecondary, borderTop: `1px solid ${C.border}` }}>
+                Registro legado: este evento registrou quais campos mudaram, mas não os valores antes/depois — não há snapshot pra reconstruir.
+              </p>
+            </div>
+          )}
+
+          {legacyMislabel && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border p-2.5 text-xs" style={{ borderColor: C.warning, color: C.text, background: `${C.warning}12` }}>
+              <AlertCircle size={13} className="mt-0.5 shrink-0" style={{ color: C.warning }} aria-hidden="true" />
+              <span>Registro legado: esta versão do sistema gravava &quot;Encerrada&quot; para todo cancelamento manual. O estado atual real desta campanha é <strong>Cancelada</strong> — o valor acima é o que foi gravado no momento, preservado sem alteração.</span>
+            </div>
+          )}
+
+          {hasRawDetails && (
+            <Accordion className="mt-3">
+              <AccordionItem value="tecnico">
+                <AccordionTrigger className="text-xs font-semibold" style={{ color: C.textSecondary }}>Detalhes técnicos</AccordionTrigger>
+                <AccordionContent style={{ color: C.textSecondary }}>
+                  <div className="space-y-1 text-[11px]">
+                    <p>Ação: <code>{event.action}</code></p>
+                    {event.previousStatus && <p>Código anterior: <code>{event.previousStatus}</code></p>}
+                    {event.newStatus && <p>Código posterior: <code>{event.newStatus}</code></p>}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }

@@ -119,6 +119,19 @@ export async function logAppAdminEvent(
      *  "antes/depois" de status pra mostrar. */
     previousStatus?: string | null
     newStatus?: string | null
+    /** Vínculo real com a versão do criativo (ad_creatives.id) — só pros
+     *  eventos de submit_creative/review_creative_* que já sabem exatamente
+     *  qual versão. Sem isso, a aba Histórico tem que adivinhar por
+     *  proximidade de horário (nunca mais precisa pra eventos novos). */
+    creativeId?: string | null
+    /** Nota interna do revisor no momento da decisão — nunca a mesma coisa
+     *  que `reason` (que em review_creative_changes/reject é a mensagem
+     *  enviada ao parceiro). Só rotas /admin lêem esta coluna. */
+    internalNote?: string | null
+    /** Antes/depois REAIS por campo — só quando a rota tem os dois valores
+     *  na mão (ex.: update_campaign_config). Nunca preencher com o valor
+     *  atual como se fosse o anterior. */
+    fieldChanges?: { field: string; label: string; before: string | null; after: string | null }[] | null
   },
 ) {
   await supabase.from('app_admin_events').insert({
@@ -134,5 +147,8 @@ export async function logAppAdminEvent(
     reason: event.reason ?? null,
     previous_status: event.previousStatus ?? null,
     new_status: event.newStatus ?? null,
+    creative_id: event.creativeId ?? null,
+    internal_note: event.internalNote ?? null,
+    field_changes: event.fieldChanges ?? null,
   })
 }

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { logAppAdminEvent } from '@/lib/services/app-publish'
+import { formatDateTimeBR } from '@/lib/marketplace'
 
 const EDITABLE_FIELDS = ['internal_name', 'space_id', 'package_id', 'starts_at', 'ends_at'] as const
 const FIELD_LABEL: Record<string, string> = {
-  internal_name: 'nome interno', space_id: 'espaço', package_id: 'pacote', starts_at: 'início', ends_at: 'término',
+  internal_name: 'Nome interno', space_id: 'Espaço', package_id: 'Pacote', starts_at: 'Data inicial', ends_at: 'Data final',
 }
 
 /**
@@ -30,7 +31,7 @@ export async function PATCH(
 
   const { data: campaign } = await supabase
     .from('sponsored_campaigns')
-    .select('id, cancelled_at, updated_at, app_draft_id, application_id')
+    .select('id, cancelled_at, updated_at, app_draft_id, application_id, internal_name, space_id, package_id, starts_at, ends_at')
     .eq('id', campaignId)
     .single()
   if (!campaign) return NextResponse.json({ error: 'Campanha não encontrada.' }, { status: 404 })
@@ -79,12 +80,35 @@ export async function PATCH(
     }, { status: 409 })
   }
 
-  const changedFields = Object.keys(updates).map(f => FIELD_LABEL[f] ?? f)
+  // Antes/depois REAIS por campo (não só o nome do campo) — resolvidos a
+  // partir da linha que já tínhamos antes do update, nunca reconstruídos
+  // depois do fato (seção 9 do pedido de Histórico).
+  const changedKeys = Object.keys(updates) as (typeof EDITABLE_FIELDS)[number][]
+  async function displayValue(field: typeof EDITABLE_FIELDS[number], value: unknown): Promise<string | null> {
+    if (value == null) return field === 'space_id' || field === 'package_id' ? 'Nenhum' : null
+    if (field === 'starts_at' || field === 'ends_at') return formatDateTimeBR(value as string)
+    if (field === 'space_id') {
+      const { data } = await supabase.from('ad_spaces').select('name').eq('id', value as string).single()
+      return data?.name ?? `Espaço ${(value as string).slice(0, 8)}…`
+    }
+    if (field === 'package_id') {
+      const { data } = await supabase.from('ad_packages').select('name').eq('id', value as string).single()
+      return data?.name ?? `Pacote ${(value as string).slice(0, 8)}…`
+    }
+    return String(value)
+  }
+  const fieldChanges = await Promise.all(changedKeys.map(async field => ({
+    field, label: FIELD_LABEL[field] ?? field,
+    before: await displayValue(field, campaign[field]),
+    after: await displayValue(field, updates[field]),
+  })))
+
   await logAppAdminEvent(supabase, {
     appDraftId: campaign.app_draft_id, applicationId: campaign.application_id, campaignId,
     actorId: user.id, action: 'update_campaign_config',
-    reason: `Campos alterados: ${changedFields.join(', ')}.`,
+    reason: `Campos alterados: ${fieldChanges.map(f => f.label).join(', ')}.`,
     previousStatus: null, newStatus: null,
+    fieldChanges,
   })
 
   return NextResponse.json({ ok: true, updatedAt: updatedRows[0].updated_at })

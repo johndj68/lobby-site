@@ -88,6 +88,8 @@ export async function POST(
     reason: action !== 'approve' ? reason.trim() : null,
     previousStatus: 'em_revisao',
     newStatus,
+    creativeId: latest.id,
+    internalNote: typeof internalNotes === 'string' ? internalNotes.trim() || null : null,
   })
 
   const ownerId = draftRef?.created_by
