@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useSyncExternalStore } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pause, Play, ImageOff, RotateCcw } from 'lucide-react'
 import Container from '@/components/layout/Container'
 import { colors } from '@/lib/design-tokens'
 
@@ -44,6 +44,20 @@ interface SponsoredApp {
     price?: number
     billing_period?: string
   }>
+}
+
+function subscribeReducedMotion(callback: () => void) {
+  const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+  mq.addEventListener('change', callback)
+  return () => mq.removeEventListener('change', callback)
+}
+function getReducedMotionSnapshot() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+// SSR não tem matchMedia — assume "movimento permitido" (mesmo default de
+// sempre) até o cliente hidratar com o valor real, sem gerar mismatch.
+function getReducedMotionServerSnapshot() {
+  return false
 }
 
 const AUTOPLAY_INTERVAL = 6000
@@ -114,11 +128,22 @@ function sendClickBeacon(campaignId: string | undefined, creativeId: string | nu
 export default function SponsoredCarouselSection({
   campaigns = [],
   isPreview = false,
+  forceViewport,
+  onPreviewCtaClick,
 }: {
   campaigns?: SponsoredApp[]
   /** true na aba Prévia do admin — nunca gera impressão/clique faturável
    *  (seção 18/19). */
   isPreview?: boolean
+  /** Só a prévia administrativa passa isto — força o layout de um breakpoint
+   *  específico via classe condicional em vez de depender de lg: (media
+   *  query da JANELA real, que não muda só porque o contêiner da prévia foi
+   *  estreitado). A home pública nunca passa essa prop, então continua 100%
+   *  responsiva pela largura real da janela como sempre foi. */
+  forceViewport?: 'desktop' | 'tablet' | 'mobile'
+  /** Só em prévia: em vez do clique não fazer nada, informa destino/validade
+   *  pro admin decidir o que fazer — nunca navega nem conta clique. */
+  onPreviewCtaClick?: (info: { href: string; valid: boolean }) => void
 }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
@@ -148,14 +173,23 @@ export default function SponsoredCarouselSection({
   const handlePlay = () => { setIsPaused(false); setIsPlaying(true) }
   const handlePause = () => { setIsPaused(true); setIsPlaying(false) }
 
+  // useSyncExternalStore em vez de ler matchMedia + setState dentro de um
+  // effect: aquele padrão (setState síncrono no corpo do effect, não dentro
+  // do callback de um listener) é exatamente o que react-hooks/purity
+  // rejeita, mas também é a forma clássica de evitar mismatch de hidratação
+  // pra estado só disponível no navegador — useSyncExternalStore resolve os
+  // dois problemas ao mesmo tempo (getServerSnapshot cobre o SSR, o valor
+  // real chega já no primeiro render do cliente, sem setState imperativo).
+  const prefersReducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotionSnapshot, getReducedMotionServerSnapshot)
+
   useEffect(() => {
-    if (!hasCampaigns || !isPlaying || isPaused || !pageVisibilityRef.current) {
+    if (!hasCampaigns || !isPlaying || isPaused || prefersReducedMotion || !pageVisibilityRef.current) {
       if (intervalRef.current) clearInterval(intervalRef.current)
       return
     }
     intervalRef.current = setInterval(nextSlide, AUTOPLAY_INTERVAL)
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
-  }, [isPlaying, isPaused, nextSlide, hasCampaigns])
+  }, [isPlaying, isPaused, nextSlide, hasCampaigns, prefersReducedMotion])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -164,14 +198,6 @@ export default function SponsoredCarouselSection({
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [])
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (mediaQuery.matches) setIsPlaying(false)
-    const handleChange = (e: MediaQueryListEvent) => { if (e.matches) setIsPlaying(false) }
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
 
   const handleMouseEnter = () => handlePause()
@@ -227,7 +253,9 @@ export default function SponsoredCarouselSection({
 
           <div
             ref={impressionRef}
-            className="relative rounded-3xl overflow-hidden border p-8 lg:p-12 flex flex-col lg:flex-row gap-8 items-center"
+            className={`relative rounded-3xl overflow-hidden border p-8 lg:p-12 flex gap-8 items-center ${
+              forceViewport ? (forceViewport === 'desktop' ? 'flex-row' : 'flex-col') : 'flex-col lg:flex-row'
+            }`}
             style={{ borderColor: colors.border, backgroundColor: colors.background }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -275,7 +303,15 @@ export default function SponsoredCarouselSection({
 
               <Link
                 href={isPreview ? '#' : (current.cta_href || `/app/${app.slug}`)}
-                onClick={e => { if (isPreview) { e.preventDefault(); return } sendClickBeacon(current.id, current.creative_id, viewId, !isPreview) }}
+                onClick={e => {
+                  if (isPreview) {
+                    e.preventDefault()
+                    const href = current.cta_href || `/app/${app.slug}`
+                    onPreviewCtaClick?.({ href, valid: !!current.cta_href })
+                    return
+                  }
+                  sendClickBeacon(current.id, current.creative_id, viewId, !isPreview)
+                }}
                 className="inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold text-white transition-all hover:shadow-lg"
                 style={{ backgroundColor: colors.primary }}
               >
@@ -283,17 +319,11 @@ export default function SponsoredCarouselSection({
               </Link>
             </div>
 
-            <div className="hidden lg:block flex-1">
-              {isAllowedImageHost(current.campaign_image_url) ? (
-                <div className="relative w-full h-64 rounded-2xl overflow-hidden">
-                  <Image src={current.campaign_image_url!} alt={current.image_alt || app.name} fill className="object-cover" />
-                </div>
-              ) : (
-                <div className="w-full h-64 rounded-2xl border flex items-center justify-center" style={{ borderColor: colors.border, backgroundColor: colors.backgroundAlt }}>
-                  <p className="text-sm" style={{ color: colors.textMuted }}>Imagem do app</p>
-                </div>
-              )}
-            </div>
+            {(!forceViewport || forceViewport !== 'mobile') && (
+              <div className={forceViewport ? 'flex-1 w-full' : 'hidden lg:block flex-1'}>
+                <CreativeImage url={current.campaign_image_url} alt={current.image_alt || app.name} />
+              </div>
+            )}
 
             {campaigns.length > 1 && (
               <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
@@ -337,5 +367,44 @@ export default function SponsoredCarouselSection({
         </div>
       </Container>
     </section>
+  )
+}
+
+/** Distingue "nunca cadastrou" de "cadastrou mas não carrega" — sem isso os
+ *  dois casos mostravam o mesmo placeholder genérico, sem jeito de saber se
+ *  havia algo pra corrigir. onError do next/image detecta falha real de
+ *  carregamento (404, host bloqueado por CSP, etc.); "Tentar novamente"
+ *  força um novo <Image> (key muda) em vez de reusar a mesma tag travada
+ *  no estado de erro do navegador. */
+function CreativeImage({ url, alt }: { url: string | null | undefined; alt: string }) {
+  const [failed, setFailed] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
+  const [prevUrl, setPrevUrl] = useState(url)
+  if (url !== prevUrl) { setPrevUrl(url); setFailed(false) }
+
+  if (!isAllowedImageHost(url)) {
+    return (
+      <div className="flex h-64 w-full flex-col items-center justify-center gap-2 rounded-2xl border" style={{ borderColor: colors.border, backgroundColor: colors.backgroundAlt }}>
+        <ImageOff size={22} style={{ color: colors.textMuted }} aria-hidden="true" />
+        <p className="text-sm" style={{ color: colors.textMuted }}>Imagem do destaque não cadastrada.</p>
+      </div>
+    )
+  }
+  if (failed) {
+    return (
+      <div className="flex h-64 w-full flex-col items-center justify-center gap-2 rounded-2xl border" style={{ borderColor: colors.border, backgroundColor: colors.backgroundAlt }}>
+        <ImageOff size={22} style={{ color: colors.textMuted }} aria-hidden="true" />
+        <p className="text-sm" style={{ color: colors.textMuted }}>Não foi possível carregar a imagem.</p>
+        <button type="button" onClick={() => { setFailed(false); setRetryKey(k => k + 1) }}
+          className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: colors.border, color: colors.text }}>
+          <RotateCcw size={12} aria-hidden="true" /> Tentar novamente
+        </button>
+      </div>
+    )
+  }
+  return (
+    <div className="relative h-64 w-full overflow-hidden rounded-2xl">
+      <Image key={retryKey} src={url!} alt={alt} fill className="object-cover" onError={() => setFailed(true)} />
+    </div>
   )
 }

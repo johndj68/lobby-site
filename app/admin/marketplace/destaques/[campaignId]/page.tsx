@@ -13,7 +13,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   const { data: campaign } = await supabase
     .from('sponsored_campaigns')
-    .select('*, app_drafts(id, name, logo_url, created_by, applications(id, slug, is_published, suspended_at)), space:ad_spaces(id, name), package:ad_packages(id, name, price, currency, duration_days)')
+    .select('*, app_drafts(id, name, logo_url, created_by, applications(id, slug, is_published, suspended_at)), space:ad_spaces(id, name, slug), package:ad_packages(id, name, price, currency, duration_days)')
     .eq('id', campaignId)
     .single()
   if (!campaign) notFound()
@@ -37,7 +37,11 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
     supabase.from('app_admin_events').select('id, action, reason, previous_status, new_status, actor_id, created_at').eq('campaign_id', campaignId).order('created_at', { ascending: false }),
   ])
 
-  const actorIds = [...new Set((events ?? []).map(e => e.actor_id).filter(Boolean))] as string[]
+  // Um único mapa de atores serve tanto o histórico (app_admin_events) quanto
+  // o "responsável" de cada versão do criativo (ad_creatives.reviewer_id) —
+  // mesma tabela, mesma regra de exibição, nunca duas buscas equivalentes.
+  const creativeReviewerIds = [...new Set((creatives ?? []).map(c => c.reviewer_id).filter(Boolean))] as string[]
+  const actorIds = [...new Set([...(events ?? []).map(e => e.actor_id), ...creativeReviewerIds].filter(Boolean))] as string[]
   const { data: actors } = actorIds.length
     ? await supabase.from('profiles').select('id, full_name, email').in('id', actorIds)
     : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
@@ -77,7 +81,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
       review={review}
       payment={payment}
       eligibility={eligibility}
-      space={space ? { id: space.id, name: space.name } : null}
+      space={space ? { id: space.id, name: space.name, slug: space.slug } : null}
       pkg={pkg ? { id: pkg.id, name: pkg.name, price: pkg.price, currency: pkg.currency, durationDays: pkg.duration_days } : null}
       spaceOptions={(spaces ?? []).map(s => ({ id: s.id, name: s.name }))}
       packageOptions={(packages ?? []).map(p => ({ id: p.id, name: p.name, spaceId: p.space_id, price: p.price, currency: p.currency, durationDays: p.duration_days }))}
@@ -85,6 +89,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         id: c.id, version: c.version, title: c.title, description: c.description, imageUrl: c.image_url, imageAlt: c.image_alt,
         ctaLabel: c.cta_label, ctaHref: c.cta_href, reviewStatus: c.review_status, reviewerNotes: c.reviewer_notes,
         partnerFeedback: c.partner_feedback, reviewedAt: c.reviewed_at, isLive: c.id === campaign.live_creative_id,
+        reviewerName: c.reviewer_id ? (actorMap.get(c.reviewer_id) ?? null) : null, createdAt: c.created_at,
       }))}
       purchases={(purchases ?? []).map(p => ({
         id: p.id, amount: p.amount, currency: p.currency, kind: p.kind, status: p.status,

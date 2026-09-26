@@ -1,28 +1,34 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, Grid3x3, Copy, PauseCircle, PlayCircle, StopCircle,
-  Info, History as HistoryIcon, Loader2, CheckCircle2, XCircle, MessageSquare, CreditCard, Upload, Monitor, Smartphone,
+  ArrowLeft, Copy, PauseCircle, PlayCircle, StopCircle,
+  Info, History as HistoryIcon, Loader2, CheckCircle2, XCircle, MessageSquare, CreditCard, Upload, Monitor, Smartphone, Tablet,
+  Maximize2, ExternalLink, Settings, AlertTriangle,
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
+import Link from 'next/link'
 import AdminShell from '@/components/layout/AdminShell'
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
+import MarketplaceTabs from '@/components/admin/MarketplaceTabs'
+import AppLogo from '@/components/admin/AppLogo'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import SponsoredCarouselSection from '@/components/sections/SponsoredCarouselSection'
 import { MARKETPLACE_COLORS as C, formatDateTimeBR, ORIGIN_LABEL, type PublicationStatus } from '@/lib/marketplace'
-import type { CampaignStatusBadge, EligibilityResult } from '@/lib/services/campaigns'
+import { getCreativeReviewBadge, type CampaignStatusBadge } from '@/lib/services/campaign-labels'
+import type { EligibilityResult } from '@/lib/services/campaigns'
 
 interface CampaignInfo { id: string; internalName: string | null; startsAt: string; endsAt: string; spaceId: string | null; packageId: string | null; pausedReason: string | null; createdAt: string; updatedAt: string }
 interface AppInfo { id: string; name: string; logoUrl: string | null; applicationSlug: string | null }
-interface SpaceRef { id: string; name: string }
+interface SpaceRef { id: string; name: string; slug?: string }
 interface PackageRef { id: string; name: string; price: number | null; currency: string; durationDays: number }
 interface PackageOption extends PackageRef { spaceId: string }
 interface Creative {
   id: string; version: number; title: string | null; description: string | null; imageUrl: string | null; imageAlt: string | null
   ctaLabel: string | null; ctaHref: string | null; reviewStatus: string; reviewerNotes: string | null; partnerFeedback: string | null
-  reviewedAt: string | null; isLive: boolean
+  reviewedAt: string | null; isLive: boolean; reviewerName: string | null; createdAt: string
 }
 interface Purchase { id: string; amount: number; currency: string; kind: string; status: string; isentoReason: string | null; refundStatus: string | null; createdAt: string; paidAt: string | null }
 interface EventItem { id: string; action: string; reason: string | null; previous_status: string | null; new_status: string | null; actorName: string; created_at: string }
@@ -93,29 +99,30 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
   return (
     <AdminShell user={user} profile={profile}>
       <div style={{ background: C.bg, minHeight: '100vh' }} className="px-4 py-6 sm:px-6 lg:px-8">
+        <p className="mb-3 text-xs" style={{ color: C.textSecondary }}>
+          <Link href="/admin/marketplace" className="hover:underline">Marketplace</Link> /{' '}
+          <Link href="/admin/marketplace/destaques" className="hover:underline">Destaques</Link> / {campaign.internalName ?? 'Campanha'}
+        </p>
+        <MarketplaceTabs active="destaques" />
         <button type="button" onClick={() => (window.history.length > 1 ? router.back() : router.push('/admin/marketplace/destaques'))}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium" style={{ color: C.primary }}>
-          <ArrowLeft size={14} aria-hidden="true" /> Voltar às campanhas
+          <ArrowLeft size={14} aria-hidden="true" /> Voltar aos destaques
         </button>
 
         <div className="mb-6 rounded-2xl border p-5" style={{ background: C.card, borderColor: C.border }}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
-              {app.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={app.logoUrl} alt="" className="h-14 w-14 rounded-2xl object-cover" />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: C.header }}>
-                  <Grid3x3 size={22} style={{ color: C.textSecondary }} aria-hidden="true" />
-                </div>
-              )}
+              <AppLogo url={app.logoUrl} size={56} theme="dark" />
               <div>
-                <h1 className="text-xl font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>{app.name} · {campaign.internalName ?? 'Campanha'}</h1>
+                <h1 className="text-xl font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>{campaign.internalName ?? 'Campanha sem nome'}</h1>
+                <p className="mt-0.5 text-sm" style={{ color: C.textSecondary }}>{app.name}</p>
                 <button onClick={() => { navigator.clipboard.writeText(campaign.id); toast.success('ID da campanha copiado.') }}
-                  className="mt-0.5 inline-flex items-center gap-1 text-xs" style={{ color: C.textSecondary }}>
+                  className="mt-1 inline-flex items-center gap-1 text-xs" style={{ color: C.textSecondary }}>
                   ID: {campaign.id.slice(0, 8)}… <Copy size={11} aria-hidden="true" />
                 </button>
-                <p className="mt-1 text-xs" style={{ color: C.textSecondary }}>{origin === 'lobby' ? ORIGIN_LABEL.lobby : `${ORIGIN_LABEL.partner} · ${partnerName}`}</p>
+                <p className="mt-1 text-xs" style={{ color: C.textSecondary }}>
+                  {origin === 'lobby' ? ORIGIN_LABEL.lobby : `${ORIGIN_LABEL.partner} · ${partnerName}`} · Atualizado em {formatDateTimeBR(campaign.updatedAt)}
+                </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -131,15 +138,31 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
           <div className="mt-4 grid grid-cols-2 gap-3 border-t pt-4 text-xs sm:grid-cols-4" style={{ borderColor: C.border }}>
             <Info2 label="Espaço" value={space?.name ?? 'Não definido'} />
             <Info2 label="Pacote" value={pkg?.name ?? 'Não definido'} />
-            <Info2 label="Período" value={`${formatDateTimeBR(campaign.startsAt)} — ${formatDateTimeBR(campaign.endsAt)}`} />
+            <Info2 label="Período (horário de Brasília)" value={`${formatDateTimeBR(campaign.startsAt)} — ${formatDateTimeBR(campaign.endsAt)}${
+              eligibility.key === 'programada' ? ' · agendada, ainda não começou' : eligibility.key === 'encerrada' ? ' · período encerrado' : ''
+            }`} />
             <Info2 label="Atualizado" value={formatDateTimeBR(campaign.updatedAt)} />
           </div>
           {campaign.pausedReason && (
             <p className="mt-3 rounded-lg border p-2.5 text-xs" style={{ borderColor: C.warning, color: C.text, background: 'rgba(245,158,11,0.08)' }}>Motivo da pausa: {campaign.pausedReason}</p>
           )}
-          {eligibility.reasons.length > 0 && (
+          {eligibility.key !== 'em_exibicao' && eligibility.key !== 'programada' && eligibility.key !== 'encerrada' && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg border p-2.5 text-xs" style={{ borderColor: '#7F1D1D', color: C.text, background: 'rgba(239,68,68,0.10)' }}>
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: C.error }} aria-hidden="true" />
+              <span><strong>Este destaque não está sendo exibido.</strong> {eligibility.reasons.join(' ')}</span>
+            </div>
+          )}
+          {eligibility.key === 'em_exibicao' && (
             <div className="mt-3 flex items-start gap-2 rounded-lg border p-2.5 text-xs" style={{ borderColor: C.border, color: C.textSecondary }}>
-              <Info size={13} className="mt-0.5 shrink-0" style={{ color: C.primary }} aria-hidden="true" /><span>{eligibility.reasons.join(' ')}</span>
+              <Info size={13} className="mt-0.5 shrink-0" style={{ color: C.success }} aria-hidden="true" /><span>Elegível para exibição no espaço configurado — sem telemetria de entrega em tempo real, não é possível confirmar que está sendo mostrado neste exato instante.</span>
+            </div>
+          )}
+          {(eligibility.key === 'programada' || eligibility.key === 'encerrada') && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg border p-2.5 text-xs" style={{ borderColor: C.border, color: C.textSecondary }}>
+              <Info size={13} className="mt-0.5 shrink-0" style={{ color: C.primary }} aria-hidden="true" />
+              <span>{eligibility.key === 'programada'
+                ? `Agendamento: começa em ${formatDateTimeBR(campaign.startsAt)} (horário de Brasília).`
+                : `Período encerrado em ${formatDateTimeBR(campaign.endsAt)} (horário de Brasília).`}</span>
             </div>
           )}
         </div>
@@ -152,7 +175,7 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
         </div>
 
         <div className="rounded-2xl border p-5" style={{ background: C.card, borderColor: C.border }}>
-          {tab === 'Prévia' && <PreviaTab liveCreative={liveCreative} pendingCreative={pendingCreative} app={app} />}
+          {tab === 'Prévia' && <PreviaTab campaign={campaign} app={app} space={space} creatives={creatives} onGoToConfig={() => setTab('Configuração')} />}
           {tab === 'Configuração' && (
             <ConfiguracaoTab campaign={campaign} app={app} draftCreative={draftCreative} pendingCreative={pendingCreative} liveCreative={liveCreative}
               spaceOptions={spaceOptions} packageOptions={packageOptions} purchases={purchases} isLeader={!!profile?.is_leader}
@@ -206,41 +229,200 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
 
 /** Monta o item aceito por SponsoredCarouselSection a partir de campos soltos
  *  (rascunho ainda não salvo) ou de uma versão já persistida — usada tanto
- *  pela prévia ao vivo da aba Configuração quanto pela aba Prévia. */
-function buildPreviewItem(app: AppInfo, fields: { title: string; description: string; imageUrl: string; imageAlt: string; ctaLabel: string }) {
+ *  pela prévia ao vivo da aba Configuração quanto pela aba Prévia. ctaHref
+ *  só existe pra versões já persistidas (a rota de salvar rascunho sempre
+ *  recalcula a partir do slug real — nunca aceita link livre do cliente). */
+function buildPreviewItem(app: AppInfo, fields: { title: string; description: string; imageUrl: string; imageAlt: string; ctaLabel: string }, ctaHref?: string | null) {
   return {
     id: 'preview', application_id: app.id, title: fields.title, description: fields.description,
     campaign_image_url: fields.imageUrl || undefined, image_alt: fields.imageAlt || undefined, cta_label: fields.ctaLabel || undefined,
-    cta_href: undefined, creative_id: null, starts_at: new Date().toISOString(), ends_at: new Date().toISOString(),
+    cta_href: ctaHref ?? undefined, creative_id: null, starts_at: new Date().toISOString(), ends_at: new Date().toISOString(),
     application: [{ id: app.id, name: app.name, slug: app.applicationSlug ?? '', category: '', logo_url: app.logoUrl ?? undefined }],
   }
 }
 
-function PreviaTab({ liveCreative, pendingCreative, app }: { liveCreative: Creative | null; pendingCreative: Creative | null; app: AppInfo }) {
-  function toCarouselItem(c: Creative) {
-    return buildPreviewItem(app, { title: c.title ?? '', description: c.description ?? '', imageUrl: c.imageUrl ?? '', imageAlt: c.imageAlt ?? '', ctaLabel: c.ctaLabel ?? '' })
+type Viewport = 'desktop' | 'tablet' | 'mobile'
+
+/** Rótulo real da versão — nunca "Versão aprovada (no ar)" fixo (seção 9):
+ *  distingue rascunho / em análise / ajustes pedidos / vinculada à
+ *  veiculação (a que serve agora) / aprovada histórica (já foi live, foi
+ *  substituída) / rejeitada, sempre com o número real da versão. */
+function versionLabel(c: Creative): string {
+  if (c.isLive) return `Vinculada à veiculação · v${c.version}`
+  switch (c.reviewStatus) {
+    case 'rascunho': return `Rascunho · v${c.version}`
+    case 'em_revisao': return `Em análise · v${c.version}`
+    case 'ajustes_solicitados': return `Ajustes solicitados · v${c.version}`
+    case 'aprovado': return `Aprovada (histórico) · v${c.version}`
+    case 'rejeitado': return `Rejeitada · v${c.version}`
+    default: return `v${c.version}`
   }
+}
+
+function ViewportButton({ icon: Icon, label, active, onClick }: { icon: React.ElementType; label: string; active: boolean; onClick: () => void }) {
   return (
-    <div className="space-y-6">
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold"
+      style={active ? { background: `${C.primary}22`, color: C.primary } : { color: C.textSecondary }}>
+      <Icon size={14} aria-hidden="true" /> {label}
+    </button>
+  )
+}
+
+function PreviaTab({ campaign, app, space, creatives, onGoToConfig }: {
+  campaign: CampaignInfo; app: AppInfo; space: SpaceRef | null; creatives: Creative[]; onGoToConfig: () => void
+}) {
+  const sorted = [...creatives].sort((a, b) => b.version - a.version)
+  const defaultCreative = sorted.find(c => c.isLive) ?? sorted[0] ?? null
+  const [selectedId, setSelectedId] = useState<string | null>(defaultCreative?.id ?? null)
+  const [viewport, setViewport] = useState<Viewport>('desktop')
+  const [expanded, setExpanded] = useState(false)
+  const [ctaInfo, setCtaInfo] = useState<{ href: string; valid: boolean } | null>(null)
+  const expandTriggerRef = useRef<HTMLButtonElement>(null)
+
+  // Se a versão selecionada sumir (troca de campanha, refresh) cai pra
+  // versão padrão em vez de continuar apontando pra um id que não existe
+  // mais — nunca mistura dado antigo com a lista nova (seção 19).
+  const selected = sorted.find(c => c.id === selectedId) ?? defaultCreative
+
+  const isCarouselSpace = space?.slug === 'home_carousel'
+  const item = selected ? buildPreviewItem(app, {
+    title: selected.title ?? '', description: selected.description ?? '', imageUrl: selected.imageUrl ?? '',
+    imageAlt: selected.imageAlt ?? '', ctaLabel: selected.ctaLabel ?? '',
+  }, selected.ctaHref) : null
+
+  const checks: { label: string; ok: boolean }[] = selected ? [
+    { label: 'Título preenchido', ok: !!selected.title?.trim() },
+    { label: 'Descrição válida', ok: !!selected.description?.trim() },
+    { label: 'Imagem disponível', ok: !!selected.imageUrl },
+    { label: 'CTA configurado', ok: !!selected.ctaLabel?.trim() },
+    { label: 'Destino válido', ok: !!selected.ctaHref },
+    { label: 'Espaço de exibição ativo', ok: !!space },
+  ] : []
+
+  function renderFrame(vp: Viewport) {
+    if (!space) return <EmptyState icon={Info} text="Nenhum espaço de exibição definido para esta campanha ainda." />
+    if (!isCarouselSpace) return <EmptyState icon={Info} text={`Nenhuma prévia visual disponível para o espaço "${space.name}" ainda.`} />
+    if (!selected || !item) return <EmptyState icon={Info} text="Nenhuma versão de anúncio criada ainda." />
+    return (
+      <div className="mx-auto overflow-hidden rounded-2xl border transition-all"
+        style={{ borderColor: C.border, maxWidth: vp === 'mobile' ? 390 : vp === 'tablet' ? 768 : '100%' }}>
+        <SponsoredCarouselSection campaigns={[item]} isPreview forceViewport={vp} onPreviewCtaClick={setCtaInfo} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Prévia do destaque</h2>
+        <p className="mt-1 text-sm" style={{ color: C.textSecondary }}>Confira a apresentação desta campanha no espaço selecionado.</p>
+      </div>
       <p className="flex items-center gap-1.5 text-xs" style={{ color: C.textSecondary }}>
-        <Info size={12} aria-hidden="true" /> Prévia privada — nenhuma compra, impressão ou clique real é gerado aqui.
+        <Info size={12} aria-hidden="true" /> Ambiente de prévia. Não gera métricas comerciais nem compras.
       </p>
-      {liveCreative ? (
-        <div>
-          <p className="mb-2 text-xs font-semibold" style={{ color: C.textSecondary }}>Versão aprovada (no ar) — v{liveCreative.version}</p>
-          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: C.border }}>
-            <SponsoredCarouselSection campaigns={[toCarouselItem(liveCreative)]} isPreview />
-          </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={selected?.id ?? ''} onChange={e => setSelectedId(e.target.value || null)} disabled={sorted.length === 0}
+          className="rounded-lg border bg-transparent px-3 py-2 text-sm outline-none disabled:opacity-50" style={{ borderColor: C.border, color: C.text }}>
+          {sorted.length === 0 && <option value="" style={{ color: 'black' }}>Nenhuma versão</option>}
+          {sorted.map(c => <option key={c.id} value={c.id} style={{ color: 'black' }}>{versionLabel(c)}</option>)}
+        </select>
+        <div className="flex items-center gap-1 rounded-lg border p-1" style={{ borderColor: C.border }}>
+          <ViewportButton icon={Monitor} label="Desktop" active={viewport === 'desktop'} onClick={() => setViewport('desktop')} />
+          <ViewportButton icon={Tablet} label="Tablet" active={viewport === 'tablet'} onClick={() => setViewport('tablet')} />
+          <ViewportButton icon={Smartphone} label="Celular" active={viewport === 'mobile'} onClick={() => setViewport('mobile')} />
         </div>
-      ) : <EmptyState icon={Info} text="Nenhuma versão aprovada ainda." />}
-      {pendingCreative && (
-        <div>
-          <p className="mb-2 text-xs font-semibold" style={{ color: C.warning }}>Versão em análise — v{pendingCreative.version}</p>
-          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: C.warning }}>
-            <SponsoredCarouselSection campaigns={[toCarouselItem(pendingCreative)]} isPreview />
-          </div>
+        <button type="button" ref={expandTriggerRef} onClick={() => setExpanded(true)} disabled={!selected}
+          className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-40" style={{ borderColor: C.border, color: C.text }}>
+          <Maximize2 size={13} aria-hidden="true" /> Expandir
+        </button>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[72fr_28fr]">
+        <div className="min-w-0 rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+          {renderFrame(viewport)}
         </div>
-      )}
+
+        <div className="space-y-4">
+          <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.textSecondary }}>Versão selecionada</p>
+            {selected ? (
+              <div className="space-y-2 text-xs">
+                <Info2 label="Versão" value={`v${selected.version}`} />
+                <Info2 label="Status do criativo" value={getCreativeReviewBadge(selected.reviewStatus as Parameters<typeof getCreativeReviewBadge>[0]).label} />
+                <Info2 label="Data" value={selected.reviewedAt ? formatDateTimeBR(selected.reviewedAt) : `Criada em ${formatDateTimeBR(selected.createdAt)}`} />
+                {selected.reviewerName && <Info2 label="Responsável" value={selected.reviewerName} />}
+                <Info2 label="Formato" value={space?.name ?? 'Não definido'} />
+              </div>
+            ) : <p className="text-xs" style={{ color: C.textSecondary }}>Nenhuma versão disponível.</p>}
+          </div>
+
+          <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.textSecondary }}>Verificações do destaque</p>
+            {selected ? (
+              <ul className="space-y-1.5">
+                {checks.map(c => (
+                  <li key={c.label} className="flex items-center gap-2 text-xs" style={{ color: C.text }}>
+                    {c.ok ? <CheckCircle2 size={13} style={{ color: C.success }} aria-hidden="true" /> : <AlertTriangle size={13} style={{ color: C.warning }} aria-hidden="true" />}
+                    {c.label}
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-xs" style={{ color: C.textSecondary }}>Sem versão selecionada.</p>}
+          </div>
+
+          <button type="button" onClick={onGoToConfig}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ background: C.primary }}>
+            <Settings size={14} aria-hidden="true" /> Abrir configuração
+          </button>
+          <p className="text-[11px]" style={{ color: C.textSecondary }}>A aprovação do criativo não reativa uma campanha cancelada ou pausada — a exibição depende de todas as condições da campanha.</p>
+        </div>
+      </div>
+
+      <Dialog open={!!ctaInfo} onOpenChange={o => { if (!o) setCtaInfo(null) }}>
+        <DialogContent className="max-w-md border" style={{ background: C.card, borderColor: C.border, color: C.text }}>
+          <DialogTitle style={{ color: C.text }}>Destino do anúncio</DialogTitle>
+          {ctaInfo && (
+            <div className="space-y-3 text-sm">
+              <p style={{ color: C.textSecondary }}>Ao clicar no anúncio publicado, o comprador seria levado para:</p>
+              <p className="break-all rounded-lg border p-2 font-mono text-xs" style={{ borderColor: C.border, color: C.text }}>{ctaInfo.href}</p>
+              <p className="flex items-center gap-1.5" style={{ color: ctaInfo.valid ? C.success : C.error }}>
+                {ctaInfo.valid ? <CheckCircle2 size={14} aria-hidden="true" /> : <AlertTriangle size={14} aria-hidden="true" />}
+                {ctaInfo.valid ? 'Destino válido.' : 'Nenhum destino real configurado ainda — o aplicativo pode não ter um slug publicado.'}
+              </p>
+              <div className="flex flex-wrap gap-2 border-t pt-3" style={{ borderColor: C.border }}>
+                {ctaInfo.valid && (
+                  <a href={ctaInfo.href} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: C.primary }}>
+                    <ExternalLink size={12} aria-hidden="true" /> Abrir destino (nova aba)
+                  </a>
+                )}
+                <Link href={`/admin/marketplace/aplicativos/${app.id}`} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: C.border, color: C.text }}>
+                  Ver aplicativo no admin
+                </Link>
+              </div>
+              <p className="text-[11px]" style={{ color: C.textSecondary }}>Abrir o destino sai do ambiente de prévia. Nenhum clique publicitário é registrado por esta ação.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={expanded} onOpenChange={o => { if (!o) setExpanded(false) }}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-[1200px] border" style={{ background: C.card, borderColor: C.border, color: C.text }}>
+          <DialogTitle className="text-sm" style={{ color: C.text }}>Prévia do destaque — {selected ? versionLabel(selected) : campaign.internalName ?? 'Campanha'}</DialogTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3" style={{ borderColor: C.border }}>
+            <p className="text-xs" style={{ color: C.textSecondary }}>Ambiente de prévia. Não gera métricas comerciais nem compras.</p>
+            <div className="flex items-center gap-1 rounded-lg border p-1" style={{ borderColor: C.border }}>
+              <ViewportButton icon={Monitor} label="Desktop" active={viewport === 'desktop'} onClick={() => setViewport('desktop')} />
+              <ViewportButton icon={Tablet} label="Tablet" active={viewport === 'tablet'} onClick={() => setViewport('tablet')} />
+              <ViewportButton icon={Smartphone} label="Celular" active={viewport === 'mobile'} onClick={() => setViewport('mobile')} />
+            </div>
+          </div>
+          <div className="max-h-[75vh] overflow-y-auto py-3">{renderFrame(viewport)}</div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
