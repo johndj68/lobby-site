@@ -108,14 +108,17 @@ export async function logAppAdminEvent(
       | 'create_campaign' | 'submit_creative' | 'review_creative_approve' | 'review_creative_changes' | 'review_creative_reject'
       | 'promote_creative' | 'reserve_capacity' | 'confirm_payment' | 'payment_capacity_conflict' | 'grant_exemption'
       | 'refund_campaign' | 'pause_campaign' | 'resume_campaign' | 'cancel_campaign' | 'reschedule_campaign'
-      | 'duplicate_campaign' | 'update_space' | 'update_package'
+      | 'duplicate_campaign' | 'update_space' | 'update_package' | 'update_campaign_config'
       // /admin/marketplace/categorias
       | 'create_category' | 'update_category' | 'move_category' | 'reorder_categories'
       | 'toggle_category_status' | 'toggle_category_nav' | 'delete_category'
       | 'reclassify_app' | 'reclassify_apps_bulk'
     reason?: string | null
-    previousStatus: string
-    newStatus: string
+    /** Omitidos quando o evento não representa uma transição de estado
+     *  (ex.: edição de campos de configuração) — nem todo evento tem um
+     *  "antes/depois" de status pra mostrar. */
+    previousStatus?: string | null
+    newStatus?: string | null
   },
 ) {
   await supabase.from('app_admin_events').insert({
@@ -129,7 +132,7 @@ export async function logAppAdminEvent(
     actor_id: event.actorId ?? null,
     action: event.action,
     reason: event.reason ?? null,
-    previous_status: event.previousStatus,
-    new_status: event.newStatus,
+    previous_status: event.previousStatus ?? null,
+    new_status: event.newStatus ?? null,
   })
 }

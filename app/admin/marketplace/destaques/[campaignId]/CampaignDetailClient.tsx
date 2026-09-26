@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Copy, PauseCircle, PlayCircle, StopCircle,
   Info, History as HistoryIcon, Loader2, CheckCircle2, XCircle, MessageSquare, CreditCard, Upload, Monitor, Smartphone, Tablet,
-  Maximize2, ExternalLink, Settings, AlertTriangle,
+  Maximize2, ExternalLink, Settings, AlertTriangle, FileText, Grid3x3, Image as ImageIcon, Lock, Trash2, Eye,
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import Link from 'next/link'
@@ -22,9 +22,11 @@ import type { EligibilityResult } from '@/lib/services/campaigns'
 
 interface CampaignInfo { id: string; internalName: string | null; startsAt: string; endsAt: string; spaceId: string | null; packageId: string | null; pausedReason: string | null; createdAt: string; updatedAt: string }
 interface AppInfo { id: string; name: string; logoUrl: string | null; applicationSlug: string | null }
-interface SpaceRef { id: string; name: string; slug?: string }
-interface PackageRef { id: string; name: string; price: number | null; currency: string; durationDays: number }
+interface AcceptedFormats { aspect_ratio?: string; min_width?: number; min_height?: number; max_size_mb?: number }
+interface SpaceRef { id: string; name: string; slug?: string; description?: string | null; acceptedFormats?: AcceptedFormats | null }
+interface PackageRef { id: string; name: string; price: number | null; currency: string; durationDays: number; description?: string | null; cancellationPolicy?: string | null; pausePolicy?: string | null }
 interface PackageOption extends PackageRef { spaceId: string }
+interface ReservationInfo { id: string; status: string; startsAt: string; endsAt: string; expiresAt: string | null }
 interface Creative {
   id: string; version: number; title: string | null; description: string | null; imageUrl: string | null; imageAlt: string | null
   ctaLabel: string | null; ctaHref: string | null; reviewStatus: string; reviewerNotes: string | null; partnerFeedback: string | null
@@ -51,6 +53,7 @@ interface Props {
   creatives: Creative[]
   purchases: Purchase[]
   events: EventItem[]
+  latestReservation: ReservationInfo | null
 }
 
 const TABS = ['Prévia', 'Configuração', 'Desempenho', 'Histórico'] as const
@@ -61,9 +64,10 @@ const ACTION_LABEL: Record<string, string> = {
   confirm_payment: 'Pagamento confirmado', payment_capacity_conflict: 'Pagamento confirmado com pendência de conciliação',
   grant_exemption: 'Isenção concedida', refund_campaign: 'Reembolso solicitado', pause_campaign: 'Exibição pausada',
   resume_campaign: 'Exibição retomada', cancel_campaign: 'Campanha encerrada', reschedule_campaign: 'Reagendada', duplicate_campaign: 'Duplicada',
+  update_campaign_config: 'Configuração atualizada',
 }
 
-export default function CampaignDetailClient({ user, profile, campaign, app, origin, partnerName, publication, review, payment, eligibility, space, pkg, spaceOptions, packageOptions, creatives, purchases, events }: Props) {
+export default function CampaignDetailClient({ user, profile, campaign, app, origin, partnerName, publication, review, payment, eligibility, space, pkg, spaceOptions, packageOptions, creatives, purchases, events, latestReservation }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('Prévia')
   const [busy, setBusy] = useState(false)
@@ -177,9 +181,10 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
         <div className="rounded-2xl border p-5" style={{ background: C.card, borderColor: C.border }}>
           {tab === 'Prévia' && <PreviaTab campaign={campaign} app={app} space={space} creatives={creatives} onGoToConfig={() => setTab('Configuração')} />}
           {tab === 'Configuração' && (
-            <ConfiguracaoTab campaign={campaign} app={app} draftCreative={draftCreative} pendingCreative={pendingCreative} liveCreative={liveCreative}
-              spaceOptions={spaceOptions} packageOptions={packageOptions} purchases={purchases} isLeader={!!profile?.is_leader}
-              onChanged={() => router.refresh()} />
+            <ConfiguracaoTab campaign={campaign} app={app} partnerName={partnerName} origin={origin} draftCreative={draftCreative} pendingCreative={pendingCreative} liveCreative={liveCreative}
+              space={space} pkg={pkg} spaceOptions={spaceOptions} packageOptions={packageOptions} purchases={purchases} isLeader={!!profile?.is_leader}
+              publication={publication} eligibility={eligibility} latestReservation={latestReservation}
+              onChanged={() => router.refresh()} onGoToPreview={() => setTab('Prévia')} />
           )}
           {tab === 'Desempenho' && <DesempenhoTab campaignId={campaign.id} />}
           {tab === 'Histórico' && (
@@ -427,54 +432,109 @@ function PreviaTab({ campaign, app, space, creatives, onGoToConfig }: {
   )
 }
 
-function ConfiguracaoTab({ campaign, app, draftCreative, pendingCreative, liveCreative, spaceOptions, packageOptions, purchases, isLeader, onChanged }: {
-  campaign: CampaignInfo; app: AppInfo; draftCreative: Creative | null; pendingCreative: Creative | null; liveCreative: Creative | null
-  spaceOptions: SpaceRef[]; packageOptions: PackageOption[]; purchases: Purchase[]; isLeader: boolean; onChanged: () => void
+// America/Sao_Paulo é UTC-3 fixo desde o fim do horário de verão no Brasil
+// (2019) — mesma suposição já assumida em lib/marketplace.ts (periodRange).
+// <input type="datetime-local"> não faz nenhuma conversão de fuso sozinho:
+// ele mostra/edita os dígitos literais da string. O bug real que isto
+// substitui era pegar os dígitos UTC crus (campaign.startsAt.slice(0,16)) e
+// exibi-los como se já fossem horário de Brasília — o admin via (e podia
+// resalvar) um horário sempre 3h adiantado em relação ao real.
+const BRT_OFFSET_MINUTES = 3 * 60
+function utcIsoToBrtInputValue(iso: string): string {
+  return new Date(new Date(iso).getTime() - BRT_OFFSET_MINUTES * 60000).toISOString().slice(0, 16)
+}
+function brtInputValueToUtcIso(value: string): string {
+  return new Date(new Date(`${value}:00Z`).getTime() + BRT_OFFSET_MINUTES * 60000).toISOString()
+}
+
+type SaveState = 'idle' | 'saving' | 'saved' | 'error' | 'conflict'
+type AvailabilityState = { status: 'idle' | 'checking' | 'disponivel' | 'indisponivel' | 'erro'; detail?: string }
+
+function ConfiguracaoTab({
+  campaign, app, partnerName, origin, draftCreative, pendingCreative, liveCreative,
+  space, pkg, spaceOptions, packageOptions, purchases, isLeader, publication, eligibility, latestReservation,
+  onChanged, onGoToPreview,
+}: {
+  campaign: CampaignInfo; app: AppInfo; partnerName: string; origin: 'lobby' | 'partner'
+  draftCreative: Creative | null; pendingCreative: Creative | null; liveCreative: Creative | null
+  space: SpaceRef | null; pkg: PackageRef | null; spaceOptions: SpaceRef[]; packageOptions: PackageOption[]
+  purchases: Purchase[]; isLeader: boolean; publication: PublicationStatus; eligibility: EligibilityResult
+  latestReservation: ReservationInfo | null
+  onChanged: () => void; onGoToPreview: () => void
 }) {
-  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop')
-  const editable = draftCreative ?? liveCreative
-  const [form, setForm] = useState({
-    title: editable?.title ?? '', description: editable?.description ?? '', imageUrl: editable?.imageUrl ?? '',
-    imageAlt: editable?.imageAlt ?? '', ctaLabel: editable?.ctaLabel ?? 'Conhecer aplicativo',
-  })
-  const [saving, setSaving] = useState(false)
+  const editableCreative = draftCreative ?? liveCreative
+  const canEditCreative = !pendingCreative
+
+  const initialCreativeForm = {
+    title: editableCreative?.title ?? '', description: editableCreative?.description ?? '',
+    imageUrl: editableCreative?.imageUrl ?? '', imageAlt: editableCreative?.imageAlt ?? '',
+    ctaLabel: editableCreative?.ctaLabel ?? 'Conhecer aplicativo',
+  }
+  const initialConfigForm = {
+    internalName: campaign.internalName ?? '', spaceId: campaign.spaceId ?? spaceOptions[0]?.id ?? '',
+    packageId: campaign.packageId ?? '', startsAt: utcIsoToBrtInputValue(campaign.startsAt), endsAt: utcIsoToBrtInputValue(campaign.endsAt),
+  }
+
+  const [creativeForm, setCreativeForm] = useState(initialCreativeForm)
+  const [configForm, setConfigForm] = useState(initialConfigForm)
   const [uploading, setUploading] = useState(false)
-  const [spaceId, setSpaceId] = useState(campaign.spaceId ?? spaceOptions[0]?.id ?? '')
-  const [packageId, setPackageId] = useState(campaign.packageId ?? '')
-  const [startsAt, setStartsAt] = useState(campaign.startsAt.slice(0, 16))
-  const [endsAt, setEndsAt] = useState(campaign.endsAt.slice(0, 16))
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [imageMeta, setImageMeta] = useState<{ width: number; height: number } | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [availability, setAvailability] = useState<AvailabilityState>({ status: 'idle' })
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop')
+  const [expandedPreview, setExpandedPreview] = useState(false)
+  const [ctaTest, setCtaTest] = useState<{ href: string; valid: boolean } | null>(null)
   const [exemptReason, setExemptReason] = useState('')
   const [showExempt, setShowExempt] = useState(false)
 
-  const canEditCreative = !pendingCreative
+  const isCreativeDirty = canEditCreative && JSON.stringify(creativeForm) !== JSON.stringify(initialCreativeForm)
+  const isConfigDirty = JSON.stringify(configForm) !== JSON.stringify(initialConfigForm)
+  const isDirty = isCreativeDirty || isConfigDirty
+
+  // Protege contra perder edição ao fechar/recarregar a aba (seção 16) —
+  // trocar de aba dentro da própria página não passa por aqui, mas também
+  // nunca desmonta este componente (a troca só esconde/mostra), então o
+  // estado do formulário sobrevive normalmente.
+  useEffect(() => {
+    function handler(e: BeforeUnloadEvent) { if (isDirty) e.preventDefault() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  const selectedSpace = spaceOptions.find(s => s.id === configForm.spaceId) ?? space
+  const selectedPackage = packageOptions.find(p => p.id === configForm.packageId) ?? (pkg && configForm.packageId === campaign.packageId ? { ...pkg, spaceId: campaign.spaceId ?? '' } : null)
+  const hasConfirmedPurchase = purchases.some(p => p.status === 'paid' || p.status === 'isento')
+  const changingContractedTerms = hasConfirmedPurchase && (configForm.spaceId !== (campaign.spaceId ?? '') || configForm.packageId !== (campaign.packageId ?? ''))
+
+  const ctaHref = app.applicationSlug ? `/app/${app.applicationSlug}` : null
+  const destinationValid = !!ctaHref
 
   async function uploadImage(file: File) {
     setUploading(true)
+    setUploadError(null)
     try {
       const fd = new FormData()
       fd.append('file', file)
       const res = await fetch('/api/admin/campaigns/upload-image', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok) { toast.error(data.error || 'Falha no upload.'); return }
-      setForm(f => ({ ...f, imageUrl: data.url }))
+      if (!res.ok) { setUploadError(data.error || 'Falha no upload.'); return }
+      setCreativeForm(f => ({ ...f, imageUrl: data.url }))
+      setImageMeta(data.width && data.height ? { width: data.width, height: data.height } : null)
       toast.success('Imagem enviada.')
-    } catch { toast.error('Falha de conexão.') }
+    } catch { setUploadError('Falha de conexão.') }
     finally { setUploading(false) }
   }
 
-  async function saveCreative() {
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/admin/campaigns/${campaign.id}/creative`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-      const data = await res.json()
-      if (!res.ok) { toast.error(data.error || 'Não foi possível salvar.'); return }
-      toast.success('Anúncio salvo.')
-      onChanged()
-    } catch { toast.error('Falha de conexão.') }
-    finally { setSaving(false) }
+  function removeImage() {
+    setCreativeForm(f => ({ ...f, imageUrl: '' }))
+    setImageMeta(null)
   }
 
   async function submitForReview() {
+    if (isDirty) { toast.error('Salve as alterações antes de enviar para revisão.'); return }
     const res = await fetch(`/api/admin/campaigns/${campaign.id}/creative/submit`, { method: 'POST' })
     const data = await res.json()
     if (!res.ok) { toast.error(data.error || 'Não foi possível enviar.'); return }
@@ -490,14 +550,72 @@ function ConfiguracaoTab({ campaign, app, draftCreative, pendingCreative, liveCr
     onChanged()
   }
 
-  async function saveConfig() {
-    const res = await fetch(`/api/admin/campaigns/${campaign.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ space_id: spaceId || null, package_id: packageId || null, starts_at: new Date(startsAt).toISOString(), ends_at: new Date(endsAt).toISOString() }),
-    })
-    if (!res.ok) { const data = await res.json(); toast.error(data.error || 'Não foi possível salvar.'); return }
-    toast.success('Configuração salva.')
-    onChanged()
+  async function saveAll() {
+    setSaveState('saving')
+    setSaveError(null)
+    try {
+      if (isConfigDirty) {
+        // Só manda os campos que o admin realmente tocou — não os 5 sempre —
+        // pra "Campos alterados" no histórico (seção 17) refletir o que de
+        // fato mudou, não tudo que passou pela tela.
+        const patch: Record<string, unknown> = { expected_updated_at: campaign.updatedAt }
+        if (configForm.internalName !== initialConfigForm.internalName) patch.internal_name = configForm.internalName
+        if (configForm.spaceId !== initialConfigForm.spaceId) patch.space_id = configForm.spaceId || null
+        if (configForm.packageId !== initialConfigForm.packageId) patch.package_id = configForm.packageId || null
+        if (configForm.startsAt !== initialConfigForm.startsAt) patch.starts_at = brtInputValueToUtcIso(configForm.startsAt)
+        if (configForm.endsAt !== initialConfigForm.endsAt) patch.ends_at = brtInputValueToUtcIso(configForm.endsAt)
+        const res = await fetch(`/api/admin/campaigns/${campaign.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setSaveState(data.conflict ? 'conflict' : 'error')
+          setSaveError(data.error || 'Não foi possível salvar a configuração.')
+          toast.error(data.error || 'Não foi possível salvar.')
+          return
+        }
+      }
+      if (isCreativeDirty) {
+        const res = await fetch(`/api/admin/campaigns/${campaign.id}/creative`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(creativeForm) })
+        const data = await res.json()
+        if (!res.ok) {
+          setSaveState('error')
+          setSaveError(data.error || 'Não foi possível salvar o anúncio.')
+          toast.error(data.error || 'Não foi possível salvar.')
+          return
+        }
+      }
+      setSaveState('saved')
+      toast.success('Alterações salvas.')
+      onChanged()
+    } catch {
+      setSaveState('error')
+      setSaveError('Falha de conexão.')
+      toast.error('Falha de conexão.')
+    }
+  }
+
+  function discard() {
+    setCreativeForm(initialCreativeForm)
+    setConfigForm(initialConfigForm)
+    setUploadError(null)
+    setSaveState('idle')
+    setSaveError(null)
+  }
+
+  async function checkAvailability() {
+    if (!configForm.spaceId) { toast.error('Selecione um espaço primeiro.'); return }
+    setAvailability({ status: 'checking' })
+    try {
+      const res = await fetch(`/api/admin/campaigns/${campaign.id}/check-availability`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spaceId: configForm.spaceId, startsAt: brtInputValueToUtcIso(configForm.startsAt), endsAt: brtInputValueToUtcIso(configForm.endsAt) }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setAvailability({ status: 'erro', detail: data.error }); return }
+      setAvailability({ status: data.status === 'disponivel' ? 'disponivel' : 'indisponivel', detail: data.reason })
+    } catch { setAvailability({ status: 'erro', detail: 'Falha de conexão.' }) }
   }
 
   async function reserve() {
@@ -509,8 +627,8 @@ function ConfiguracaoTab({ campaign, app, draftCreative, pendingCreative, liveCr
   }
 
   async function checkout() {
-    if (!packageId) { toast.error('Selecione um pacote.'); return }
-    const res = await fetch(`/api/admin/campaigns/${campaign.id}/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packageId }) })
+    if (!configForm.packageId) { toast.error('Selecione um pacote.'); return }
+    const res = await fetch(`/api/admin/campaigns/${campaign.id}/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packageId: configForm.packageId }) })
     const data = await res.json()
     if (!res.ok) { toast.error(data.error || 'Não foi possível iniciar a cobrança.'); return }
     if (data.url) window.location.href = data.url
@@ -518,7 +636,7 @@ function ConfiguracaoTab({ campaign, app, draftCreative, pendingCreative, liveCr
 
   async function grantExemption() {
     if (!exemptReason.trim()) { toast.error('Informe o motivo.'); return }
-    const res = await fetch(`/api/admin/campaigns/${campaign.id}/exempt`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: exemptReason.trim(), packageId: packageId || undefined }) })
+    const res = await fetch(`/api/admin/campaigns/${campaign.id}/exempt`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: exemptReason.trim(), packageId: configForm.packageId || undefined }) })
     const data = await res.json()
     if (!res.ok) { toast.error(data.error || 'Não foi possível conceder isenção.'); return }
     if (data.warning) toast.warning(data.warning); else toast.success('Isenção concedida.')
@@ -526,108 +644,241 @@ function ConfiguracaoTab({ campaign, app, draftCreative, pendingCreative, liveCr
     onChanged()
   }
 
-  const previewItem = buildPreviewItem(app, form)
+  const previewItem = buildPreviewItem(app, creativeForm, ctaHref)
+
+  const configPendencies = [
+    { label: 'Título ausente', ok: !!creativeForm.title.trim() },
+    { label: 'Descrição ausente', ok: !!creativeForm.description.trim() },
+    { label: 'Imagem ausente', ok: !!creativeForm.imageUrl },
+    { label: 'Destino inválido', ok: destinationValid },
+    { label: 'Período inválido', ok: new Date(brtInputValueToUtcIso(configForm.endsAt)).getTime() > new Date(brtInputValueToUtcIso(configForm.startsAt)).getTime() },
+  ].filter(c => !c.ok)
+  const deliveryBlockers = eligibility.key === 'em_exibicao' || eligibility.key === 'programada' ? [] : eligibility.reasons
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      {/* Coluna esquerda: formulário do anúncio, organizado com rótulo + texto de apoio por campo */}
-      <div className="space-y-6">
-        <SectionHeader title="Anúncio" subtitle="O que aparece pro comprador no carrossel — título, imagem e chamada." />
-
-        {pendingCreative && (
-          <div className="rounded-xl border p-3 text-sm" style={{ borderColor: C.warning }}>
-            <p style={{ color: C.text }}>Versão v{pendingCreative.version} em análise — decisão pendente.</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button onClick={() => decide('approve')} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: C.success }}><CheckCircle2 size={13} aria-hidden="true" /> Aprovar</button>
-              <ReviewDecisionButton icon={MessageSquare} label="Pedir ajustes" color={C.warning} onSubmit={r => decide('request_changes', r)} />
-              <ReviewDecisionButton icon={XCircle} label="Rejeitar" color={C.error} onSubmit={r => decide('reject', r)} />
-            </div>
-          </div>
-        )}
-        {!canEditCreative ? (
-          <p className="text-xs" style={{ color: C.textSecondary }}>Há uma versão em análise — decida sobre ela antes de editar novamente.</p>
-        ) : (
-          <div className="space-y-5 rounded-2xl border p-5" style={{ borderColor: C.border, background: C.header }}>
-            <Field label="Título" hint="Frase curta e direta — é o que mais chama atenção no anúncio.">
-              <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ex: Crie fluxos visuais sem programar"
-                className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
-            </Field>
-            <Field label="Descrição" hint="Uma ou duas linhas complementando o título.">
-              <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Automatize tarefas e conecte suas ferramentas."
-                className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
-            </Field>
-            <Field label="Imagem" hint="Formato 16:9, mínimo 800×450 — reaproveita a validação/compressão real de upload.">
-              <div className="flex items-center gap-3">
-                {form.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={form.imageUrl} alt="" className="h-16 w-24 rounded-lg border object-cover" style={{ borderColor: C.border }} />
-                ) : (
-                  <div className="flex h-16 w-24 items-center justify-center rounded-lg border border-dashed" style={{ borderColor: C.border, color: C.textSecondary }}>
-                    <Upload size={16} aria-hidden="true" />
-                  </div>
-                )}
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold" style={{ borderColor: C.border, color: C.text }}>
-                  {uploading ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <Upload size={13} aria-hidden="true" />} Enviar imagem
-                  <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f) }} />
-                </label>
-              </div>
-            </Field>
-            <Field label="Texto alternativo da imagem" hint="Descrição curta pra leitores de tela.">
-              <input value={form.imageAlt} onChange={e => setForm({ ...form, imageAlt: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
-            </Field>
-            <Field label="Texto do botão" hint="Chamada de ação — o destino é sempre a página do aplicativo, gerado automaticamente.">
-              <input value={form.ctaLabel} onChange={e => setForm({ ...form, ctaLabel: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
-            </Field>
-
-            <div className="flex flex-wrap items-center gap-2 border-t pt-4" style={{ borderColor: C.border }}>
-              <button onClick={saveCreative} disabled={saving} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: C.primary }}>
-                {saving ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null} Salvar rascunho
-              </button>
-              <button onClick={submitForReview} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Enviar para revisão</button>
-            </div>
-          </div>
-        )}
-
-        <SectionHeader title="Espaço, pacote e período" subtitle="Onde e por quanto tempo a campanha roda." />
-        <div className="space-y-4 rounded-2xl border p-5" style={{ borderColor: C.border, background: C.header }}>
-          <Field label="Espaço de exibição">
-            <select value={spaceId} onChange={e => { setSpaceId(e.target.value); setPackageId('') }} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }}>
-              <option value="" style={{ color: 'black' }}>Selecione…</option>
-              {spaceOptions.map(s => <option key={s.id} value={s.id} style={{ color: 'black' }}>{s.name}</option>)}
-            </select>
-          </Field>
-          <Field label="Pacote">
-            <select value={packageId} onChange={e => setPackageId(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }}>
-              <option value="" style={{ color: 'black' }}>Selecione…</option>
-              {packageOptions.filter(p => !spaceId || p.spaceId === spaceId).map(p => <option key={p.id} value={p.id} style={{ color: 'black' }}>{p.name} — {p.price != null ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: p.currency }).format(p.price) : 'sem preço'}</option>)}
-            </select>
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Início"><input type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} /></Field>
-            <Field label="Término"><input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} /></Field>
-          </div>
-          <div className="flex flex-wrap gap-2 border-t pt-4" style={{ borderColor: C.border }}>
-            <button onClick={saveConfig} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Salvar configuração</button>
-            <button onClick={reserve} className="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.primary, color: C.primary }}>Reservar espaço</button>
-          </div>
+    <div className="grid gap-6 lg:grid-cols-[68fr_32fr]">
+      <div className="min-w-0 space-y-6 pb-4">
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Configuração da campanha</h2>
+          <p className="mt-1 text-sm" style={{ color: C.textSecondary }}>Defina onde, quando e como o destaque será apresentado.</p>
         </div>
 
-        <SectionHeader title="Pagamento" subtitle="Cobrança real via Stripe, ou isenção autorizada." />
-        <div className="space-y-3 rounded-2xl border p-5" style={{ borderColor: C.border, background: C.header }}>
+        {publication.key === 'suspenso' && (
+          <div className="flex items-start gap-2 rounded-xl border p-3 text-xs" style={{ borderColor: '#7F1D1D', background: 'rgba(239,68,68,0.10)', color: C.text }}>
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" style={{ color: C.error }} aria-hidden="true" />
+            <span>O aplicativo está suspenso. Salvar aqui não remove a suspensão nem reativa a veiculação — isso é feito pelo fluxo de aplicativos.</span>
+          </div>
+        )}
+        {eligibility.key === 'cancelada' && (
+          <div className="flex items-start gap-2 rounded-xl border p-3 text-xs" style={{ borderColor: '#7F1D1D', background: 'rgba(239,68,68,0.10)', color: C.text }}>
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" style={{ color: C.error }} aria-hidden="true" />
+            <span>Esta campanha está cancelada. Salvar configuração não a reativa — reativação não é uma operação suportada por esta campanha.</span>
+          </div>
+        )}
+
+        {/* 1. Dados da campanha */}
+        <NumberedCard number={1} icon={FileText} title="Dados da campanha">
+          <Field label="Nome interno" hint="Só aparece aqui no admin — não é o título público do anúncio.">
+            <input value={configForm.internalName} onChange={e => setConfigForm({ ...configForm, internalName: e.target.value })}
+              placeholder="Ex: FlowPilot — Campanha de outubro" className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Aplicativo vinculado" hint="A troca de aplicativo não é suportada — abra uma nova campanha se precisar vincular outro app.">
+              <div className="flex items-center gap-2 rounded-lg border p-2 text-sm" style={{ borderColor: C.border, color: C.textSecondary, background: 'rgba(255,255,255,0.03)' }}>
+                <Lock size={12} className="shrink-0" aria-hidden="true" /> {app.name}
+              </div>
+            </Field>
+            <Field label="Parceiro responsável" hint="Derivado do vínculo do aplicativo, não editável aqui.">
+              <div className="flex items-center gap-2 rounded-lg border p-2 text-sm" style={{ borderColor: C.border, color: C.textSecondary, background: 'rgba(255,255,255,0.03)' }}>
+                <Lock size={12} className="shrink-0" aria-hidden="true" /> {origin === 'lobby' ? ORIGIN_LABEL.lobby : partnerName}
+              </div>
+            </Field>
+          </div>
+          <button type="button" onClick={() => { navigator.clipboard.writeText(campaign.id); toast.success('ID da campanha copiado.') }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: C.primary }}>
+            <Copy size={12} aria-hidden="true" /> Copiar identificador da campanha
+          </button>
+        </NumberedCard>
+
+        {/* 2. Espaço e período */}
+        <NumberedCard number={2} icon={Grid3x3} title="Espaço e período">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Espaço de exibição">
+              <select value={configForm.spaceId} onChange={e => { setConfigForm({ ...configForm, spaceId: e.target.value, packageId: '' }); setAvailability({ status: 'idle' }) }}
+                className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }}>
+                <option value="" style={{ color: 'black' }}>Selecione…</option>
+                {spaceOptions.map(s => <option key={s.id} value={s.id} style={{ color: 'black' }}>{s.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Pacote">
+              <select value={configForm.packageId} onChange={e => setConfigForm({ ...configForm, packageId: e.target.value })}
+                className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }}>
+                <option value="" style={{ color: 'black' }}>Selecione…</option>
+                {packageOptions.filter(p => !configForm.spaceId || p.spaceId === configForm.spaceId).map(p => (
+                  <option key={p.id} value={p.id} style={{ color: 'black' }}>{p.name} — {p.price != null ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: p.currency }).format(p.price) : 'sem preço'}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          {selectedSpace?.acceptedFormats && (
+            <p className="text-xs" style={{ color: C.textSecondary }}>
+              Formato aceito: {selectedSpace.acceptedFormats.aspect_ratio ?? '—'} · mínimo {selectedSpace.acceptedFormats.min_width ?? '—'}×{selectedSpace.acceptedFormats.min_height ?? '—'}px · até {selectedSpace.acceptedFormats.max_size_mb ?? '—'}MB
+            </p>
+          )}
+          {selectedPackage && (
+            <p className="text-xs" style={{ color: C.textSecondary }}>
+              {selectedPackage.durationDays} dia(s) de duração{selectedPackage.description ? ` · ${selectedPackage.description}` : ''}
+              {selectedPackage.cancellationPolicy ? ` · Cancelamento: ${selectedPackage.cancellationPolicy}` : ''}
+            </p>
+          )}
+          {changingContractedTerms && (
+            <p className="flex items-start gap-1.5 text-xs" style={{ color: C.warning }}>
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" aria-hidden="true" /> Há uma contratação confirmada para o espaço/pacote atual — trocar aqui não altera as condições já contratadas nem gera cobrança automática.
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 border-t pt-4" style={{ borderColor: C.border }}>
+            <Field label="Início"><input type="datetime-local" value={configForm.startsAt} onChange={e => { setConfigForm({ ...configForm, startsAt: e.target.value }); setAvailability({ status: 'idle' }) }} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} /></Field>
+            <Field label="Término"><input type="datetime-local" value={configForm.endsAt} onChange={e => { setConfigForm({ ...configForm, endsAt: e.target.value }); setAvailability({ status: 'idle' }) }} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text, colorScheme: 'dark' }} /></Field>
+          </div>
+          <p className="text-xs" style={{ color: C.textSecondary }}>
+            Exibição prevista de {formatDateTimeBR(brtInputValueToUtcIso(configForm.startsAt))} até {formatDateTimeBR(brtInputValueToUtcIso(configForm.endsAt))}, no fuso horário de Brasília.
+          </p>
+          {new Date(brtInputValueToUtcIso(configForm.endsAt)).getTime() <= new Date(brtInputValueToUtcIso(configForm.startsAt)).getTime() && (
+            <p className="text-xs" style={{ color: C.error }}>O término precisa ser posterior ao início.</p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={checkAvailability} disabled={availability.status === 'checking'}
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50" style={{ borderColor: C.border, color: C.text }}>
+              {availability.status === 'checking' ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : null} Verificar disponibilidade
+            </button>
+            {availability.status === 'disponivel' && <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: C.success }}><CheckCircle2 size={13} aria-hidden="true" /> Disponível</span>}
+            {availability.status === 'indisponivel' && <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: C.error }}><AlertTriangle size={13} aria-hidden="true" /> Indisponível</span>}
+            {availability.status === 'erro' && <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: C.warning }}><AlertTriangle size={13} aria-hidden="true" /> Não foi possível verificar</span>}
+          </div>
+          {availability.detail && <p className="text-xs" style={{ color: C.textSecondary }}>{availability.detail}</p>}
+          <p className="text-[11px]" style={{ color: C.textSecondary }}>Uma consulta de disponibilidade não garante a vaga — a reserva efetiva é validada de novo no momento em que é feita.</p>
+
+          {latestReservation && (
+            <p className="border-t pt-3 text-xs" style={{ borderColor: C.border, color: C.textSecondary }}>
+              Reserva atual: <strong style={{ color: C.text }}>{latestReservation.status === 'confirmed' ? 'confirmada' : latestReservation.status === 'held' ? 'temporária' : 'liberada'}</strong>
+              {' '}({formatDateTimeBR(latestReservation.startsAt)} — {formatDateTimeBR(latestReservation.endsAt)})
+              {latestReservation.status === 'held' && latestReservation.expiresAt ? `, expira em ${formatDateTimeBR(latestReservation.expiresAt)}` : ''}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2 border-t pt-4" style={{ borderColor: C.border }}>
+            <button type="button" onClick={reserve} className="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.primary, color: C.primary }}>Reservar espaço</button>
+          </div>
+        </NumberedCard>
+
+        {/* 3. Conteúdo do destaque + destino */}
+        <NumberedCard number={3} icon={ImageIcon} title="Conteúdo do destaque">
+          {pendingCreative && (
+            <div className="rounded-xl border p-3 text-sm" style={{ borderColor: C.warning }}>
+              <p style={{ color: C.text }}>Versão v{pendingCreative.version} em análise — decisão pendente.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button onClick={() => decide('approve')} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: C.success }}><CheckCircle2 size={13} aria-hidden="true" /> Aprovar</button>
+                <ReviewDecisionButton icon={MessageSquare} label="Pedir ajustes" color={C.warning} onSubmit={r => decide('request_changes', r)} />
+                <ReviewDecisionButton icon={XCircle} label="Rejeitar" color={C.error} onSubmit={r => decide('reject', r)} />
+              </div>
+            </div>
+          )}
+          {!canEditCreative ? (
+            <p className="text-xs" style={{ color: C.textSecondary }}>Há uma versão em análise — decida sobre ela antes de editar novamente.</p>
+          ) : (
+            <>
+              <Field label="Título público" hint="Frase curta e direta — é o que mais chama atenção no anúncio.">
+                <input value={creativeForm.title} onChange={e => setCreativeForm({ ...creativeForm, title: e.target.value })} placeholder="Ex: Crie fluxos visuais sem programar"
+                  className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+              </Field>
+              <Field label="Descrição curta" hint="Uma ou duas linhas complementando o título.">
+                <textarea value={creativeForm.description} onChange={e => setCreativeForm({ ...creativeForm, description: e.target.value })} rows={3} placeholder="Automatize tarefas e conecte suas ferramentas."
+                  className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+              </Field>
+
+              <Field label="Imagem do destaque" hint={selectedSpace?.acceptedFormats ? `${selectedSpace.acceptedFormats.aspect_ratio ?? ''} · mínimo ${selectedSpace.acceptedFormats.min_width ?? '—'}×${selectedSpace.acceptedFormats.min_height ?? '—'}px · até ${selectedSpace.acceptedFormats.max_size_mb ?? '—'}MB`.trim() : 'Formato 16:9 recomendado.'}>
+                {creativeForm.imageUrl ? (
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={creativeForm.imageUrl} alt="" className="h-20 w-32 rounded-lg border object-cover" style={{ borderColor: C.border }} />
+                    <div className="space-y-1.5">
+                      {imageMeta && <p className="text-xs" style={{ color: C.textSecondary }}>{imageMeta.width}×{imageMeta.height}px</p>}
+                      <div className="flex gap-2">
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: C.border, color: C.text }}>
+                          {uploading ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : <Upload size={12} aria-hidden="true" />} Substituir
+                          <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f) }} />
+                        </label>
+                        <button type="button" onClick={removeImage} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: C.error, color: C.error }}>
+                          <Trash2 size={12} aria-hidden="true" /> Remover
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <label
+                    onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) uploadImage(f) }}
+                    className="flex h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed text-center"
+                    style={{ borderColor: dragOver ? C.primary : C.border, background: dragOver ? `${C.primary}11` : 'transparent', color: C.textSecondary }}>
+                    {uploading ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Upload size={18} aria-hidden="true" />}
+                    <span className="text-xs">{uploading ? 'Enviando…' : 'Clique ou arraste uma imagem'}</span>
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f) }} />
+                  </label>
+                )}
+                {uploadError && (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs" style={{ color: C.error }}>
+                    <AlertTriangle size={12} aria-hidden="true" /> {uploadError}
+                    <button type="button" onClick={() => setUploadError(null)} className="underline">Tentar de novo</button>
+                  </p>
+                )}
+              </Field>
+
+              <Field label="Texto alternativo da imagem" hint="Descrição curta pra leitores de tela.">
+                <input value={creativeForm.imageAlt} onChange={e => setCreativeForm({ ...creativeForm, imageAlt: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+              </Field>
+              <Field label="Texto do botão">
+                <input value={creativeForm.ctaLabel} onChange={e => setCreativeForm({ ...creativeForm, ctaLabel: e.target.value })} className="w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
+              </Field>
+
+              <div className="space-y-2 border-t pt-4" style={{ borderColor: C.border }}>
+                <p className="text-xs font-semibold" style={{ color: C.text }}>Destino do botão</p>
+                <p className="text-xs" style={{ color: C.textSecondary }}>Tipo: página interna do aplicativo (derivada automaticamente — não é possível digitar uma URL livre).</p>
+                <p className="break-all text-xs font-mono" style={{ color: C.text }}>{ctaHref ?? 'Nenhum destino disponível'}</p>
+                <p className="flex items-center gap-1.5 text-xs" style={{ color: destinationValid ? C.success : C.error }}>
+                  {destinationValid ? <CheckCircle2 size={12} aria-hidden="true" /> : <AlertTriangle size={12} aria-hidden="true" />}
+                  {destinationValid ? 'Destino válido.' : 'Aplicativo ainda não publicado — não há endereço público pra apontar.'}
+                </p>
+                <button type="button" onClick={() => setCtaTest({ href: ctaHref ?? 'Nenhum destino disponível', valid: destinationValid })}
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: C.border, color: C.text }}>
+                  Testar destino
+                </button>
+              </div>
+
+              <p className="text-[11px]" style={{ color: C.textSecondary }}>O selo &quot;Patrocinado&quot; segue a regra do espaço — não pode ser removido por aqui.</p>
+            </>
+          )}
+        </NumberedCard>
+
+        {/* 4. Condições comerciais */}
+        <NumberedCard number={4} icon={CreditCard} title="Condições comerciais">
           {purchases.length === 0 ? <EmptyState icon={CreditCard} text="Nenhuma cobrança criada ainda." /> : (
             <ul className="space-y-2">
               {purchases.map(p => (
                 <li key={p.id} className="rounded-xl border p-3 text-xs" style={{ borderColor: C.border, color: C.text }}>
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: p.currency }).format(p.amount)} · {p.status} ({p.kind}) · {formatDateTimeBR(p.createdAt)}
-                  {p.isentoReason && <span> · Motivo: {p.isentoReason}</span>}
+                  {p.isentoReason && <span> · Isenção: {p.isentoReason}</span>}
                   {p.refundStatus && <span> · Reembolso: {p.refundStatus}</span>}
                 </li>
               ))}
             </ul>
           )}
-          <div className="flex flex-wrap gap-2">
-            <button onClick={checkout} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ background: C.primary }}>Gerar cobrança (Stripe)</button>
-            {isLeader && !showExempt && <button onClick={() => setShowExempt(true)} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Conceder isenção</button>}
+          <p className="text-[11px]" style={{ color: C.textSecondary }}>Estado financeiro é só de consulta aqui — confirmação de pagamento vem sempre do provedor real (Stripe) ou de isenção registrada, nunca de um campo editável.</p>
+          <div className="flex flex-wrap gap-2 border-t pt-4" style={{ borderColor: C.border }}>
+            <button type="button" onClick={checkout} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ background: C.primary }}>Gerar cobrança (Stripe)</button>
+            {isLeader && !showExempt && <button type="button" onClick={() => setShowExempt(true)} className="rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>Conceder isenção</button>}
           </div>
           {showExempt && (
             <div className="space-y-2 rounded-xl border p-3" style={{ borderColor: C.border }}>
@@ -635,51 +886,170 @@ function ConfiguracaoTab({ campaign, app, draftCreative, pendingCreative, liveCr
                 <textarea value={exemptReason} onChange={e => setExemptReason(e.target.value)} rows={2} className="mt-1 w-full rounded-lg border bg-transparent p-2 text-sm outline-none" style={{ borderColor: C.border, color: C.text }} />
               </label>
               <div className="flex gap-2">
-                <button onClick={grantExemption} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: C.primary }}>Confirmar isenção</button>
-                <button onClick={() => setShowExempt(false)} className="rounded-lg border px-3 py-1.5 text-xs" style={{ borderColor: C.border, color: C.text }}>Cancelar</button>
+                <button type="button" onClick={grantExemption} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: C.primary }}>Confirmar isenção</button>
+                <button type="button" onClick={() => setShowExempt(false)} className="rounded-lg border px-3 py-1.5 text-xs" style={{ borderColor: C.border, color: C.text }}>Cancelar</button>
               </div>
+            </div>
+          )}
+        </NumberedCard>
+
+        {/* Barra de ações — sticky só dentro da coluna do formulário, nunca cobre a sidebar nem o teclado no celular */}
+        <div className="sticky bottom-0 -mx-5 flex flex-wrap items-center gap-3 border-t px-5 py-3" style={{ borderColor: C.border, background: C.card }}>
+          <SaveStateLabel state={saveState} error={saveError} isDirty={isDirty} />
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button type="button" onClick={discard} disabled={!isDirty || saveState === 'saving'}
+              className="rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-40" style={{ borderColor: C.border, color: C.text }}>
+              Descartar alterações
+            </button>
+            <button type="button" onClick={onGoToPreview} className="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: C.border, color: C.text }}>
+              <Eye size={14} aria-hidden="true" /> Ver prévia
+            </button>
+            <button type="button" onClick={saveAll} disabled={!isDirty || saveState === 'saving'}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: C.primary }}>
+              {saveState === 'saving' ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null} Salvar alterações
+            </button>
+          </div>
+        </div>
+        {canEditCreative && !isDirty && (draftCreative ?? liveCreative) && (
+          <div className="-mt-3 flex justify-end">
+            <button type="button" onClick={submitForReview} className="text-xs font-semibold hover:underline" style={{ color: C.primary }}>Enviar anúncio para revisão</button>
+          </div>
+        )}
+      </div>
+
+      {/* Coluna de apoio */}
+      <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+          <p className="mb-3 text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Resumo da configuração</p>
+          <div className="space-y-2 text-xs">
+            <Info2 label="Aplicativo" value={app.name} />
+            <Info2 label="Espaço" value={selectedSpace?.name ?? 'Não definido'} />
+            <Info2 label="Pacote" value={selectedPackage?.name ?? 'Não definido'} />
+            <Info2 label="Período" value={`${formatDateTimeBR(brtInputValueToUtcIso(configForm.startsAt))} — ${formatDateTimeBR(brtInputValueToUtcIso(configForm.endsAt))}`} />
+            <Info2 label="Fuso" value="Horário de Brasília" />
+            <Info2 label="Versão do criativo" value={liveCreative ? `v${liveCreative.version} (vinculada)` : editableCreative ? `v${editableCreative.version} (rascunho)` : 'Nenhuma ainda'} />
+            <Info2 label="Estado financeiro" value={hasConfirmedPurchase ? 'Confirmado' : 'Pendente'} />
+          </div>
+          {isDirty && (
+            <p className="mt-3 flex items-center gap-1.5 rounded-lg p-2 text-xs font-semibold" style={{ background: `${C.warning}18`, color: C.warning }}>
+              <AlertTriangle size={12} aria-hidden="true" /> Alterações ainda não salvas
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Prévia do destaque</p>
+            <button type="button" onClick={() => setExpandedPreview(true)} className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: C.primary }}>
+              Ampliar prévia <Maximize2 size={11} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="mb-3 flex items-center gap-2">
+            <ViewportButton icon={Monitor} label="Desktop" active={previewMode === 'desktop'} onClick={() => setPreviewMode('desktop')} />
+            <ViewportButton icon={Smartphone} label="Mobile" active={previewMode === 'mobile'} onClick={() => setPreviewMode('mobile')} />
+          </div>
+          <div className="mx-auto overflow-hidden rounded-xl border transition-all" style={{ borderColor: C.border, maxWidth: previewMode === 'mobile' ? 360 : '100%' }}>
+            <SponsoredCarouselSection campaigns={[previewItem]} isPreview forceViewport={previewMode === 'mobile' ? 'mobile' : 'desktop'} onPreviewCtaClick={setCtaTest} />
+          </div>
+          <p className="mt-2 text-[11px]" style={{ color: C.textSecondary }}>Reflete o formulário atual — nenhuma impressão, clique ou compra real é gerada aqui.</p>
+        </div>
+
+        <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+          <p className="mb-3 text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Antes de veicular</p>
+          {configPendencies.length === 0 && deliveryBlockers.length === 0 ? (
+            <p className="flex items-center gap-1.5 text-xs" style={{ color: C.success }}><CheckCircle2 size={13} aria-hidden="true" /> Sem pendências conhecidas.</p>
+          ) : (
+            <div className="space-y-3">
+              {configPendencies.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: C.textSecondary }}>Pendências de configuração</p>
+                  <ul className="space-y-1">
+                    {configPendencies.map(p => (
+                      <li key={p.label} className="flex items-center gap-1.5 text-xs" style={{ color: C.warning }}><AlertTriangle size={12} aria-hidden="true" /> {p.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {deliveryBlockers.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: C.textSecondary }}>Impedimentos de veiculação</p>
+                  <ul className="space-y-1">
+                    {deliveryBlockers.map((r, i) => (
+                      <li key={i} className="flex items-center gap-1.5 text-xs" style={{ color: C.error }}><XCircle size={12} aria-hidden="true" /> {r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Coluna direita: prévia ao vivo, atualiza a cada tecla — mesmo padrão
-          do editor de app do parceiro (split-pane form + prévia), adaptado
-          ao tema escuro do admin. */}
-      <div className="lg:sticky lg:top-6 lg:self-start space-y-3">
-        <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
-          <p className="mb-3 text-sm font-semibold" style={{ color: C.text }}>Prévia do anúncio</p>
-          <div className="mb-3 flex items-center gap-2">
-            <button type="button" onClick={() => setPreviewMode('desktop')}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold"
-              style={previewMode === 'desktop' ? { background: `${C.primary}22`, color: C.primary } : { color: C.textSecondary }}>
-              <Monitor size={14} aria-hidden="true" /> Desktop
-            </button>
-            <button type="button" onClick={() => setPreviewMode('mobile')}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold"
-              style={previewMode === 'mobile' ? { background: `${C.primary}22`, color: C.primary } : { color: C.textSecondary }}>
-              <Smartphone size={14} aria-hidden="true" /> Mobile
-            </button>
-            <span className="ml-auto text-[11px]" style={{ color: C.textSecondary }}>Prévia privada</span>
+      <Dialog open={!!ctaTest} onOpenChange={o => { if (!o) setCtaTest(null) }}>
+        <DialogContent className="max-w-md border" style={{ background: C.card, borderColor: C.border, color: C.text }}>
+          <DialogTitle style={{ color: C.text }}>Destino do anúncio</DialogTitle>
+          {ctaTest && (
+            <div className="space-y-3 text-sm">
+              <p className="break-all rounded-lg border p-2 font-mono text-xs" style={{ borderColor: C.border, color: C.text }}>{ctaTest.href}</p>
+              <p className="flex items-center gap-1.5" style={{ color: ctaTest.valid ? C.success : C.error }}>
+                {ctaTest.valid ? <CheckCircle2 size={14} aria-hidden="true" /> : <AlertTriangle size={14} aria-hidden="true" />}
+                {ctaTest.valid ? 'Destino válido.' : 'Nenhum destino real configurado.'}
+              </p>
+              {ctaTest.valid && (
+                <a href={ctaTest.href} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: C.primary }}>
+                  <ExternalLink size={12} aria-hidden="true" /> Abrir destino (nova aba)
+                </a>
+              )}
+              <p className="text-[11px]" style={{ color: C.textSecondary }}>Isto só confere o endereço — nenhum clique publicitário, checkout ou reserva é registrado.</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={expandedPreview} onOpenChange={o => { if (!o) setExpandedPreview(false) }}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-[1000px] border" style={{ background: C.card, borderColor: C.border, color: C.text }}>
+          <DialogTitle className="text-sm" style={{ color: C.text }}>Prévia do destaque — rascunho atual</DialogTitle>
+          <div className="flex items-center gap-2 border-b pb-3" style={{ borderColor: C.border }}>
+            <ViewportButton icon={Monitor} label="Desktop" active={previewMode === 'desktop'} onClick={() => setPreviewMode('desktop')} />
+            <ViewportButton icon={Smartphone} label="Mobile" active={previewMode === 'mobile'} onClick={() => setPreviewMode('mobile')} />
           </div>
-          <div className="mx-auto overflow-hidden rounded-xl border transition-all" style={{ borderColor: C.border, maxWidth: previewMode === 'mobile' ? 360 : '100%' }}>
-            <SponsoredCarouselSection campaigns={[previewItem]} isPreview />
+          <div className="max-h-[70vh] overflow-y-auto py-3">
+            <div className="mx-auto overflow-hidden rounded-xl border transition-all" style={{ borderColor: C.border, maxWidth: previewMode === 'mobile' ? 390 : '100%' }}>
+              <SponsoredCarouselSection campaigns={[previewItem]} isPreview forceViewport={previewMode === 'mobile' ? 'mobile' : 'desktop'} onPreviewCtaClick={setCtaTest} />
+            </div>
           </div>
-          <p className="mt-2 text-[11px]" style={{ color: C.textSecondary }}>Atualiza conforme você edita — nenhuma impressão ou clique real é gerado aqui.</p>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function NumberedCard({ number, icon: Icon, title, children }: { number: number; icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <h3 className="text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>{title}</h3>
-      <p className="mt-0.5 text-xs" style={{ color: C.textSecondary }}>{subtitle}</p>
+    <div className="space-y-4 rounded-2xl border p-5" style={{ borderColor: C.border, background: C.header }}>
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: `${C.primary}22`, color: C.primary }}>{number}</span>
+        <Icon size={15} style={{ color: C.textSecondary }} aria-hidden="true" />
+        <h3 className="text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>{title}</h3>
+      </div>
+      {children}
     </div>
   )
 }
+
+function SaveStateLabel({ state, error, isDirty }: { state: SaveState; error: string | null; isDirty: boolean }) {
+  if (state === 'saving') return <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: C.textSecondary }}><Loader2 size={12} className="animate-spin" aria-hidden="true" /> Salvando…</span>
+  if (state === 'conflict') return <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: C.error }} role="alert"><AlertTriangle size={12} aria-hidden="true" /> {error ?? 'Conflito de versão — recarregue a página.'}</span>
+  if (state === 'error') return <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: C.error }} role="alert"><AlertTriangle size={12} aria-hidden="true" /> {error ?? 'Erro ao salvar.'}</span>
+  // "Salvo" só se sustenta enquanto nada mudou depois — um novo campo tocado
+  // após salvar volta a ser "alterações não salvas", nunca fica preso no
+  // rótulo de sucesso de um salvamento anterior.
+  if (state === 'saved' && !isDirty) return <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: C.success }}><CheckCircle2 size={12} aria-hidden="true" /> Salvo</span>
+  if (isDirty) return <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: C.warning }} role="status"><AlertTriangle size={12} aria-hidden="true" /> Alterações não salvas</span>
+  return <span className="text-xs" style={{ color: C.textSecondary }}>Sem alterações</span>
+}
+
 
 function ReviewDecisionButton({ icon: Icon, label, color, onSubmit }: { icon: React.ElementType; label: string; color: string; onSubmit: (reason: string) => void }) {
   const [open, setOpen] = useState(false)
