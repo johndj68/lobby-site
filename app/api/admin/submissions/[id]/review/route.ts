@@ -133,15 +133,19 @@ export async function PATCH(
     }
     const updated = updatedRows[0]
 
-    // If approved, update app status
-    if (action === 'approve') {
-      await supabase
-        .from('app_drafts')
-        .update({
-          status: 'approved',
-        })
-        .eq('id', submission.app_draft_id)
-    }
+    // Sincroniza app_drafts.status com a decisão — sem isso, reject/
+    // request_changes deixavam o draft travado em 'submitted' (setado pela
+    // rota de envio), que não está em SUBMITTABLE_STATUSES: o parceiro nunca
+    // mais conseguia reenviar depois de uma decisão dessas. app_drafts não
+    // tem um status "rejected" próprio (não existe no CHECK constraint), e
+    // rejeitar aqui nunca foi um veto definitivo em lugar nenhum do projeto
+    // (sem fluxo de "reabrir cadastro" separado) — 'changes_requested' é o
+    // único estado que realmente reabre o reenvio pra ambos os casos.
+    const draftStatus = action === 'approve' ? 'approved' : 'changes_requested'
+    await supabase
+      .from('app_drafts')
+      .update({ status: draftStatus })
+      .eq('id', submission.app_draft_id)
 
     // Send notification email
     const { data: dev } = await supabase
