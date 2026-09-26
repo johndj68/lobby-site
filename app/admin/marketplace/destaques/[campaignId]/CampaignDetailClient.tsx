@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Copy, PauseCircle, PlayCircle, StopCircle,
   Info, History as HistoryIcon, Loader2, CheckCircle2, XCircle, MessageSquare, CreditCard, Upload, Monitor, Smartphone, Tablet,
   Maximize2, ExternalLink, Settings, AlertTriangle, FileText, Grid3x3, Image as ImageIcon, Lock, Trash2, Eye,
+  RotateCcw, Download, MousePointerClick, Percent, TrendingUp, TrendingDown, Minus, ArrowUpDown, BarChart3, ChevronRight,
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import Link from 'next/link'
@@ -15,10 +16,12 @@ import ConfirmDialog from '@/components/admin/ConfirmDialog'
 import MarketplaceTabs from '@/components/admin/MarketplaceTabs'
 import AppLogo from '@/components/admin/AppLogo'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import SponsoredCarouselSection from '@/components/sections/SponsoredCarouselSection'
 import { MARKETPLACE_COLORS as C, formatDateTimeBR, ORIGIN_LABEL, type PublicationStatus } from '@/lib/marketplace'
 import { getCreativeReviewBadge, type CampaignStatusBadge } from '@/lib/services/campaign-labels'
 import type { EligibilityResult } from '@/lib/services/campaigns'
+import { fillDays, type DesempenhoPeriod, type DayPoint } from '@/lib/services/campaign-metrics'
 
 interface CampaignInfo { id: string; internalName: string | null; startsAt: string; endsAt: string; spaceId: string | null; packageId: string | null; pausedReason: string | null; createdAt: string; updatedAt: string }
 interface AppInfo { id: string; name: string; logoUrl: string | null; applicationSlug: string | null }
@@ -69,7 +72,22 @@ const ACTION_LABEL: Record<string, string> = {
 
 export default function CampaignDetailClient({ user, profile, campaign, app, origin, partnerName, publication, review, payment, eligibility, space, pkg, spaceOptions, packageOptions, creatives, purchases, events, latestReservation }: Props) {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('Prévia')
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  // Estado local é a fonte de verdade (router.replace sozinho não reflete de
+  // forma confiável em useSearchParams nesta versão do Next — mesmo padrão
+  // já usado em BuscaClient.tsx e em AcompanharClient.tsx). router.replace
+  // só existe pra manter a aba e os filtros de desempenho na URL, então
+  // recarregar ou compartilhar o link preserva a seleção (seção 4/16).
+  const initialTab = (searchParams.get('tab') as Tab) || 'Prévia'
+  const [tab, setTabState] = useState<Tab>(TABS.includes(initialTab) ? initialTab : 'Prévia')
+
+  function setTab(t: Tab) {
+    setTabState(t)
+    const next = new URLSearchParams(searchParams.toString())
+    next.set('tab', t)
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }
   const [busy, setBusy] = useState(false)
   const [confirmKind, setConfirmKind] = useState<'pause' | 'resume' | 'cancel' | null>(null)
   const [reason, setReason] = useState('')
@@ -186,7 +204,10 @@ export default function CampaignDetailClient({ user, profile, campaign, app, ori
               publication={publication} eligibility={eligibility} latestReservation={latestReservation}
               onChanged={() => router.refresh()} onGoToPreview={() => setTab('Prévia')} />
           )}
-          {tab === 'Desempenho' && <DesempenhoTab campaignId={campaign.id} />}
+          {tab === 'Desempenho' && (
+            <DesempenhoTab campaign={campaign} space={space} pkg={pkg} eligibility={eligibility}
+              liveCreative={liveCreative} onGoToConfig={() => setTab('Configuração')} onGoToPreview={() => setTab('Prévia')} onGoToHistory={() => setTab('Histórico')} />
+          )}
           {tab === 'Histórico' && (
             events.length === 0 ? <EmptyState icon={HistoryIcon} text="Nenhuma ação registrada ainda para esta campanha." /> : (
               <ul className="space-y-2">
@@ -1063,42 +1084,490 @@ function ReviewDecisionButton({ icon: Icon, label, color, onSubmit }: { icon: Re
   )
 }
 
-function DesempenhoTab({ campaignId }: { campaignId: string }) {
-  const [period, setPeriod] = useState('30d')
-  const [data, setData] = useState<{ impressions: number; clicks: number; ctr: number | null; byDevice: Record<string, number> } | null>(null)
-  const loading = data === null
+interface MetricsResponse {
+  period: DesempenhoPeriod
+  range: { start: string; end: string; clampedToNow: boolean }
+  campaignCreatedAt: string; campaignStartsAt: string; campaignEndsAt: string; campaignNotStarted: boolean
+  impressions: number; clicks: number; ctr: number | null
+  byDay: DayPoint[]
+  byDevice: Record<string, number>
+  byCreative: { creativeId: string; impressions: number; clicks: number; version: number | null }[]
+  comparison: { range: { start: string; end: string }; impressions: number; clicks: number; ctr: number | null; byDay: DayPoint[] } | null
+  fetchedAt: string
+}
+
+const DESEMP_PERIOD_LABEL: Record<DesempenhoPeriod, string> = {
+  hoje: 'Hoje', '7d': 'Últimos 7 dias', '30d': 'Últimos 30 dias', campanha: 'Todo o período da campanha', custom: 'Personalizado',
+}
+const numberBR = (n: number) => n.toLocaleString('pt-BR')
+
+function shortDay(iso: string): string {
+  const [, m, d] = iso.split('-')
+  return `${d}/${m}`
+}
+
+function DesempenhoTab({ campaign, space, pkg, eligibility, liveCreative, onGoToConfig, onGoToPreview, onGoToHistory }: {
+  campaign: CampaignInfo; space: SpaceRef | null; pkg: PackageRef | null; eligibility: EligibilityResult
+  liveCreative: Creative | null; onGoToConfig: () => void; onGoToPreview: () => void; onGoToHistory: () => void
+}) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const initialPeriod = searchParams.get('period')
+  const [period, setPeriodState] = useState<DesempenhoPeriod>(isValidDesempenhoPeriod(initialPeriod) ? initialPeriod : '30d')
+  const [customFrom, setCustomFrom] = useState(searchParams.get('from') ?? '')
+  const [customTo, setCustomTo] = useState(searchParams.get('to') ?? '')
+  const [compare, setCompareState] = useState(searchParams.get('compare') === '1')
+  const [metric, setMetric] = useState<'impressions' | 'clicks' | 'ctr'>('impressions')
+  const [breakdown, setBreakdown] = useState<'none' | 'device' | 'creative'>('none')
+  const [sortAsc, setSortAsc] = useState(false)
+  const [tablePage, setTablePage] = useState(0)
+  const TABLE_PAGE_SIZE = 14
+
+  const [data, setData] = useState<MetricsResponse | null>(null)
+  const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'error' | 'refreshing'>('loading')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const requestIdRef = useRef(0)
+  const hasLoadedRef = useRef(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  function updateQuery(updates: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams.toString())
+    next.set('tab', 'Desempenho')
+    for (const [k, v] of Object.entries(updates)) { if (v === null) next.delete(k); else next.set(k, v) }
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }
+  function setPeriod(p: DesempenhoPeriod) {
+    setPeriodState(p)
+    setTablePage(0)
+    updateQuery({ period: p, ...(p !== 'custom' ? { from: null, to: null } : {}) })
+  }
+  function setCompare(v: boolean) { setCompareState(v); updateQuery({ compare: v ? '1' : null }) }
+
+  const canFetch = period !== 'custom' || (!!customFrom && !!customTo)
 
   useEffect(() => {
+    if (!canFetch) return
     let cancelled = false
-    fetch(`/api/admin/campaigns/${campaignId}/metrics?period=${period}`)
-      .then(r => r.json()).then(d => { if (!cancelled) setData(d) })
+    const myId = ++requestIdRef.current
+    setLoadState(hasLoadedRef.current ? 'refreshing' : 'loading')
+    setErrorMsg(null)
+    const qs = new URLSearchParams({ period, compare: compare ? '1' : '0' })
+    if (period === 'custom') { qs.set('from', customFrom); qs.set('to', customTo) }
+    fetch(`/api/admin/campaigns/${campaign.id}/metrics?${qs.toString()}`)
+      .then(async res => {
+        const json = await res.json()
+        if (cancelled || myId !== requestIdRef.current) return
+        if (!res.ok) { setLoadState('error'); setErrorMsg(json.error || 'Falha ao carregar.'); return }
+        setData(json)
+        setLoadState('loaded')
+        hasLoadedRef.current = true
+      })
+      .catch(() => {
+        if (cancelled || myId !== requestIdRef.current) return
+        setLoadState('error')
+        setErrorMsg('Falha de conexão.')
+      })
     return () => { cancelled = true }
-  }, [campaignId, period])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, customFrom, customTo, compare, refreshKey, campaign.id])
+
+  function exportCsv() {
+    const qs = new URLSearchParams({ period })
+    if (period === 'custom') { qs.set('from', customFrom); qs.set('to', customTo) }
+    window.open(`/api/admin/campaigns/${campaign.id}/metrics/export?${qs.toString()}`, '_blank')
+  }
+
+  const days = data ? fillDays(data.byDay, data.range.start, data.range.end) : []
+  const prevDays = data?.comparison ? fillDays(data.comparison.byDay, data.comparison.range.start, data.comparison.range.end) : []
+  const sortedDays = [...days].sort((a, b) => sortAsc ? a.day.localeCompare(b.day) : b.day.localeCompare(a.day))
+  const pagedDays = sortedDays.slice(tablePage * TABLE_PAGE_SIZE, (tablePage + 1) * TABLE_PAGE_SIZE)
+  const totalPages = Math.ceil(sortedDays.length / TABLE_PAGE_SIZE)
+
+  const campaignNotStarted = data?.campaignNotStarted ?? false
 
   return (
-    <div className="space-y-4">
-      <select value={period} onChange={e => setPeriod(e.target.value)} className="rounded-xl border px-3 py-2 text-sm" style={{ background: C.header, borderColor: C.border, color: C.text }}>
-        <option value="7d" style={{ color: 'black' }}>Últimos 7 dias</option>
-        <option value="30d" style={{ color: 'black' }}>Últimos 30 dias</option>
-        <option value="90d" style={{ color: 'black' }}>Últimos 90 dias</option>
-      </select>
-      {loading ? <Loader2 size={18} className="animate-spin" style={{ color: C.textSecondary }} aria-hidden="true" /> : data && (
-        <>
-          <div className="grid grid-cols-3 gap-3">
-            <Info2 label="Impressões" value={String(data.impressions)} />
-            <Info2 label="Cliques" value={String(data.clicks)} />
-            <Info2 label="CTR" value={data.ctr != null ? `${data.ctr}%` : '—'} />
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Desempenho da campanha</h2>
+        <p className="mt-1 text-sm" style={{ color: C.textSecondary }}>Acompanhe as exibições e os cliques do seu destaque.</p>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={period} onChange={e => setPeriod(e.target.value as DesempenhoPeriod)}
+          className="rounded-xl border px-3 py-2 text-sm outline-none" style={{ background: C.header, borderColor: C.border, color: C.text }}>
+          {(Object.keys(DESEMP_PERIOD_LABEL) as DesempenhoPeriod[]).map(p => <option key={p} value={p} style={{ color: 'black' }}>{DESEMP_PERIOD_LABEL[p]}</option>)}
+        </select>
+        {period === 'custom' && (
+          <div className="flex items-center gap-1.5">
+            <input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); updateQuery({ from: e.target.value || null }) }}
+              className="rounded-lg border px-2 py-2 text-sm outline-none" style={{ background: C.header, borderColor: C.border, color: C.text, colorScheme: 'dark' }} aria-label="Data inicial" />
+            <span style={{ color: C.textSecondary }}>—</span>
+            <input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); updateQuery({ to: e.target.value || null }) }}
+              className="rounded-lg border px-2 py-2 text-sm outline-none" style={{ background: C.header, borderColor: C.border, color: C.text, colorScheme: 'dark' }} aria-label="Data final" />
           </div>
-          {Object.keys(data.byDevice).length > 0 && (
-            <div>
-              <p className="mb-1 text-xs font-semibold" style={{ color: C.textSecondary }}>Impressões por dispositivo</p>
-              <div className="flex gap-3 text-xs" style={{ color: C.text }}>
-                {Object.entries(data.byDevice).map(([k, v]) => <span key={k}>{k}: {v}</span>)}
+        )}
+        <label className="flex items-center gap-1.5 text-xs font-medium" style={{ color: C.text }}>
+          <input type="checkbox" checked={compare} onChange={e => setCompare(e.target.checked)} /> Comparar período anterior
+        </label>
+        <button type="button" onClick={() => setRefreshKey(k => k + 1)} disabled={loadState === 'refreshing' || loadState === 'loading'}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-50" style={{ borderColor: C.border, color: C.text }}>
+          <RotateCcw size={14} className={loadState === 'refreshing' ? 'animate-spin' : ''} aria-hidden="true" /> Atualizar
+        </button>
+        <button type="button" onClick={exportCsv} disabled={!data}
+          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: C.primary }}>
+          <Download size={14} aria-hidden="true" /> Exportar dados
+        </button>
+      </div>
+
+      {data && (
+        <p className="text-xs" style={{ color: C.textSecondary }}>
+          {formatDateTimeBR(data.range.start)} — {formatDateTimeBR(data.range.end)} (horário de Brasília)
+          {data.range.clampedToNow ? ' · período contratado ainda em andamento, mostrando até agora' : ''}
+          {' · '}Dados atualizados em {formatDateTimeBR(data.fetchedAt)}
+          {loadState === 'refreshing' ? ' · atualizando…' : ''}
+        </p>
+      )}
+
+      {loadState === 'error' && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border p-3 text-sm" style={{ borderColor: C.error, color: C.text }}>
+          <AlertTriangle size={16} style={{ color: C.error }} aria-hidden="true" />
+          {errorMsg ?? 'Não foi possível carregar as métricas.'}
+          <button type="button" onClick={() => setRefreshKey(k => k + 1)} className="ml-auto rounded-lg border px-3 py-1.5 text-xs font-semibold" style={{ borderColor: C.border, color: C.text }}>Tentar novamente</button>
+        </div>
+      )}
+
+      {loadState === 'loading' && !data && (
+        <div className="space-y-4" aria-busy="true" aria-label="Carregando métricas">
+          <div className="grid gap-3 sm:grid-cols-3">{[0, 1, 2].map(i => <div key={i} className="h-24 animate-pulse rounded-xl" style={{ background: C.header }} />)}</div>
+          <div className="h-64 animate-pulse rounded-xl" style={{ background: C.header }} />
+        </div>
+      )}
+
+      {data && (
+        <>
+          {campaignNotStarted && (
+            <p className="flex items-center gap-1.5 rounded-xl border p-3 text-xs" style={{ borderColor: C.border, color: C.textSecondary }}>
+              <Info size={13} style={{ color: C.primary }} aria-hidden="true" /> Esta campanha ainda não começou — não há veiculação possível antes de {formatDateTimeBR(data.campaignStartsAt)}.
+            </p>
+          )}
+          {eligibility.key === 'cancelada' && (
+            <p className="flex items-center gap-1.5 rounded-xl border p-3 text-xs" style={{ borderColor: C.border, color: C.textSecondary }}>
+              <Info size={13} style={{ color: C.warning }} aria-hidden="true" /> Esta campanha está cancelada — os resultados abaixo, quando existirem, são o histórico real registrado antes do cancelamento.
+            </p>
+          )}
+
+          {/* Indicadores */}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <IndicatorCard icon={Eye} label="IMPRESSÕES" value={numberBR(data.impressions)} hint="Exibições válidas registradas no período."
+              delta={data.comparison ? deltaPercent(data.impressions, data.comparison.impressions) : null} />
+            <IndicatorCard icon={MousePointerClick} label="CLIQUES" value={numberBR(data.clicks)} hint="Cliques válidos no destaque no período."
+              delta={data.comparison ? deltaPercent(data.clicks, data.comparison.clicks) : null} />
+            <IndicatorCard icon={Percent} label="CTR" value={data.ctr != null ? `${data.ctr.toLocaleString('pt-BR')}%` : '—'}
+              hint={data.ctr != null ? 'Cliques ÷ impressões × 100.' : 'Sem impressões para calcular a taxa.'}
+              delta={data.comparison && data.ctr != null && data.comparison.ctr != null ? { points: Number((data.ctr - data.comparison.ctr).toFixed(2)) } : null} />
+          </div>
+
+          {/* Evolução + Contexto */}
+          <div className="grid gap-5 lg:grid-cols-[70fr_30fr]">
+            <div className="min-w-0 rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Evolução no período</p>
+                <div className="flex items-center gap-1 rounded-lg border p-1" style={{ borderColor: C.border }}>
+                  {(['impressions', 'clicks', 'ctr'] as const).map(m => (
+                    <button key={m} type="button" onClick={() => setMetric(m)} aria-pressed={metric === m}
+                      className="rounded-md px-3 py-1.5 text-xs font-semibold" style={metric === m ? { background: C.primary, color: '#fff' } : { color: C.textSecondary }}>
+                      {m === 'impressions' ? 'Impressões' : m === 'clicks' ? 'Cliques' : 'CTR'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {days.every(d => d.impressions === 0 && d.clicks === 0) ? (
+                <div className="flex flex-col items-center gap-2 py-14 text-center">
+                  <BarChart3 size={28} style={{ color: C.textSecondary }} aria-hidden="true" />
+                  <p className="text-sm font-semibold" style={{ color: C.text }}>Nenhum evento registrado neste período.</p>
+                  <p className="text-xs" style={{ color: C.textSecondary }}>Não há exibições ou cliques no período selecionado.</p>
+                  <button type="button" onClick={() => setPeriod('30d')} className="text-xs font-semibold hover:underline" style={{ color: C.primary }}>Alterar período</button>
+                </div>
+              ) : (
+                <EvolutionChart days={days} prevDays={compare ? prevDays : null} metric={metric} />
+              )}
+              <p className="mt-2 text-[11px]" style={{ color: C.textSecondary }}>Valores exatos por dia na tabela &quot;Resultados por dia&quot; abaixo — alternativa acessível ao gráfico.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+                <p className="mb-3 text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Contexto da campanha</p>
+                <div className="space-y-2 text-xs">
+                  <Info2 label="Espaço contratado" value={space?.name ?? 'Não definido'} />
+                  <Info2 label="Pacote contratado" value={pkg?.name ?? 'Não definido'} />
+                  <Info2 label="Período contratado" value={`${formatDateTimeBR(campaign.startsAt)} — ${formatDateTimeBR(campaign.endsAt)}`} />
+                  <Info2 label="Estado atual" value={campaignLifecycleBadge(eligibility).label} />
+                  <Info2 label="Versão do criativo" value={liveCreative ? `v${liveCreative.version} (vinculada)` : 'Nenhuma vinculada'} />
+                  <Info2 label="Cobertura de métricas" value={`Desde ${formatDateTimeBR(data.campaignCreatedAt)}`} />
+                </div>
+                {(eligibility.key !== 'em_exibicao' && eligibility.key !== 'programada' && eligibility.key !== 'encerrada') && (
+                  <p className="mt-3 flex items-start gap-1.5 rounded-lg p-2 text-xs" style={{ background: `${C.error}18`, color: C.text }}>
+                    <AlertTriangle size={12} className="mt-0.5 shrink-0" style={{ color: C.error }} aria-hidden="true" /> {eligibility.reasons.join(' ')}
+                  </p>
+                )}
+                <div className="mt-3 space-y-1.5 border-t pt-3" style={{ borderColor: C.border }}>
+                  <button type="button" onClick={onGoToConfig} className="flex w-full items-center justify-between text-xs font-semibold hover:underline" style={{ color: C.primary }}>Ver configuração <ChevronRight size={12} aria-hidden="true" /></button>
+                  <button type="button" onClick={onGoToHistory} className="flex w-full items-center justify-between text-xs font-semibold hover:underline" style={{ color: C.primary }}>Consultar histórico <ChevronRight size={12} aria-hidden="true" /></button>
+                  <button type="button" onClick={onGoToPreview} className="flex w-full items-center justify-between text-xs font-semibold hover:underline" style={{ color: C.primary }}>Abrir prévia <ChevronRight size={12} aria-hidden="true" /></button>
+                </div>
               </div>
             </div>
-          )}
-          <p className="text-xs" style={{ color: C.textSecondary }}>Conversão/receita atribuída não é exibida — não há janela de atribuição real implementada neste projeto.</p>
+          </div>
+
+          {/* Resultados por dia + Atribuição */}
+          <div className="grid gap-5 lg:grid-cols-[70fr_30fr]">
+            <div className="min-w-0 space-y-3 rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Resultados por dia</p>
+                {(Object.keys(data.byDevice).length > 0 || data.byCreative.length > 1) && (
+                  <div className="flex items-center gap-1 rounded-lg border p-1" style={{ borderColor: C.border }}>
+                    <button type="button" onClick={() => setBreakdown('none')} className="rounded-md px-2.5 py-1 text-[11px] font-semibold" style={breakdown === 'none' ? { background: C.primary, color: '#fff' } : { color: C.textSecondary }}>Por dia</button>
+                    {Object.keys(data.byDevice).length > 0 && <button type="button" onClick={() => setBreakdown('device')} className="rounded-md px-2.5 py-1 text-[11px] font-semibold" style={breakdown === 'device' ? { background: C.primary, color: '#fff' } : { color: C.textSecondary }}>Por dispositivo</button>}
+                    {data.byCreative.length > 1 && <button type="button" onClick={() => setBreakdown('creative')} className="rounded-md px-2.5 py-1 text-[11px] font-semibold" style={breakdown === 'creative' ? { background: C.primary, color: '#fff' } : { color: C.textSecondary }}>Por versão do criativo</button>}
+                  </div>
+                )}
+              </div>
+
+              {breakdown === 'device' ? (
+                <table className="w-full text-left text-xs">
+                  <thead><tr style={{ color: C.textSecondary }}><th className="pb-2 font-semibold">Dispositivo</th><th className="pb-2 font-semibold">Impressões</th></tr></thead>
+                  <tbody>{Object.entries(data.byDevice).map(([k, v]) => (
+                    <tr key={k} className="border-t" style={{ borderColor: C.border, color: C.text }}><td className="py-1.5 capitalize">{k}</td><td className="py-1.5">{numberBR(v)}</td></tr>
+                  ))}</tbody>
+                </table>
+              ) : breakdown === 'creative' ? (
+                <table className="w-full text-left text-xs">
+                  <thead><tr style={{ color: C.textSecondary }}><th className="pb-2 font-semibold">Versão</th><th className="pb-2 font-semibold">Impressões</th><th className="pb-2 font-semibold">Cliques</th></tr></thead>
+                  <tbody>{data.byCreative.map(c => (
+                    <tr key={c.creativeId} className="border-t" style={{ borderColor: C.border, color: C.text }}><td className="py-1.5">{c.version != null ? `v${c.version}` : 'Desconhecida'}</td><td className="py-1.5">{numberBR(c.impressions)}</td><td className="py-1.5">{numberBR(c.clicks)}</td></tr>
+                  ))}</tbody>
+                </table>
+              ) : sortedDays.every(d => d.impressions === 0 && d.clicks === 0) ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <FileText size={22} style={{ color: C.textSecondary }} aria-hidden="true" />
+                  <p className="text-sm" style={{ color: C.textSecondary }}>Nenhum resultado para este período.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[420px] text-left text-xs">
+                    <thead>
+                      <tr style={{ color: C.textSecondary }}>
+                        <th className="pb-2 font-semibold">
+                          <button type="button" onClick={() => setSortAsc(v => !v)} className="inline-flex items-center gap-1 hover:underline">Data <ArrowUpDown size={11} aria-hidden="true" /></button>
+                        </th>
+                        <th className="pb-2 font-semibold">Impressões</th>
+                        <th className="pb-2 font-semibold">Cliques</th>
+                        <th className="pb-2 font-semibold">CTR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedDays.map(d => (
+                        <tr key={d.day} className="border-t" style={{ borderColor: C.border, color: C.text }}>
+                          <td className="py-1.5">{formatDateTimeBR(`${d.day}T12:00:00Z`).split(',')[0]}</td>
+                          <td className="py-1.5">{numberBR(d.impressions)}</td>
+                          <td className="py-1.5">{numberBR(d.clicks)}</td>
+                          <td className="py-1.5">{d.impressions > 0 ? `${((d.clicks / d.impressions) * 100).toFixed(2)}%` : '—'}</td>
+                        </tr>
+                      ))}
+                      <tr className="border-t font-semibold" style={{ borderColor: C.border, color: C.text }}>
+                        <td className="py-1.5">Total</td>
+                        <td className="py-1.5">{numberBR(data.impressions)}</td>
+                        <td className="py-1.5">{numberBR(data.clicks)}</td>
+                        <td className="py-1.5">{data.ctr != null ? `${data.ctr}%` : '—'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {breakdown === 'none' && totalPages > 1 && (
+                <div className="flex items-center justify-end gap-2 text-xs" style={{ color: C.textSecondary }}>
+                  <button type="button" onClick={() => setTablePage(p => Math.max(0, p - 1))} disabled={tablePage === 0} className="rounded-lg border px-2 py-1 disabled:opacity-40" style={{ borderColor: C.border }}>Anterior</button>
+                  Página {tablePage + 1} de {totalPages}
+                  <button type="button" onClick={() => setTablePage(p => Math.min(totalPages - 1, p + 1))} disabled={tablePage >= totalPages - 1} className="rounded-lg border px-2 py-1 disabled:opacity-40" style={{ borderColor: C.border }}>Próxima</button>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+              <p className="mb-2 flex items-center gap-1.5 text-sm font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}
+                title="Não há hoje um vínculo entre o clique no destaque e um pedido/assinatura do app anunciado.">
+                Atribuição de vendas <Info size={13} style={{ color: C.textSecondary }} aria-hidden="true" />
+              </p>
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <BarChart3 size={24} style={{ color: C.textSecondary }} aria-hidden="true" />
+                <p className="text-xs" style={{ color: C.textSecondary }}>Este destaque mede exibições e cliques — vendas e receita atribuídas não são calculadas, pois não existe hoje um vínculo entre o clique e um pedido do app anunciado.</p>
+              </div>
+            </div>
+          </div>
+
+          <Accordion>
+            <AccordionItem value="definicoes">
+              <AccordionTrigger className="text-sm font-bold" style={{ color: C.text }}>Como calculamos os resultados</AccordionTrigger>
+              <AccordionContent style={{ color: C.textSecondary }}>
+                <div className="space-y-2 text-xs">
+                  <p><strong style={{ color: C.text }}>Impressão:</strong> contada quando ao menos 50% do anúncio fica visível na tela por 1 segundo contínuo, com a aba em primeiro plano — no máximo uma vez por visita (mesmo identificador de sessão), mesmo se o carrossel pré-carregar outros slides.</p>
+                  <p><strong style={{ color: C.text }}>Clique:</strong> contado quando o botão do anúncio é acionado numa página pública real — nunca em prévia administrativa, prévia do parceiro ou testes.</p>
+                  <p><strong style={{ color: C.text }}>CTR:</strong> cliques ÷ impressões do próprio intervalo × 100 — nunca a média das taxas diárias.</p>
+                  <p><strong style={{ color: C.text }}>Exclusões:</strong> este projeto não implementa filtragem de bots nem deduplicação de visitantes únicos — os números refletem eventos brutos que passaram pela regra de visibilidade acima.</p>
+                  <p><strong style={{ color: C.text }}>Atribuição de vendas:</strong> não há hoje um vínculo entre o clique no destaque e um pedido/assinatura do app anunciado — por isso o card &quot;Atribuição de vendas&quot; não mostra números.</p>
+                  <p><strong style={{ color: C.text }}>Atualização:</strong> os números refletem o momento da consulta (campo &quot;Dados atualizados em&quot;) — não há atraso de processamento em lote.</p>
+                  <p><strong style={{ color: C.text }}>Cobertura disponível:</strong> desde {formatDateTimeBR(data.campaignCreatedAt)}, quando esta campanha foi criada.</p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </>
+      )}
+    </div>
+  )
+}
+
+function isValidDesempenhoPeriod(v: string | null): v is DesempenhoPeriod {
+  return !!v && (['hoje', '7d', '30d', 'campanha', 'custom'] as const).includes(v as DesempenhoPeriod)
+}
+
+function deltaPercent(current: number, previous: number): { percent: number | null } {
+  if (previous <= 0) return { percent: null }
+  return { percent: Number((((current - previous) / previous) * 100).toFixed(1)) }
+}
+
+function IndicatorCard({ icon: Icon, label, value, hint, delta }: {
+  icon: React.ElementType; label: string; value: string; hint: string
+  delta: { percent: number | null } | { points: number } | null
+}) {
+  return (
+    <div className="rounded-2xl border p-4" style={{ borderColor: C.border, background: C.header }}>
+      <div className="mb-2 flex items-center gap-2">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: `${C.primary}18` }}>
+          <Icon size={15} style={{ color: C.primary }} aria-hidden="true" />
+        </span>
+        <p className="text-xs font-bold tracking-wide" style={{ color: C.textSecondary }}>{label}</p>
+      </div>
+      <p className="text-2xl font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>{value}</p>
+      <p className="mt-1 text-xs" style={{ color: C.textSecondary }}>{hint}</p>
+      {delta && <DeltaLabel delta={delta} />}
+    </div>
+  )
+}
+
+function DeltaLabel({ delta }: { delta: { percent: number | null } | { points: number } }) {
+  if ('points' in delta) {
+    const Icon = delta.points > 0 ? TrendingUp : delta.points < 0 ? TrendingDown : Minus
+    return (
+      <p className="mt-1.5 flex items-center gap-1 text-xs font-semibold" style={{ color: delta.points > 0 ? C.success : delta.points < 0 ? C.error : C.textSecondary }}>
+        <Icon size={12} aria-hidden="true" /> {delta.points > 0 ? '+' : ''}{delta.points.toLocaleString('pt-BR')} p.p. vs. período anterior
+      </p>
+    )
+  }
+  if (delta.percent === null) return <p className="mt-1.5 text-xs font-semibold" style={{ color: C.textSecondary }}>Sem base de comparação</p>
+  const Icon = delta.percent > 0 ? TrendingUp : delta.percent < 0 ? TrendingDown : Minus
+  return (
+    <p className="mt-1.5 flex items-center gap-1 text-xs font-semibold" style={{ color: delta.percent > 0 ? C.success : delta.percent < 0 ? C.error : C.textSecondary }}>
+      <Icon size={12} aria-hidden="true" /> {delta.percent > 0 ? '+' : ''}{delta.percent.toLocaleString('pt-BR')}% vs. período anterior
+    </p>
+  )
+}
+
+/** SVG simples e real — nada de curva ilustrativa: impressões/cliques em
+ *  barras (contagem discreta por dia), CTR em linha reta ponto-a-ponto com
+ *  lacuna real nos dias sem impressão (taxa indefinida, não zero). A tabela
+ *  "Resultados por dia" logo abaixo é a alternativa acessível (seção 7). */
+function EvolutionChart({ days, prevDays, metric }: { days: DayPoint[]; prevDays: DayPoint[] | null; metric: 'impressions' | 'clicks' | 'ctr' }) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+  const width = 640, height = 220, padL = 32, padB = 24, padT = 10, padR = 8
+  const plotW = width - padL - padR, plotH = height - padT - padB
+
+  function valueOf(d: DayPoint): number | null {
+    if (metric === 'impressions') return d.impressions
+    if (metric === 'clicks') return d.clicks
+    return d.impressions > 0 ? Number(((d.clicks / d.impressions) * 100).toFixed(2)) : null
+  }
+
+  const values = days.map(valueOf)
+  const prevValues = prevDays?.map(valueOf) ?? []
+  const maxVal = Math.max(1, ...values.filter((v): v is number => v !== null), ...prevValues.filter((v): v is number => v !== null))
+  const n = days.length
+  const stepX = n > 1 ? plotW / (n - 1) : 0
+  const xFor = (i: number) => padL + (n > 1 ? i * stepX : plotW / 2)
+  const yFor = (v: number) => padT + plotH - (v / maxVal) * plotH
+
+  const tickCount = Math.min(6, n)
+  const tickIdx = Array.from({ length: tickCount }, (_, i) => Math.round(i * (n - 1) / Math.max(1, tickCount - 1)))
+
+  function linePath(vals: (number | null)[]) {
+    let path = ''
+    let started = false
+    vals.forEach((v, i) => {
+      if (v === null) { started = false; return }
+      const cmd = started ? 'L' : 'M'
+      path += `${cmd}${xFor(i).toFixed(1)},${yFor(v).toFixed(1)} `
+      started = true
+    })
+    return path.trim()
+  }
+
+  const isBar = metric !== 'ctr'
+  const label = metric === 'impressions' ? 'impressões' : metric === 'clicks' ? 'cliques' : 'CTR'
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={`Gráfico de ${label} por dia no período selecionado`} style={{ overflow: 'visible' }}>
+        {[0, 0.5, 1].map(f => (
+          <line key={f} x1={padL} x2={width - padR} y1={padT + plotH * f} y2={padT + plotH * f} stroke={C.border} strokeWidth={1} />
+        ))}
+        <text x={4} y={padT + 4} fontSize={9} fill={C.textSecondary}>{metric === 'ctr' ? `${maxVal}%` : numberBR(Math.round(maxVal))}</text>
+        <text x={4} y={padT + plotH + 4} fontSize={9} fill={C.textSecondary}>0</text>
+
+        {isBar ? days.map((d, i) => {
+          const v = values[i] ?? 0
+          const barW = Math.max(2, stepX * 0.5)
+          const x = xFor(i) - barW / 2
+          const y = yFor(v)
+          return (
+            <rect key={d.day} x={x} y={y} width={barW} height={Math.max(0, padT + plotH - y)} fill={C.primary} opacity={hoverIdx === i ? 1 : 0.75}
+              onMouseEnter={() => setHoverIdx(i)} onMouseLeave={() => setHoverIdx(null)} tabIndex={0}
+              onFocus={() => setHoverIdx(i)} onBlur={() => setHoverIdx(null)} role="button" aria-label={`${d.day}: ${numberBR(metric === 'impressions' ? d.impressions : d.clicks)} ${label}`}>
+              <title>{`${d.day}: ${numberBR(metric === 'impressions' ? d.impressions : d.clicks)} ${label}`}</title>
+            </rect>
+          )
+        }) : (
+          <>
+            {prevDays && <path d={linePath(prevValues)} fill="none" stroke={C.textSecondary} strokeWidth={1.5} strokeDasharray="4,3" opacity={0.7} />}
+            <path d={linePath(values)} fill="none" stroke={C.primary} strokeWidth={2} />
+            {values.map((v, i) => v === null ? null : (
+              <circle key={days[i].day} cx={xFor(i)} cy={yFor(v)} r={hoverIdx === i ? 4 : 2.5} fill={C.primary}
+                onMouseEnter={() => setHoverIdx(i)} onMouseLeave={() => setHoverIdx(null)} tabIndex={0}
+                onFocus={() => setHoverIdx(i)} onBlur={() => setHoverIdx(null)} role="button" aria-label={`${days[i].day}: ${v}% de CTR`}>
+                <title>{`${days[i].day}: ${v}% de CTR`}</title>
+              </circle>
+            ))}
+          </>
+        )}
+
+        {tickIdx.map(i => (
+          <text key={i} x={xFor(i)} y={height - 4} fontSize={9} fill={C.textSecondary} textAnchor="middle">{shortDay(days[i].day)}</text>
+        ))}
+      </svg>
+      {hoverIdx !== null && (
+        <p className="mt-1 text-center text-xs" style={{ color: C.text }}>
+          {days[hoverIdx].day} — {metric === 'ctr'
+            ? (values[hoverIdx] != null ? `${values[hoverIdx]}% de CTR` : 'Sem impressões')
+            : `${numberBR(values[hoverIdx] ?? 0)} ${label}`}
+        </p>
+      )}
+      {prevDays && metric === 'ctr' && (
+        <p className="mt-1 flex items-center gap-1.5 text-[11px]" style={{ color: C.textSecondary }}>
+          <span className="inline-block h-0.5 w-4" style={{ background: C.primary }} /> período atual
+          <span className="ml-2 inline-block h-0.5 w-4 border-t border-dashed" style={{ borderColor: C.textSecondary }} /> período anterior
+        </p>
       )}
     </div>
   )
@@ -1115,6 +1584,23 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 function Badge({ color, label }: { color: string; label: string }) {
   return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: `${color}22`, color }}>{label}</span>
+}
+
+/** Estado real do CICLO DE VIDA da campanha — dimensão própria, separada de
+ *  criativo/financeiro/exibição (seção 3: 4 rótulos com significado claro,
+ *  não um "eligibility" composto disfarçado de 4º badge). Cancelada/pausada/
+ *  agendada/encerrada vêm direto das mesmas checagens já usadas em
+ *  computeCampaignEligibility (nunca uma segunda régua divergente); fora
+ *  desses casos, a campanha em si está "ativa" mesmo que outra dimensão
+ *  (criativo em revisão, pagamento pendente) seja o que impede a exibição. */
+function campaignLifecycleBadge(eligibility: EligibilityResult): { label: string; color: string } {
+  switch (eligibility.key) {
+    case 'cancelada': return { label: 'Cancelada', color: C.textSecondary }
+    case 'pausada': return { label: 'Pausada', color: C.warning }
+    case 'programada': return { label: 'Agendada', color: C.primary }
+    case 'encerrada': return { label: 'Encerrada', color: C.textSecondary }
+    default: return { label: 'Ativa', color: C.success }
+  }
 }
 function ActionButton({ icon: Icon, label, onClick, primary }: { icon: React.ElementType; label: string; onClick: () => void; primary?: boolean }) {
   return <button onClick={onClick} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold" style={primary ? { background: C.primary, color: 'white' } : { border: `1px solid ${C.border}`, color: C.text }}><Icon size={13} aria-hidden="true" /> {label}</button>
