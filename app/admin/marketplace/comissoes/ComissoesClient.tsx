@@ -30,6 +30,7 @@ const NAV_TABS = [
   { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: true },
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
   { label: 'Comissões', href: '/admin/marketplace/comissoes', enabled: true },
+  { label: 'Repasses', href: '/admin/marketplace/repasses', enabled: true },
 ]
 
 const EMPTY_FORM = { partnerId: '', categoryId: '', percent: '' }
@@ -140,7 +141,7 @@ export default function ComissoesClient({ user, profile, partners, categories, t
           <Info size={16} className="mt-0.5 shrink-0" style={{ color: C.textSecondary }} aria-hidden="true" />
           <p className="text-sm" style={{ color: C.textSecondary }}>
             Quando nenhuma condição abaixo se aplica a uma venda, o padrão é <span className="font-bold" style={{ color: C.text }}>{DEFAULT_COMMISSION_PERCENT}%</span>.
-            Isso não depende de checkout de app existir ainda — a resolução já está pronta no banco (<code>get_partner_commission_percent</code>) pra quando a venda própria de app for implementada.
+            O checkout de app já usa essa resolução (<code>get_partner_commission_percent</code>) pra calcular a comissão no momento da venda — mudar uma condição aqui só afeta vendas futuras, nunca recalcula vendas já feitas.
           </p>
         </div>
 

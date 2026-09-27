@@ -58,6 +58,7 @@ const NAV_TABS = [
   { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: true },
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
   { label: 'Comissões', href: '/admin/marketplace/comissoes', enabled: true },
+  { label: 'Repasses', href: '/admin/marketplace/repasses', enabled: true },
 ]
 
 const INNER_TABS = ['Campanhas', 'Programação', 'Pacotes e espaços'] as const
