@@ -12,6 +12,10 @@ import { PAYOUT_RETENTION_DAYS, type PartnerPayoutStatus } from '@/lib/services/
 
 export interface EligiblePurchaseRow {
   id:              string
+  /** app_purchase = venda avulsa de app; subscription_invoice = ciclo de
+   *  cobrança de assinatura (peça 5) — mesma fila, fontes diferentes na
+   *  hora de chamar create_partner_payout. */
+  kind:            'app_purchase' | 'subscription_invoice'
   applicationName: string
   planName:        string
   amount:          number
@@ -101,11 +105,17 @@ export default function RepassesClient({ user, profile, partnerGroups, history }
     setError('')
     try {
       const supabase = createClient()
+      // A fila mistura app_purchase (venda avulsa) e subscription_invoice
+      // (ciclo de assinatura) — a RPC exige listas separadas.
+      const selectedRows = payingPartner.eligiblePurchases.filter(p => selected.has(p.id))
+      const appPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase').map(p => p.id)
+      const subscriptionInvoiceIds = selectedRows.filter(p => p.kind === 'subscription_invoice').map(p => p.id)
       const { error: err } = await supabase.rpc('create_partner_payout', {
         p_partner_id: payingPartner.partnerId,
-        p_app_purchase_ids: [...selected],
+        p_app_purchase_ids: appPurchaseIds,
         p_reference: reference.trim(),
         p_notes: notes.trim() || null,
+        p_subscription_invoice_ids: subscriptionInvoiceIds,
       })
       if (err) throw err
       window.location.reload() // reflete elegibilidade/histórico sem duplicar o cálculo de agrupamento aqui
