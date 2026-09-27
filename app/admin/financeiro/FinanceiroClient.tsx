@@ -35,6 +35,7 @@ import FinanceTransactionModal, {
 } from '@/components/admin/finance/FinanceTransactionModal'
 import ConfirmEbookPaymentModal from '@/components/admin/finance/ConfirmEbookPaymentModal'
 import RefundFinanceTransactionModal from '@/components/admin/finance/RefundFinanceTransactionModal'
+import RefundEbookPurchaseModal, { type PaidEbookPurchase } from '@/components/admin/finance/RefundEbookPurchaseModal'
 // Tipos globais para transações financeiras
 import type { FinancialTransaction, FinanceType, FinanceStatus, PaymentMethod } from '@/types'
 // Tipo para compras de e-books pendentes de confirmação
@@ -47,6 +48,7 @@ interface Props {
   profile:                  { full_name?: string } | null // Perfil do técnico logado
   initialTransactions:      FinancialTransaction[]       // Transações pré-carregadas no servidor
   initialPendingPurchases:  PendingEbookPurchase[]       // E-books aguardando confirmação de pagamento
+  initialPaidEbookPurchases: PaidEbookPurchase[]         // E-books já pagos — ação de reembolso
 }
 
 // Opções de filtro de período para as transações
@@ -59,11 +61,15 @@ const PERIOD_OPTIONS: { value: FinanceFilters['period']; label: string }[] = [
   { value: 'todos', label: 'Todos' },
 ]
 
-export default function FinanceiroClient({ user, profile, initialTransactions, initialPendingPurchases }: Props) {
+export default function FinanceiroClient({ user, profile, initialTransactions, initialPendingPurchases, initialPaidEbookPurchases }: Props) {
   // Lista de transações exibida (atualizada otimisticamente)
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(initialTransactions)
   // E-books com pagamento pendente de confirmação manual
   const [pendingPurchases, setPendingPurchases] = useState<PendingEbookPurchase[]>(initialPendingPurchases)
+  // E-books já pagos (crédito ou manual) — lista pra ação de reembolso
+  const [paidEbookPurchases, setPaidEbookPurchases] = useState<PaidEbookPurchase[]>(initialPaidEbookPurchases)
+  // E-book selecionado para reembolsar via modal (null = fechado)
+  const [refundingEbook, setRefundingEbook] = useState<PaidEbookPurchase | null>(null)
   // Compra de e-book selecionada para confirmar via modal (null = fechado)
   const [confirmingPurchase, setConfirmingPurchase] = useState<PendingEbookPurchase | null>(null)
   // Transação selecionada para reembolsar via modal (null = fechado)
@@ -206,6 +212,14 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
     toast.success('Reembolso registrado.')
   }
 
+  /* Chamado pelo modal de reembolso de e-book — a RPC já reverteu o
+     pagamento (crédito devolvido ou financial_transactions marcado) e
+     revogou o acesso; só tira da lista de "pagos" aqui. */
+  const handleEbookRefunded = (purchaseId: string) => {
+    setPaidEbookPurchases(prev => prev.filter(p => p.id !== purchaseId))
+    toast.success('E-book reembolsado e acesso revogado.')
+  }
+
   // Descrição da transação sendo excluída (para exibir no modal de confirmação)
   const deletingTitle = transactions.find(t => t.id === confirmDel)?.description ?? ''
 
@@ -269,6 +283,37 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
                   >
                     <CheckCircle2 size={13} aria-hidden="true" />
                     Confirmar pagamento
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* ── E-BOOKS VENDIDOS: lista compacta pra reembolso — cobre tanto compra
+             via crédito (nunca aparece na tabela de transações, seção 3 do
+             pedido original) quanto manual/BRL ── */}
+        {paidEbookPurchases.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
+            className="rounded-3xl border border-white/[0.08] bg-[#111827]/80 p-5"
+            aria-label="E-books vendidos"
+          >
+            <h2 className="mb-3 text-sm font-bold text-white/70">
+              E-books vendidos ({paidEbookPurchases.length})
+            </h2>
+            <div className="max-h-64 space-y-2 overflow-y-auto">
+              {paidEbookPurchases.map(p => (
+                <div key={p.id} className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{p.ebook_title}</p>
+                    <p className="truncate text-xs text-white/40">
+                      {p.buyer_name || p.buyer_email || 'Comprador desconhecido'} · {formatCurrencyBRL(p.amount)} · {p.payment_provider === 'credits' ? 'créditos' : 'manual'}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setRefundingEbook(p)}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 transition-all hover:bg-red-500/20">
+                    Reembolsar
                   </button>
                 </div>
               ))}
@@ -410,6 +455,13 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
         transaction={refundingTx}
         onClose={() => setRefundingTx(null)}
         onRefunded={handleTxRefunded}
+      />
+
+      {/* ── MODAL: reembolso de e-book (crédito ou manual, sempre total) ── */}
+      <RefundEbookPurchaseModal
+        purchase={refundingEbook}
+        onClose={() => setRefundingEbook(null)}
+        onRefunded={handleEbookRefunded}
       />
 
       {/* ── MODAL: confirmação de exclusão permanente ── */}
