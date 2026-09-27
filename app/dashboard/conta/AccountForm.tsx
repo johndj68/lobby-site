@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import {
   Loader2, CheckCircle, User, Building2, Mail, ArrowRight,
   ShieldCheck, Code2, Settings2, BarChart3, Shield,
-  Headphones, CheckCircle2, Crown, Phone,
+  Headphones, CheckCircle2, Crown, Phone, Banknote,
 } from 'lucide-react'
 import { Input }    from '@/components/ui/input'
 import { Label }    from '@/components/ui/label'
@@ -53,7 +53,11 @@ interface Props {
   profile: {
     full_name?: string; company_name?: string; interest_area?: string; email?: string; phone?: string
     notification_prefs?: Record<PrefKey, boolean> | null
+    payout_pix_key?: string | null; payout_account_holder?: string | null; payout_notes?: string | null
   } | null
+  /** Só parceiros (dono de app_draft) veem a seção de dados de recebimento
+   *  — repasse (peça 4) é pra eles, não pra cliente comum. */
+  isPartner?: boolean
 }
 
 // Valores padrão para as preferências de notificação quando o perfil ainda não tem registro
@@ -63,7 +67,7 @@ const DEFAULT_PREFS: Record<PrefKey, boolean> = {
   recommendations: false, // desabilitado por padrão — conteúdo personalizado é opt-in
 }
 
-export default function AccountForm({ user, profile }: Props) {
+export default function AccountForm({ user, profile, isPartner }: Props) {
   // Estado controlado do formulário de dados pessoais
   // Inicializado com valores do perfil existente ou strings vazias
   const [form, setForm] = useState({
@@ -71,6 +75,9 @@ export default function AccountForm({ user, profile }: Props) {
     company_name:  profile?.company_name  || '',
     interest_area: profile?.interest_area || '',
     phone:         profile?.phone         || '',
+    payout_pix_key:        profile?.payout_pix_key        || '',
+    payout_account_holder: profile?.payout_account_holder || '',
+    payout_notes:          profile?.payout_notes          || '',
   })
 
   // Estados de UI do submit: loading evita duplo envio, success/error dão feedback
@@ -108,6 +115,9 @@ export default function AccountForm({ user, profile }: Props) {
           interest_area: form.interest_area,
           phone:         form.phone || null, // salva null quando vazio (campo opcional)
           notification_prefs: prefs,         // objeto JSON com as preferências
+          payout_pix_key:        form.payout_pix_key.trim() || null,
+          payout_account_holder: form.payout_account_holder.trim() || null,
+          payout_notes:          form.payout_notes.trim() || null,
         })
       if (updateError) throw updateError
       setSuccess(true)
@@ -343,6 +353,43 @@ export default function AccountForm({ user, profile }: Props) {
                   })}
                 </div>
               </div>
+
+              {/* Dados de recebimento — só parceiros (dono de app), repasse é manual
+                  (peça 4): líder lê isso aqui e faz o PIX/TED por fora. */}
+              {isPartner && (
+                <div className="rounded-2xl border border-[#93C5FD]/40 bg-[#EFF6FF] p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Banknote size={16} className="text-[#005BFF]" aria-hidden="true" />
+                    <p className="text-sm font-bold text-[#0B1020]">Dados de recebimento</p>
+                  </div>
+                  <p className="mb-4 text-xs text-[#1D4ED8]">
+                    Usado só pelo time da LOBBY pra fazer o repasse das suas vendas por PIX/TED — não processa pagamento automático.
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="payout_pix_key" className="mb-1.5 block text-xs font-semibold text-[#0B1020]">Chave PIX</Label>
+                      <Input id="payout_pix_key" placeholder="CPF, e-mail, telefone ou chave aleatória"
+                        value={form.payout_pix_key}
+                        onChange={(e) => setForm({ ...form, payout_pix_key: e.target.value })}
+                        className="h-11 rounded-xl border-[#93C5FD]/50 bg-white text-sm text-[#0B1020] placeholder:text-[#5D6475]/60" />
+                    </div>
+                    <div>
+                      <Label htmlFor="payout_account_holder" className="mb-1.5 block text-xs font-semibold text-[#0B1020]">Titular</Label>
+                      <Input id="payout_account_holder" placeholder="Nome do titular da chave/conta"
+                        value={form.payout_account_holder}
+                        onChange={(e) => setForm({ ...form, payout_account_holder: e.target.value })}
+                        className="h-11 rounded-xl border-[#93C5FD]/50 bg-white text-sm text-[#0B1020] placeholder:text-[#5D6475]/60" />
+                    </div>
+                    <div>
+                      <Label htmlFor="payout_notes" className="mb-1.5 block text-xs font-semibold text-[#0B1020]">Observações <span className="font-normal text-[#5D6475]">(opcional)</span></Label>
+                      <textarea id="payout_notes" rows={2} placeholder="Dados bancários pra TED, preferências, etc."
+                        value={form.payout_notes}
+                        onChange={(e) => setForm({ ...form, payout_notes: e.target.value })}
+                        className="w-full resize-none rounded-xl border border-[#93C5FD]/50 bg-white px-3 py-2 text-sm text-[#0B1020] placeholder:text-[#5D6475]/60 outline-none" />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Feedback de erro — exibido quando o upsert retorna erro */}

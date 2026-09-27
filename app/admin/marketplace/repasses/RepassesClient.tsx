@@ -20,9 +20,16 @@ export interface EligiblePurchaseRow {
   status:          'retido' | 'elegivel'
 }
 
+export interface PartnerPayoutInfo {
+  pixKey:        string | null
+  accountHolder: string | null
+  notes:         string | null
+}
+
 export interface PartnerGroup {
   partnerId:         string
   partnerName:       string
+  payoutInfo:        PartnerPayoutInfo
   retidoTotal:       number
   elegivelTotal:     number
   eligiblePurchases: EligiblePurchaseRow[]
@@ -217,6 +224,20 @@ export default function RepassesClient({ user, profile, partnerGroups, history }
             <div className="mb-4 flex items-center justify-between">
               <p className="text-lg font-bold" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Registrar repasse — {payingPartner.partnerName}</p>
               <button type="button" onClick={closePayout} disabled={saving} style={{ color: C.textSecondary }}><X size={18} aria-hidden="true" /></button>
+            </div>
+
+            {/* Dados de recebimento que o próprio parceiro cadastrou em /dashboard/conta
+                — repasse é manual, líder lê aqui e faz o PIX/TED por fora. */}
+            <div className="mb-4 rounded-xl border p-3 text-xs" style={{ borderColor: C.border, background: 'rgba(255,255,255,0.03)' }}>
+              {payingPartner.payoutInfo.pixKey || payingPartner.payoutInfo.accountHolder || payingPartner.payoutInfo.notes ? (
+                <>
+                  {payingPartner.payoutInfo.pixKey && <p style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Chave PIX:</span> <strong>{payingPartner.payoutInfo.pixKey}</strong></p>}
+                  {payingPartner.payoutInfo.accountHolder && <p className="mt-1" style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Titular:</span> {payingPartner.payoutInfo.accountHolder}</p>}
+                  {payingPartner.payoutInfo.notes && <p className="mt-1" style={{ color: C.textSecondary }}>{payingPartner.payoutInfo.notes}</p>}
+                </>
+              ) : (
+                <p style={{ color: C.warning }}>Parceiro ainda não cadastrou dados de recebimento em /dashboard/conta.</p>
+              )}
             </div>
 
             <div className="mb-4 max-h-52 space-y-1.5 overflow-y-auto">

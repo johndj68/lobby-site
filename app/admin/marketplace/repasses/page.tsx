@@ -41,9 +41,12 @@ export default async function RepassesPage() {
     ...(payouts ?? []).map(p => p.partner_id as string),
   ])]
   const { data: partnerProfiles } = partnerIds.length
-    ? await supabase.from('profiles').select('id, full_name, email, company_name').in('id', partnerIds)
-    : { data: [] as { id: string; full_name: string | null; email: string | null; company_name: string | null }[] }
+    ? await supabase.from('profiles').select('id, full_name, email, company_name, payout_pix_key, payout_account_holder, payout_notes').in('id', partnerIds)
+    : { data: [] as { id: string; full_name: string | null; email: string | null; company_name: string | null; payout_pix_key: string | null; payout_account_holder: string | null; payout_notes: string | null }[] }
   const partnerNameById = new Map((partnerProfiles ?? []).map(p => [p.id, partnerDisplayName(p)]))
+  const partnerPayoutInfoById = new Map((partnerProfiles ?? []).map(p => [p.id, {
+    pixKey: p.payout_pix_key, accountHolder: p.payout_account_holder, notes: p.payout_notes,
+  }]))
 
   // Agrupa compras elegíveis/retidas por parceiro.
   const groups = new Map<string, PartnerGroup>()
@@ -57,6 +60,7 @@ export default async function RepassesPage() {
       groups.set(partnerId, {
         partnerId,
         partnerName: partnerNameById.get(partnerId) ?? 'Parceiro removido',
+        payoutInfo: partnerPayoutInfoById.get(partnerId) ?? { pixKey: null, accountHolder: null, notes: null },
         retidoTotal: 0,
         elegivelTotal: 0,
         eligiblePurchases: [],
