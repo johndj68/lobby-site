@@ -56,6 +56,7 @@ const NAV_TABS = [
   { label: 'Destaques', href: '/admin/marketplace/destaques', enabled: true },
   { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: true },
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
+  { label: 'Comissões', href: '/admin/marketplace/comissoes', enabled: true },
 ]
 
 function personName(people: Person[], id: string | null | undefined): string {

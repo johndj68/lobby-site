@@ -41,6 +41,7 @@ const NAV_TABS = [
   { label: 'Destaques', href: '/admin/marketplace/destaques', enabled: true },
   { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: true },
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
+  { label: 'Comissões', href: '/admin/marketplace/comissoes', enabled: true },
 ]
 
 const BILLING_OPTIONS: [string, string][] = [['todas', 'Cobrança: todas'], ['one-time', 'Pagamento único'], ['monthly', 'Assinatura mensal'], ['yearly', 'Assinatura anual'], ['lifetime', 'Vitalício']]
