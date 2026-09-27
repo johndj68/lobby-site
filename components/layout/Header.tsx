@@ -23,6 +23,7 @@ const navItems = [
   { label: 'Soluções', href: '/solucoes' },
   { label: 'Projetos', href: '/projetos' },
   { label: 'Recursos', href: '/recursos' },
+  { label: 'Marketplace', href: '/marketplace' },
   { label: 'Sobre',    href: '/sobre'    },
 ]
 

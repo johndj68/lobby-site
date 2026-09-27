@@ -399,7 +399,7 @@ export interface ChatThread {
 }
 
 // Tipo de lançamento financeiro no módulo de controle financeiro.
-export type FinanceType   = 'ebook' | 'projeto' | 'visita_tecnica' | 'consultoria' | 'mensalidade' | 'creditos' | 'outro'
+export type FinanceType   = 'ebook' | 'projeto' | 'visita_tecnica' | 'consultoria' | 'mensalidade' | 'creditos' | 'app' | 'outro'
 
 // Status de um lançamento financeiro.
 export type FinanceStatus = 'pago' | 'pendente' | 'cancelado' | 'reembolsado' | 'negociacao'
@@ -411,7 +411,7 @@ export type PaymentMethod = 'pix' | 'cartao' | 'boleto' | 'dinheiro' | 'transfer
 // 20260927160000). Nulo = lançamento manual sem pedido vinculado — o par
 // (source_type, source_id) é único no banco, então nunca há 2 lançamentos
 // pro mesmo pedido de origem.
-export type FinanceSourceType = 'credit_purchases' | 'ebook_purchases' | 'client_projects' | 'campaign_purchases'
+export type FinanceSourceType = 'credit_purchases' | 'ebook_purchases' | 'client_projects' | 'campaign_purchases' | 'app_purchases'
 
 // Linha da tabela financial_transactions — controle financeiro, visível só
 // pro técnico líder (ver lib/services/profile.ts:requireLeaderSession).
@@ -528,6 +528,34 @@ export interface CreditPurchase {
   package?:                 { name: string } | null
   buyer_name?:              string | null
   buyer_email?:             string | null
+}
+
+// ── Checkout de app de parceiro/LOBBY ────────────────────────────────
+
+export type AppPurchaseStatus = 'pending' | 'paid' | 'canceled' | 'failed' | 'refunded'
+
+// Linha da tabela app_purchases. commission_percent/commission_amount são
+// snapshot resolvido no momento da venda (get_partner_commission_percent),
+// nunca recalculados depois. partner_id nulo = app da própria LOBBY.
+export interface AppPurchase {
+  id:                  string
+  application_id:      string
+  plan_id:             string
+  application_name:    string
+  plan_name:           string
+  buyer_user_id:       string
+  partner_id:          string | null
+  amount:              number
+  currency:            string
+  commission_percent:  number
+  commission_amount:   number
+  partner_amount:      number
+  status:              AppPurchaseStatus
+  stripe_session_id?:  string | null
+  stripe_payment_intent_id?: string | null
+  paid_at?:            string | null
+  created_at:          string
+  updated_at:          string
 }
 
 // Fases padrão pré-definidas para novos projetos de cliente.

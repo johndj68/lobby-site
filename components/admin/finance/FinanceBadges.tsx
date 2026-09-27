@@ -1,6 +1,6 @@
 import {
   BookOpen, FolderKanban, MapPin, Users, RefreshCw, Coins, Package,
-  CheckCircle2, Clock, XCircle, RotateCcw, TrendingUp,
+  CheckCircle2, Clock, XCircle, RotateCcw, TrendingUp, Smartphone,
 } from 'lucide-react'
 import { getFinanceTypeStyle, getFinanceStatusStyle, FINANCE_TYPE_LABEL, FINANCE_STATUS_LABEL } from '@/lib/finance'
 import type { FinanceType, FinanceStatus } from '@/types'
@@ -16,6 +16,7 @@ const TYPE_ICON: Record<FinanceType, React.ElementType> = {
   consultoria:    Users,         // consultoria avulsa
   mensalidade:    RefreshCw,     // contrato recorrente
   creditos:       Coins,         // compra de créditos da plataforma
+  app:            Smartphone,    // venda de app de parceiro/LOBBY
   outro:          Package,       // receita não categorizada
 }
 

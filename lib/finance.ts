@@ -17,6 +17,7 @@ export const FINANCE_TYPE_LABEL: Record<FinanceType, string> = {
   consultoria:    'Consultoria',
   mensalidade:    'Mensalidade',
   creditos:       'Créditos',
+  app:            'App',
   outro:          'Outro',
 }
 
@@ -45,6 +46,7 @@ export function getFinanceTypeStyle(type: FinanceType): { color: string; bg: str
     consultoria:    { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
     mensalidade:    { color: '#38BDF8', bg: 'rgba(56,189,248,0.12)' },
     creditos:       { color: '#EAB308', bg: 'rgba(234,179,8,0.12)'  },
+    app:            { color: '#EC4899', bg: 'rgba(236,72,153,0.12)' },
     outro:          { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' },
   }
   return map[type]

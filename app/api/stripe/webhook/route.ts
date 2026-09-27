@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { captureException } from '@/lib/monitoring'
-import { sendEmail, buildCreditReceiptEmailHtml } from '@/lib/notifications'
+import { sendEmail, buildCreditReceiptEmailHtml, buildAppPurchaseReceiptEmailHtml } from '@/lib/notifications'
 import { confirmReservationOrFlagConflict } from '@/lib/services/campaigns'
 import { logAppAdminEvent } from '@/lib/services/app-publish'
 
@@ -75,6 +75,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (session.metadata?.kind === 'campaign') {
     await handleCampaignCheckoutCompleted(session, purchaseId)
+    return
+  }
+
+  if (session.metadata?.kind === 'app_purchase') {
+    await handleAppPurchaseCheckoutCompleted(session, purchaseId)
     return
   }
 
@@ -185,6 +190,12 @@ async function handlePaymentFailed(intent: Stripe.PaymentIntent) {
     return
   }
 
+  if (intent.metadata?.kind === 'app_purchase') {
+    await admin.from('app_purchases').update({ status: 'failed' }).eq('id', purchaseId).eq('status', 'pending')
+    console.info('[stripe/webhook] App purchase payment failed:', purchaseId)
+    return
+  }
+
   await admin
     .from('credit_purchases')
     .update({ status: 'failed' })
@@ -252,6 +263,109 @@ async function handleCampaignCheckoutCompleted(session: Stripe.Checkout.Session,
   }
 
   console.info('[stripe/webhook] Campaign purchase confirmed:', purchaseId, confirmed.ok ? 'ok' : 'capacity conflict')
+}
+
+/**
+ * Confirmação de compra de app de parceiro/LOBBY. Idempotente (redelivery
+ * não duplica nem reenvia e-mail). Lança em financial_transactions só
+ * commission_amount — o valor que fica com a LOBBY, não o preço bruto
+ * pago pelo cliente (seção 17: não chamar venda bruta de receita própria;
+ * o resto, partner_amount, é dinheiro do parceiro, ainda não repassado —
+ * fica só em app_purchases até a peça 4 do roadmap existir).
+ *
+ * "Entrega" é sempre app_activation_config (link/instruções/e-mail de
+ * suporte) — nunca um código automático, porque app_activation_codes
+ * nunca foi ligado de verdade no sistema (ver comentário em
+ * lib/notifications.ts:buildAppPurchaseReceiptEmailHtml).
+ */
+async function handleAppPurchaseCheckoutCompleted(session: Stripe.Checkout.Session, purchaseId: string) {
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin.from('app_purchases').select('status').eq('id', purchaseId).single()
+  if (existing?.status === 'paid') {
+    console.info('[stripe/webhook] Redelivery of an already-confirmed app purchase — skipping:', purchaseId)
+    return
+  }
+
+  const { data: purchase, error } = await admin
+    .from('app_purchases')
+    .update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent?.id ?? null),
+    })
+    .eq('id', purchaseId)
+    .select('id, buyer_user_id, plan_id, application_name, plan_name, amount, commission_amount, currency')
+    .single()
+
+  if (error || !purchase) {
+    console.error('[stripe/webhook] failed to confirm app purchase:', error)
+    throw new Error(error?.message ?? 'app purchase not found')
+  }
+
+  await admin.from('financial_transactions').insert({
+    type: 'app',
+    client_id: purchase.buyer_user_id,
+    description: `App: ${purchase.application_name} (${purchase.plan_name})`,
+    amount: purchase.commission_amount,
+    status: 'pago',
+    sale_date: new Date().toISOString().slice(0, 10),
+    received_date: new Date().toISOString().slice(0, 10),
+    source_type: 'app_purchases',
+    source_id: purchase.id,
+  })
+
+  console.info('[stripe/webhook] App purchase confirmed:', purchaseId)
+
+  sendAppPurchaseReceiptEmail(purchase, admin)
+    .catch(err => console.error('[stripe/webhook] App purchase receipt email error:', err))
+}
+
+interface AppPurchaseForEmail {
+  buyer_user_id:    string
+  plan_id:          string
+  application_name: string
+  plan_name:        string
+  amount:           number
+  currency:         string
+}
+
+async function sendAppPurchaseReceiptEmail(purchase: AppPurchaseForEmail, admin: SupabaseAdmin) {
+  const [profileRes, planRes] = await Promise.all([
+    admin.from('profiles').select('full_name, email').eq('id', purchase.buyer_user_id).single(),
+    admin.from('app_plans').select('app_draft_id').eq('id', purchase.plan_id).single(),
+  ])
+
+  const email = profileRes.data?.email
+  if (!email) return
+
+  const appDraftId = planRes.data?.app_draft_id
+  const { data: activation } = appDraftId
+    ? await admin.from('app_activation_config').select('activation_link, support_email, instructions').eq('app_draft_id', appDraftId).maybeSingle()
+    : { data: null }
+
+  const firstName = profileRes.data?.full_name?.split(' ')[0] ?? 'Cliente'
+  const SITE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const amountFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: purchase.currency }).format(Number(purchase.amount))
+  const instructions = activation?.instructions
+  const instructionsText = instructions && typeof instructions === 'object'
+    ? Object.values(instructions as Record<string, string>).filter(Boolean).join('\n')
+    : (typeof instructions === 'string' ? instructions : null)
+
+  const html = buildAppPurchaseReceiptEmailHtml({
+    recipientName:   firstName,
+    appName:         purchase.application_name,
+    planName:        purchase.plan_name,
+    amountFormatted,
+    dateFormatted:   new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }),
+    activationLink:  activation?.activation_link ?? null,
+    supportEmail:    activation?.support_email ?? null,
+    instructions:    instructionsText,
+    ctaUrl:          `${SITE_URL}/dashboard/minhas-compras`,
+  })
+
+  await sendEmail(email, `[LOBBY] Compra de ${purchase.application_name} confirmada`, html)
 }
 
 /** Reembolso confirmado pelo provedor — só agora o estado vira definitivo
