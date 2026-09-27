@@ -106,6 +106,26 @@ export default function AppDetailPage() {
     }
   }
 
+  const handleSubscribe = async (plan: PlanRow) => {
+    if (!userId) { router.push('/login'); return }
+
+    setBuyingPlanId(plan.id)
+    setError('')
+    try {
+      const res = await fetch('/api/subscriptions/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_type: 'app_plan', app_plan_id: plan.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao iniciar assinatura')
+      redirectToExternalUrl(data.url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível iniciar a assinatura. Tente novamente.')
+      setBuyingPlanId(null)
+    }
+  }
+
   if (loading) {
     return <Container className="py-24 text-center"><Loader2 size={24} className="mx-auto animate-spin text-[#005BFF]" aria-hidden="true" /></Container>
   }
@@ -172,10 +192,10 @@ export default function AppDetailPage() {
                   </ul>
                 )}
                 {recurring ? (
-                  <button type="button" disabled
-                    title="Assinatura recorrente — cobrança automática ainda não disponível"
-                    className="mt-auto rounded-xl border border-[#E3E7F0] py-2.5 text-sm font-semibold text-[#94A3B8] opacity-60 cursor-not-allowed">
-                    Assinatura em breve
+                  <button type="button" disabled={buyingPlanId === plan.id || !plan.price} onClick={() => handleSubscribe(plan)}
+                    className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl lobby-gradient py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60">
+                    {buyingPlanId === plan.id ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <ShoppingCart size={14} aria-hidden="true" />}
+                    {buyingPlanId === plan.id ? 'Redirecionando...' : (userId ? 'Assinar' : 'Entrar para assinar')}
                   </button>
                 ) : (
                   <button type="button" disabled={buyingPlanId === plan.id || !plan.price} onClick={() => handleBuy(plan)}

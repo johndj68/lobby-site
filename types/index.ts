@@ -345,6 +345,8 @@ export interface ClientProject {
   credit_cost?:            number | null
   allow_credit_payment?:   boolean
   credit_payment_status?:  CreditPaymentStatus
+  // Mensalidade recorrente (Stripe Billing) — nullable, só o líder define.
+  monthly_fee?:            number | null
 }
 
 // Lead de download de material (tabela downloads) — antes duplicado em

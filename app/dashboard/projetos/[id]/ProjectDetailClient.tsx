@@ -48,6 +48,8 @@ import { VisualImageGalleryCard, VisualDocumentRow } from '@/components/sections
 
 // Card de pagamento via créditos (aparece apenas quando allow_credit_payment = true)
 import CreditPaymentCard from '@/components/credits/CreditPaymentCard'
+// Card de assinatura de mensalidade recorrente (aparece quando monthly_fee está definido)
+import MensalidadeSubscribeCard from '@/components/projects/MensalidadeSubscribeCard'
 
 // Utilitário que converte timestamp em texto relativo (ex.: "há 2 horas")
 import { timeAgo } from '@/lib/utils'
@@ -446,6 +448,9 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
         {project.allow_credit_payment && (
           <CreditPaymentCard project={project} onPaid={updated => setProject(updated)} />
         )}
+
+        {/* Card de assinatura de mensalidade — só aparece se o líder definiu monthly_fee */}
+        <MensalidadeSubscribeCard project={project} />
 
         {/* ─── Navegação por abas ──────────────────────────────────────────────
             Cada botão alterna o activeTab. Abas com assets exibem badge numérico.

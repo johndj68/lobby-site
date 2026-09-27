@@ -7,6 +7,9 @@ vi.mock('@/lib/stripe', () => ({
     webhooks: {
       constructEvent: vi.fn(),
     },
+    subscriptions: {
+      retrieve: vi.fn(),
+    },
   },
 }))
 
@@ -15,8 +18,10 @@ vi.mock('@/lib/supabase-admin', () => ({
 }))
 
 vi.mock('@/lib/notifications', () => ({
-  sendEmail:                  vi.fn().mockResolvedValue(undefined),
-  buildCreditReceiptEmailHtml: vi.fn().mockReturnValue('<html>receipt</html>'),
+  sendEmail:                        vi.fn().mockResolvedValue(undefined),
+  buildCreditReceiptEmailHtml:       vi.fn().mockReturnValue('<html>receipt</html>'),
+  buildAppPurchaseReceiptEmailHtml:  vi.fn().mockReturnValue('<html>app receipt</html>'),
+  buildSubscriptionPaymentFailedEmailHtml: vi.fn().mockReturnValue('<html>payment failed</html>'),
 }))
 
 vi.mock('@/lib/monitoring', () => ({
@@ -260,6 +265,266 @@ describe('POST /api/stripe/webhook', () => {
       await POST(makeReq())
       await flush()
       expect(vi.mocked(sendEmail)).not.toHaveBeenCalled()
+    })
+
+  })
+
+  // ── Assinatura (Stripe Billing) ───────────────────────────────────────────
+  //
+  // Mocks o formato REAL desta versão do SDK Stripe instalado (confirmado
+  // lendo node_modules/stripe/cjs/resources/{Subscriptions,SubscriptionItems,
+  // Invoices}.d.ts direto, não por memória): current_period_start/end vivem
+  // em items.data[0], não no topo da Subscription; invoice.subscription não
+  // existe mais, é invoice.parent.subscription_details.subscription.
+
+  describe('assinatura (Stripe Billing)', () => {
+
+    const makeSubscriptionObject = (overrides: Record<string, unknown> = {}) => ({
+      id: 'sub_test_123',
+      status: 'active',
+      cancel_at_period_end: false,
+      canceled_at: null,
+      items: {
+        data: [{
+          current_period_start: 1700000000,
+          current_period_end:   1702592000,
+          price: {
+            unit_amount: 9900,
+            currency:    'brl',
+            recurring:   { interval: 'month' },
+          },
+        }],
+      },
+      ...overrides,
+    })
+
+    const makeSubscriptionCheckoutEvent = () => ({
+      type: 'checkout.session.completed',
+      id:   'evt_sub_test',
+      data: {
+        object: {
+          id:           'cs_sub_test',
+          subscription: 'sub_test_123',
+          metadata: {
+            kind:               'subscription',
+            product_type:       'app_plan',
+            user_id:            'user-abc',
+            app_plan_id:        'plan-abc',
+            client_project_id:  '',
+            partner_id:         'partner-abc',
+            commission_percent: '25',
+            plan_name:          'App Teste — Plano Mensal',
+          },
+        },
+      },
+    })
+
+    // Mock flexível de admin client — cobre subscriptions/subscription_invoices/
+    // financial_transactions/profiles com respostas configuráveis por tabela.
+    const makeSubAdmin = (opts: {
+      existingSubscription?: unknown
+      existingInvoice?: unknown
+      subscriptionRow?: unknown
+      profile?: unknown
+    } = {}) => {
+      const inserted: Record<string, unknown[]> = {}
+      const updated:  Record<string, unknown[]> = {}
+
+      return {
+        inserted,
+        updated,
+        from: vi.fn((table: string) => {
+          const chain: Record<string, any> = {} // eslint-disable-line @typescript-eslint/no-explicit-any
+          chain.select = () => chain
+          chain.eq     = () => chain
+          chain.maybeSingle = vi.fn().mockResolvedValue({
+            data: table === 'subscriptions'
+              ? (opts.existingSubscription !== undefined ? opts.existingSubscription : (opts.subscriptionRow ?? null))
+              : table === 'subscription_invoices'
+                ? (opts.existingInvoice ?? null)
+                : null,
+            error: null,
+          })
+          chain.single = vi.fn().mockResolvedValue({ data: { id: `${table}-new-id` }, error: null })
+          chain.insert = (payload: unknown) => {
+            inserted[table] = inserted[table] ?? []
+            inserted[table].push(payload)
+            return chain
+          }
+          chain.update = (payload: unknown) => {
+            updated[table] = updated[table] ?? []
+            updated[table].push(payload)
+            return chain
+          }
+          if (table === 'profiles') {
+            chain.single = vi.fn().mockResolvedValue({ data: opts.profile ?? { full_name: 'Cliente Teste', email: 'cliente@teste.com' }, error: null })
+          }
+          return chain
+        }),
+      }
+    }
+
+    it('checkout.session.completed (kind=subscription) cria a linha em subscriptions com os campos certos', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeSubAdmin({ existingSubscription: null })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.subscriptions.retrieve).mockResolvedValueOnce(makeSubscriptionObject() as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeSubscriptionCheckoutEvent() as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+
+      const row = admin.inserted['subscriptions']?.[0] as Record<string, unknown>
+      expect(row).toBeDefined()
+      expect(row.stripe_subscription_id).toBe('sub_test_123')
+      expect(row.amount).toBe(99) // 9900 centavos / 100
+      expect(row.currency).toBe('BRL')
+      expect(row.billing_interval).toBe('month')
+      expect(row.commission_percent).toBe(25)
+      expect(row.partner_id).toBe('partner-abc')
+      // current_period_start vem do item, não do topo do objeto — é exatamente
+      // o bug que a checagem do .d.ts do SDK evitou.
+      expect(row.current_period_start).toBe(new Date(1700000000 * 1000).toISOString())
+      expect(row.current_period_end).toBe(new Date(1702592000 * 1000).toISOString())
+    })
+
+    it('redelivery de checkout.session.completed de assinatura já criada não duplica', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeSubAdmin({ existingSubscription: { id: 'existing-sub-row' } })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeSubscriptionCheckoutEvent() as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      expect(admin.inserted['subscriptions']).toBeUndefined()
+      expect(vi.mocked(stripe.subscriptions.retrieve)).not.toHaveBeenCalled()
+    })
+
+    it('invoice.paid grava subscription_invoices + financial_transactions só com o valor da comissão', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeSubAdmin({
+        existingInvoice: null,
+        subscriptionRow: {
+          id: 'subscription-row-id', commission_percent: 25, partner_id: 'partner-abc',
+          product_type: 'app_plan', plan_name: 'App Teste — Plano Mensal', user_id: 'user-abc', status: 'incomplete',
+        },
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const invoiceEvent = {
+        type: 'invoice.paid',
+        id:   'evt_invoice_test',
+        data: {
+          object: {
+            id:          'in_test_123',
+            amount_paid: 9900,
+            currency:    'brl',
+            parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_test_123' } },
+          },
+        },
+      }
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(invoiceEvent as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+
+      const invoiceRow = admin.inserted['subscription_invoices']?.[0] as Record<string, unknown>
+      expect(invoiceRow.amount).toBe(99)
+      expect(invoiceRow.commission_amount).toBe(24.75) // 25% de 99
+      expect(invoiceRow.partner_amount).toBe(74.25)
+
+      const txRow = admin.inserted['financial_transactions']?.[0] as Record<string, unknown>
+      expect(txRow.amount).toBe(24.75) // só a comissão, nunca o valor bruto (seção 17)
+      expect(txRow.type).toBe('app')
+      expect(txRow.source_type).toBe('subscription_invoices')
+
+      // Primeiro pagamento confirma a assinatura como ativa
+      expect(admin.updated['subscriptions']?.[0]).toMatchObject({ status: 'active' })
+    })
+
+    it('redelivery de invoice.paid (mesma fatura) não duplica lançamento', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeSubAdmin({ existingInvoice: { id: 'already-recorded' } })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const invoiceEvent = {
+        type: 'invoice.paid',
+        id:   'evt_invoice_redelivery',
+        data: { object: { id: 'in_test_123', amount_paid: 9900, currency: 'brl', parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_test_123' } } } },
+      }
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(invoiceEvent as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      expect(admin.inserted['subscription_invoices']).toBeUndefined()
+      expect(admin.inserted['financial_transactions']).toBeUndefined()
+    })
+
+    it('invoice.payment_failed envia e-mail de aviso ao cliente', async () => {
+      const { stripe }          = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const { sendEmail }       = await import('@/lib/notifications')
+      const admin = makeSubAdmin({
+        subscriptionRow: { id: 'subscription-row-id', user_id: 'user-abc', plan_name: 'App Teste — Plano Mensal' },
+        profile: { full_name: 'Cliente Teste', email: 'cliente@teste.com' },
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const failedEvent = {
+        type: 'invoice.payment_failed',
+        id:   'evt_failed_test',
+        data: { object: { id: 'in_failed_123', amount_due: 9900, currency: 'brl', parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_test_123' } } } },
+      }
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(failedEvent as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      await flush()
+      expect(vi.mocked(sendEmail)).toHaveBeenCalledOnce()
+      expect(vi.mocked(sendEmail).mock.calls[0][0]).toBe('cliente@teste.com')
+    })
+
+    it('customer.subscription.updated sincroniza status/período/cancel_at_period_end', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeSubAdmin()
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const updatedEvent = {
+        type: 'customer.subscription.updated',
+        id:   'evt_sub_updated',
+        data: { object: makeSubscriptionObject({ status: 'past_due', cancel_at_period_end: true }) },
+      }
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(updatedEvent as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      const row = admin.updated['subscriptions']?.[0] as Record<string, unknown>
+      expect(row.status).toBe('past_due')
+      expect(row.cancel_at_period_end).toBe(true)
+    })
+
+    it('customer.subscription.deleted marca a assinatura como cancelada', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeSubAdmin()
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const deletedEvent = {
+        type: 'customer.subscription.deleted',
+        id:   'evt_sub_deleted',
+        data: { object: makeSubscriptionObject({ status: 'canceled' }) },
+      }
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(deletedEvent as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      const row = admin.updated['subscriptions']?.[0] as Record<string, unknown>
+      expect(row.status).toBe('canceled')
     })
 
   })

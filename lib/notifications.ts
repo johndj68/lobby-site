@@ -243,6 +243,47 @@ export function buildAppPurchaseReceiptEmailHtml({
 </html>`
 }
 
+export function buildSubscriptionPaymentFailedEmailHtml({
+  recipientName,
+  planName,
+  amountFormatted,
+  ctaUrl,
+}: {
+  recipientName:   string
+  planName:        string
+  amountFormatted: string
+  ctaUrl:          string
+}): string {
+  const eName = escapeHtml(recipientName)
+  const ePlan = escapeHtml(planName)
+  const eUrl  = safeUrl(ctaUrl)
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F7F8FC;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E3E7F0;box-shadow:0 4px 24px rgba(11,16,32,0.07);">
+    <div style="background:linear-gradient(135deg,#DC2626,#F97316);padding:24px 32px;">
+      <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7);">LOBBY · Assinatura</p>
+      <h1 style="margin:6px 0 0;font-size:20px;font-weight:800;color:#fff;">Falha na cobrança</h1>
+      <p style="margin:4px 0 0;font-size:13px;color:rgba(255,255,255,.75);">Não conseguimos processar o pagamento</p>
+    </div>
+    <div style="padding:24px 32px;">
+      <p style="margin:0 0 16px;font-size:14px;color:#374151;">Olá, <strong>${eName}</strong>. A cobrança de <strong>${amountFormatted}</strong> da sua assinatura <strong>${ePlan}</strong> não foi aprovada.</p>
+      <p style="margin:0 0 20px;font-size:13px;color:#6B7280;">O Stripe tenta cobrar de novo automaticamente nos próximos dias. Se o problema persistir, atualize a forma de pagamento pra não perder o acesso.</p>
+      <a href="${eUrl}" target="_blank"
+        style="display:inline-block;background:linear-gradient(135deg,#DC2626,#F97316);color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 24px;border-radius:10px;">
+        Ver minhas assinaturas
+      </a>
+    </div>
+    <div style="padding:14px 32px;background:#F7F8FC;border-top:1px solid #E3E7F0;">
+      <p style="margin:0;font-size:11px;color:#9CA3AF;">LOBBY · Aviso automático de cobrança</p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
 export function buildMessageEmailHtml({
   recipientName,
   senderLabel,

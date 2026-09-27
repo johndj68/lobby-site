@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { captureException } from '@/lib/monitoring'
-import { sendEmail, buildCreditReceiptEmailHtml, buildAppPurchaseReceiptEmailHtml } from '@/lib/notifications'
+import { sendEmail, buildCreditReceiptEmailHtml, buildAppPurchaseReceiptEmailHtml, buildSubscriptionPaymentFailedEmailHtml } from '@/lib/notifications'
 import { confirmReservationOrFlagConflict } from '@/lib/services/campaigns'
 import { logAppAdminEvent } from '@/lib/services/app-publish'
 
@@ -45,6 +45,22 @@ export async function POST(req: NextRequest) {
         await handleChargeRefunded(event.data.object as Stripe.Charge)
         break
 
+      case 'invoice.paid':
+        await handleInvoicePaid(event.data.object as Stripe.Invoice)
+        break
+
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
+        break
+
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+        break
+
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+        break
+
       default:
         // Unhandled event type — acknowledge so Stripe doesn't retry
         break
@@ -66,6 +82,15 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // Assinatura não tem purchase_id pré-criado (diferente de crédito/
+  // campanha/app avulso) — não existe "pedido pending" antes do Stripe,
+  // porque o Customer+Subscription só passam a existir quando o checkout
+  // é concluído. A linha em `subscriptions` nasce aqui, não antes.
+  if (session.metadata?.kind === 'subscription') {
+    await handleSubscriptionCheckoutCompleted(session)
+    return
+  }
+
   const purchaseId = session.metadata?.purchase_id
   if (!purchaseId) {
     // Could be a different product — not a credit purchase
@@ -421,4 +446,206 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 
     console.info('[stripe/webhook] Credit purchase refund confirmed:', creditPurchase.id, fullyRefunded ? 'total' : 'parcial')
   }
+}
+
+/**
+ * Confirmação de início de assinatura (app_plan mensal/anual ou
+ * mensalidade). Cria a linha em `subscriptions` — não havia nenhuma
+ * criada antes (diferente dos outros checkouts). Idempotente por
+ * stripe_subscription_id.
+ *
+ * current_period_start/end vêm do SubscriptionItem, não da Subscription —
+ * essa versão da API do Stripe moveu esses campos pra lá (confirmado nos
+ * tipos do SDK instalado, node_modules/stripe/cjs/resources/
+ * SubscriptionItems.d.ts — Subscription.current_period_* não existe mais
+ * como campo do objeto, só como filtro de busca).
+ */
+async function handleSubscriptionCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const admin = createAdminClient()
+
+  const stripeSubscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
+  if (!stripeSubscriptionId) {
+    console.warn('[stripe/webhook] subscription checkout without subscription id:', session.id)
+    return
+  }
+
+  const { data: existing } = await admin.from('subscriptions').select('id').eq('stripe_subscription_id', stripeSubscriptionId).maybeSingle()
+  if (existing) {
+    console.info('[stripe/webhook] Redelivery of already-created subscription — skipping:', stripeSubscriptionId)
+    return
+  }
+
+  const md = session.metadata ?? {}
+  const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId)
+  const item = sub.items.data[0]
+  if (!item) {
+    console.error('[stripe/webhook] subscription without items:', stripeSubscriptionId)
+    return
+  }
+
+  const partnerId = md.partner_id || null
+  const commissionPercent = partnerId ? Number(md.commission_percent || '0') : 0
+
+  await admin.from('subscriptions').insert({
+    stripe_subscription_id: stripeSubscriptionId,
+    product_type:           md.product_type,
+    app_plan_id:             md.app_plan_id || null,
+    client_project_id:       md.client_project_id || null,
+    user_id:                 md.user_id,
+    partner_id:               partnerId,
+    plan_name:                md.plan_name,
+    amount:                   (item.price.unit_amount ?? 0) / 100,
+    currency:                 (item.price.currency ?? 'brl').toUpperCase(),
+    billing_interval:         item.price.recurring?.interval === 'year' ? 'year' : 'month',
+    commission_percent:       commissionPercent,
+    status:                   sub.status,
+    current_period_start:     new Date(item.current_period_start * 1000).toISOString(),
+    current_period_end:       new Date(item.current_period_end * 1000).toISOString(),
+    cancel_at_period_end:     sub.cancel_at_period_end,
+  })
+
+  console.info('[stripe/webhook] Subscription created:', stripeSubscriptionId)
+}
+
+/** Resolve o stripe_subscription_id de uma fatura — essa API do Stripe
+ *  não tem mais invoice.subscription direto, é invoice.parent.
+ *  subscription_details.subscription (confirmado no SDK instalado). */
+function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
+  if (invoice.parent?.type !== 'subscription_details') return null
+  const ref = invoice.parent.subscription_details?.subscription
+  return typeof ref === 'string' ? ref : (ref?.id ?? null)
+}
+
+/**
+ * Um ciclo de cobrança pago — a cada renovação, não só na primeira vez.
+ * Nunca conta o valor total previsto da assinatura de uma vez (seção 12).
+ * financial_transactions usa só commission_amount (receita própria da
+ * LOBBY), nunca o valor bruto — mesmo princípio de app_purchases/peça 3.
+ * partner_amount ainda não entra na fila de repasse (peça 4 só olha
+ * app_purchases hoje) — extensão pendente, não coberta aqui.
+ */
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  const stripeSubscriptionId = subscriptionIdFromInvoice(invoice)
+  if (!stripeSubscriptionId) return // fatura avulsa, não de assinatura — fora do nosso fluxo
+
+  const admin = createAdminClient()
+
+  const { data: existingInvoice } = await admin.from('subscription_invoices').select('id').eq('stripe_invoice_id', invoice.id).maybeSingle()
+  if (existingInvoice) {
+    console.info('[stripe/webhook] Redelivery of already-recorded invoice — skipping:', invoice.id)
+    return
+  }
+
+  const { data: subscription } = await admin
+    .from('subscriptions')
+    .select('id, commission_percent, partner_id, product_type, plan_name, user_id, status')
+    .eq('stripe_subscription_id', stripeSubscriptionId)
+    .maybeSingle()
+  if (!subscription) {
+    console.warn('[stripe/webhook] invoice.paid for unknown subscription:', stripeSubscriptionId)
+    return
+  }
+
+  const amountCents     = invoice.amount_paid
+  const commissionCents = subscription.partner_id ? Math.round((amountCents * subscription.commission_percent) / 100) : amountCents
+  const partnerCents    = amountCents - commissionCents
+
+  const { data: invoiceRow, error: invoiceError } = await admin
+    .from('subscription_invoices')
+    .insert({
+      subscription_id:    subscription.id,
+      stripe_invoice_id:   invoice.id ?? '',
+      amount:              amountCents / 100,
+      commission_percent:  subscription.partner_id ? subscription.commission_percent : 0,
+      commission_amount:   commissionCents / 100,
+      partner_amount:      partnerCents / 100,
+    })
+    .select('id')
+    .single()
+
+  if (invoiceError || !invoiceRow) {
+    console.error('[stripe/webhook] failed to record subscription invoice:', invoiceError)
+    throw new Error(invoiceError?.message ?? 'subscription invoice insert failed')
+  }
+
+  await admin.from('financial_transactions').insert({
+    type:            subscription.product_type === 'app_plan' ? 'app' : 'mensalidade',
+    client_id:       subscription.user_id,
+    description:     `Assinatura: ${subscription.plan_name}`,
+    amount:          commissionCents / 100,
+    status:          'pago',
+    sale_date:       new Date().toISOString().slice(0, 10),
+    received_date:   new Date().toISOString().slice(0, 10),
+    source_type:     'subscription_invoices',
+    source_id:       invoiceRow.id,
+  })
+
+  // Primeiro pagamento confirma a assinatura como ativa — não espera só o
+  // customer.subscription.updated (que também confirma, redundante e ok).
+  if (subscription.status === 'incomplete') {
+    await admin.from('subscriptions').update({ status: 'active' }).eq('id', subscription.id)
+  }
+
+  console.info('[stripe/webhook] Subscription invoice recorded:', invoice.id)
+}
+
+/** Cobrança falhou — não muda status aqui (customer.subscription.updated
+ *  é quem confirma o estado real, ex: 'past_due'); só avisa o cliente. */
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const stripeSubscriptionId = subscriptionIdFromInvoice(invoice)
+  if (!stripeSubscriptionId) return
+
+  const admin = createAdminClient()
+  const { data: subscription } = await admin
+    .from('subscriptions')
+    .select('id, user_id, plan_name')
+    .eq('stripe_subscription_id', stripeSubscriptionId)
+    .maybeSingle()
+  if (!subscription) return
+
+  const { data: profile } = await admin.from('profiles').select('full_name, email').eq('id', subscription.user_id).single()
+  if (!profile?.email) return
+
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const amountFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: (invoice.currency ?? 'brl').toUpperCase() }).format(invoice.amount_due / 100)
+
+  const html = buildSubscriptionPaymentFailedEmailHtml({
+    recipientName:   profile.full_name?.split(' ')[0] ?? 'Cliente',
+    planName:        subscription.plan_name,
+    amountFormatted,
+    ctaUrl:          `${SITE_URL}/dashboard/assinaturas`,
+  })
+
+  await sendEmail(profile.email, `[LOBBY] Falha na cobrança da assinatura ${subscription.plan_name}`, html)
+    .catch(err => console.error('[stripe/webhook] payment failed email error:', err))
+
+  console.info('[stripe/webhook] Subscription payment failed notified:', stripeSubscriptionId)
+}
+
+/** Sincroniza status/período/cancelamento — fonte de verdade única do
+ *  estado real da assinatura (nunca definido do lado de cá além da
+ *  criação inicial, seção 20). */
+async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
+  const admin = createAdminClient()
+  const item = sub.items.data[0]
+
+  await admin
+    .from('subscriptions')
+    .update({
+      status:                sub.status,
+      current_period_start: item ? new Date(item.current_period_start * 1000).toISOString() : null,
+      current_period_end:   item ? new Date(item.current_period_end * 1000).toISOString() : null,
+      cancel_at_period_end: sub.cancel_at_period_end,
+      canceled_at:          sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+    })
+    .eq('stripe_subscription_id', sub.id)
+}
+
+async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
+  const admin = createAdminClient()
+  await admin
+    .from('subscriptions')
+    .update({ status: 'canceled', canceled_at: new Date().toISOString() })
+    .eq('stripe_subscription_id', sub.id)
+  console.info('[stripe/webhook] Subscription canceled:', sub.id)
 }
