@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Eye, Pencil, CheckCircle2, Ban, Trash2, Wallet } from 'lucide-react'
+import { Eye, Pencil, CheckCircle2, Ban, Trash2, Wallet, Undo2 } from 'lucide-react'
 import { formatCurrencyBRL, formatDateBR, PAYMENT_METHOD_LABEL } from '@/lib/finance'
 import { FinanceTypeBadge, FinanceStatusBadge } from './FinanceBadges'
 import type { FinancialTransaction } from '@/types'
@@ -13,6 +13,7 @@ interface Props {
   onMarkPaid:  (t: FinancialTransaction) => void
   onCancel:    (t: FinancialTransaction) => void
   onDelete:    (t: FinancialTransaction) => void
+  onRefund:    (t: FinancialTransaction) => void
 }
 
 /**
@@ -21,7 +22,7 @@ interface Props {
  * lugar; listas já são sempre div/grid-based), então não existe cenário
  * de scroll horizontal em nenhuma largura de tela.
  */
-export default function FinanceTransactionTable({ transactions, onView, onEdit, onMarkPaid, onCancel, onDelete }: Props) {
+export default function FinanceTransactionTable({ transactions, onView, onEdit, onMarkPaid, onCancel, onDelete, onRefund }: Props) {
   if (transactions.length === 0) return null
 
   return (
@@ -57,6 +58,9 @@ export default function FinanceTransactionTable({ transactions, onView, onEdit, 
               <span className="text-[11px] text-white/35">
                 {t.payment_method ? PAYMENT_METHOD_LABEL[t.payment_method] : '—'}
               </span>
+              {t.refunded_amount > 0 && (
+                <span className="text-[11px] text-[#FBBF24]">Reembolsado: {formatCurrencyBRL(t.refunded_amount)}</span>
+              )}
             </div>
 
             {/* Right: actions */}
@@ -79,6 +83,12 @@ export default function FinanceTransactionTable({ transactions, onView, onEdit, 
                 <button type="button" onClick={() => onCancel(t)} aria-label="Cancelar entrada"
                   className="rounded-lg bg-[#F59E0B]/10 p-2 text-[#F59E0B] transition-all hover:bg-[#F59E0B]/20">
                   <Ban size={14} aria-hidden="true" />
+                </button>
+              )}
+              {t.status === 'pago' && t.refunded_amount < t.amount && (
+                <button type="button" onClick={() => onRefund(t)} aria-label="Reembolsar"
+                  className="rounded-lg bg-red-500/10 p-2 text-red-400 transition-all hover:bg-red-500/20">
+                  <Undo2 size={14} aria-hidden="true" />
                 </button>
               )}
               <button type="button" onClick={() => onDelete(t)} aria-label="Excluir"

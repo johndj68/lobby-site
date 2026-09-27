@@ -34,6 +34,7 @@ import FinanceTransactionModal, {
   EMPTY_FINANCE_FORM, transactionToForm, type FinanceFormValues,
 } from '@/components/admin/finance/FinanceTransactionModal'
 import ConfirmEbookPaymentModal from '@/components/admin/finance/ConfirmEbookPaymentModal'
+import RefundFinanceTransactionModal from '@/components/admin/finance/RefundFinanceTransactionModal'
 // Tipos globais para transações financeiras
 import type { FinancialTransaction, FinanceType, FinanceStatus, PaymentMethod } from '@/types'
 // Tipo para compras de e-books pendentes de confirmação
@@ -65,6 +66,8 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
   const [pendingPurchases, setPendingPurchases] = useState<PendingEbookPurchase[]>(initialPendingPurchases)
   // Compra de e-book selecionada para confirmar via modal (null = fechado)
   const [confirmingPurchase, setConfirmingPurchase] = useState<PendingEbookPurchase | null>(null)
+  // Transação selecionada para reembolsar via modal (null = fechado)
+  const [refundingTx, setRefundingTx] = useState<FinancialTransaction | null>(null)
   // Estado dos filtros ativos (período, tipo, status, forma de pagamento, busca)
   const [filters, setFilters] = useState<FinanceFilters>(DEFAULT_FINANCE_FILTERS)
   // ID da transação sendo editada (null = nova entrada)
@@ -194,6 +197,13 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
     setTransactions(prev => [tx, ...prev])
     setPendingPurchases(prev => prev.filter(p => p.id !== purchaseId))
     toast.success('Pagamento confirmado e lançado no financeiro.')
+  }
+
+  /* Chamado pelo modal de reembolso após a RPC confirmar — reflete
+     refunded_amount/status atualizados sem recarregar a página. */
+  const handleTxRefunded = (updated: FinancialTransaction) => {
+    setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t))
+    toast.success('Reembolso registrado.')
   }
 
   // Descrição da transação sendo excluída (para exibir no modal de confirmação)
@@ -370,6 +380,7 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
               onMarkPaid={(t) => updateStatus(t, 'pago', { received_date: t.received_date ?? new Date().toISOString().slice(0, 10) })}
               onCancel={(t) => updateStatus(t, 'cancelado')}
               onDelete={(t) => setConfirmDel(t.id)}
+              onRefund={(t) => setRefundingTx(t)}
             />
           )}
         </section>
@@ -392,6 +403,13 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
         purchase={confirmingPurchase}
         onClose={() => setConfirmingPurchase(null)}
         onConfirmed={handleEbookConfirmed}
+      />
+
+      {/* ── MODAL: reembolso parcial/total de lançamento financeiro ── */}
+      <RefundFinanceTransactionModal
+        transaction={refundingTx}
+        onClose={() => setRefundingTx(null)}
+        onRefunded={handleTxRefunded}
       />
 
       {/* ── MODAL: confirmação de exclusão permanente ── */}

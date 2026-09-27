@@ -431,6 +431,7 @@ export interface FinancialTransaction {
   notes?:               string | null
   source_type?:         FinanceSourceType | null
   source_id?:           string | null
+  refunded_amount:      number
   created_at:           string
   updated_at:           string
 }
@@ -516,6 +517,11 @@ export interface CreditPurchase {
   stripe_session_id?:       string | null
   stripe_payment_intent_id?: string | null
   paid_at?:                 string | null
+  refund_status?:           'processing' | 'refunded' | null
+  refunded_amount:          number
+  refund_reason?:           string | null
+  refunded_at?:             string | null
+  refunded_by?:             string | null
   created_at:               string
   updated_at:               string
   // Anexados manualmente pelos components (join client-side), não colunas.

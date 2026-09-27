@@ -254,25 +254,57 @@ async function handleCampaignCheckoutCompleted(session: Stripe.Checkout.Session,
   console.info('[stripe/webhook] Campaign purchase confirmed:', purchaseId, confirmed.ok ? 'ok' : 'capacity conflict')
 }
 
-/** Reembolso confirmado pelo provedor — só agora status vira "refunded"
- *  (nunca antes, seção 20). Redelivery é idempotente via .eq('refund_status'). */
+/** Reembolso confirmado pelo provedor — só agora o estado vira definitivo
+ *  (nunca antes, seção 20). Redelivery é idempotente. Tenta campaign_purchases
+ *  primeiro, depois credit_purchases (mesmo branch duplo que
+ *  handleCheckoutCompleted já usa pra distinguir tipo de compra). */
 async function handleChargeRefunded(charge: Stripe.Charge) {
   const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
   if (!paymentIntentId) return
 
   const admin = createAdminClient()
-  const { data: purchase } = await admin
+
+  const { data: campaignPurchase } = await admin
     .from('campaign_purchases')
     .select('id, refund_status')
     .eq('stripe_payment_intent_id', paymentIntentId)
     .maybeSingle()
-  if (!purchase) return // não é uma cobrança de campanha
-  if (purchase.refund_status === 'refunded') return // redelivery — já processado
+  if (campaignPurchase) {
+    if (campaignPurchase.refund_status === 'refunded') return // redelivery — já processado
+    await admin
+      .from('campaign_purchases')
+      .update({ status: 'refunded', refund_status: 'refunded', refunded_at: new Date().toISOString() })
+      .eq('id', campaignPurchase.id)
+    console.info('[stripe/webhook] Campaign refund confirmed:', campaignPurchase.id)
+    return
+  }
 
-  await admin
-    .from('campaign_purchases')
-    .update({ status: 'refunded', refund_status: 'refunded', refunded_at: new Date().toISOString() })
-    .eq('id', purchase.id)
+  const { data: creditPurchase } = await admin
+    .from('credit_purchases')
+    .select('id, amount_paid, refund_status')
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .maybeSingle()
+  if (creditPurchase) {
+    if (creditPurchase.refund_status === 'refunded') return // redelivery do reembolso total — já processado
 
-  console.info('[stripe/webhook] Campaign refund confirmed:', purchase.id)
+    // charge.amount_refunded é o TOTAL cumulativo já reembolsado dessa
+    // cobrança segundo o próprio Stripe (nunca o valor calculado
+    // localmente — seção 20). Só vira estado terminal 'refunded' quando
+    // cobre o valor pago; parcial confirmado volta refund_status pra null
+    // (destrava novos pedidos de reembolso parcial pra essa mesma compra).
+    const amountRefundedTotal = charge.amount_refunded / 100
+    const fullyRefunded = amountRefundedTotal >= Number(creditPurchase.amount_paid)
+
+    await admin
+      .from('credit_purchases')
+      .update({
+        refunded_amount: amountRefundedTotal,
+        refund_status: fullyRefunded ? 'refunded' : null,
+        refunded_at: fullyRefunded ? new Date().toISOString() : null,
+        ...(fullyRefunded ? { status: 'refunded' } : {}),
+      })
+      .eq('id', creditPurchase.id)
+
+    console.info('[stripe/webhook] Credit purchase refund confirmed:', creditPurchase.id, fullyRefunded ? 'total' : 'parcial')
+  }
 }
