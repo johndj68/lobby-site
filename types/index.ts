@@ -407,6 +407,12 @@ export type FinanceStatus = 'pago' | 'pendente' | 'cancelado' | 'reembolsado' | 
 // Forma de pagamento registrada em uma transação financeira.
 export type PaymentMethod = 'pix' | 'cartao' | 'boleto' | 'dinheiro' | 'transferencia' | 'outro'
 
+// Tabela de origem do pedido que gerou um lançamento financeiro (migration
+// 20260927160000). Nulo = lançamento manual sem pedido vinculado — o par
+// (source_type, source_id) é único no banco, então nunca há 2 lançamentos
+// pro mesmo pedido de origem.
+export type FinanceSourceType = 'credit_purchases' | 'ebook_purchases' | 'client_projects' | 'campaign_purchases'
+
 // Linha da tabela financial_transactions — controle financeiro, visível só
 // pro técnico líder (ver lib/services/profile.ts:requireLeaderSession).
 export interface FinancialTransaction {
@@ -423,6 +429,8 @@ export interface FinancialTransaction {
   received_date?:       string | null
   responsible_user_id?: string | null
   notes?:               string | null
+  source_type?:         FinanceSourceType | null
+  source_id?:           string | null
   created_at:           string
   updated_at:           string
 }

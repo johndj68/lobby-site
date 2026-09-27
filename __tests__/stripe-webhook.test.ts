@@ -41,9 +41,8 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-// Baseline so completeWebhookJob/retryWebhookJob (called unconditionally by
-// the route on every request) always get a working admin client — tests that
-// care about specific table responses still override via mockReturnValue.
+// Baseline admin client — tests that care about specific table responses
+// still override via mockReturnValue.
 beforeEach(() => {
   vi.mocked(createAdminClient).mockReturnValue(makeAdmin() as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 })
@@ -220,7 +219,7 @@ describe('POST /api/stripe/webhook', () => {
       expect(vi.mocked(sendEmail)).not.toHaveBeenCalled()
     })
 
-    it('retorna 200 e enfileira para nova tentativa quando RPC falha', async () => {
+    it('retorna 500 (deixa o Stripe reentregar) quando RPC falha', async () => {
       const { stripe }          = await import('@/lib/stripe')
       const { createAdminClient } = await import('@/lib/supabase-admin')
       const admin = makeAdmin()
@@ -229,8 +228,8 @@ describe('POST /api/stripe/webhook', () => {
       vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeCheckoutEvent('pur_123') as any) // eslint-disable-line @typescript-eslint/no-explicit-any
       const res  = await POST(makeReq())
       const body = await res.json()
-      expect(res.status).toBe(200)
-      expect(body.queued_for_retry).toBe(true)
+      expect(res.status).toBe(500)
+      expect(body.error).toBeTruthy()
     })
 
     it('não reenvia e-mail de recibo em redelivery de evento já confirmado (status já "paid" antes da RPC)', async () => {

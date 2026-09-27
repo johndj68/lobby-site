@@ -33,6 +33,7 @@ import FinanceTransactionTable, { FinanceTransactionEmptyState } from '@/compone
 import FinanceTransactionModal, {
   EMPTY_FINANCE_FORM, transactionToForm, type FinanceFormValues,
 } from '@/components/admin/finance/FinanceTransactionModal'
+import ConfirmEbookPaymentModal from '@/components/admin/finance/ConfirmEbookPaymentModal'
 // Tipos globais para transações financeiras
 import type { FinancialTransaction, FinanceType, FinanceStatus, PaymentMethod } from '@/types'
 // Tipo para compras de e-books pendentes de confirmação
@@ -62,8 +63,8 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(initialTransactions)
   // E-books com pagamento pendente de confirmação manual
   const [pendingPurchases, setPendingPurchases] = useState<PendingEbookPurchase[]>(initialPendingPurchases)
-  // ID da compra de e-book em processo de confirmação (evita cliques duplos)
-  const [confirmingPurchase, setConfirmingPurchase] = useState<string | null>(null)
+  // Compra de e-book selecionada para confirmar via modal (null = fechado)
+  const [confirmingPurchase, setConfirmingPurchase] = useState<PendingEbookPurchase | null>(null)
   // Estado dos filtros ativos (período, tipo, status, forma de pagamento, busca)
   const [filters, setFilters] = useState<FinanceFilters>(DEFAULT_FINANCE_FILTERS)
   // ID da transação sendo editada (null = nova entrada)
@@ -182,51 +183,17 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
     toast.success('Entrada financeira excluída.')
   }
 
-  /* Confirmar pagamento de e-book pendente
-     Sem gateway real, o líder confirma manualmente aqui. Marca a compra
-     como paga (o que libera o download em /recursos via RLS) e lança a
-     entrada correspondente em financial_transactions. */
-  const confirmEbookPurchase = async (purchase: PendingEbookPurchase) => {
-    setConfirmingPurchase(purchase.id)
-    const sb = sbRef.current
-    const nowIso = new Date().toISOString()
-    const today  = nowIso.slice(0, 10)
+  /* Confirmar pagamento de e-book pendente — abre o modal que coleta
+     método/data/justificativa e chama a RPC confirm_ebook_purchase_manual
+     (atômica: marca a compra como paga, libera o download via RLS e lança
+     a entrada em financial_transactions numa única transação no banco —
+     nunca deixa a compra "paga" sem o lançamento correspondente). */
+  const openConfirmEbookPurchase = (purchase: PendingEbookPurchase) => setConfirmingPurchase(purchase)
 
-    // 1. Marca a compra como paga — libera acesso ao e-book via RLS
-    const { error: purchaseErr } = await sb
-      .from('ebook_purchases')
-      .update({ status: 'paid', paid_at: nowIso })
-      .eq('id', purchase.id)
-    if (purchaseErr) {
-      toast.error('Não foi possível confirmar o pagamento.')
-      setConfirmingPurchase(null)
-      return
-    }
-
-    // 2. Lança entrada na tabela financeira para registrar a receita
-    const { data: txData, error: txErr } = await sb
-      .from('financial_transactions')
-      .insert({
-        type:                'ebook',
-        client_name:         purchase.buyer_name || purchase.buyer_email || null,
-        description:         `E-book: ${purchase.ebook_title}`,
-        amount:              purchase.amount,
-        status:              'pago',
-        sale_date:           today,
-        received_date:       today,
-        responsible_user_id: user.id,
-      })
-      .select('*').single()
-    if (txErr) {
-      // Pagamento confirmado mas lançamento falhou — orienta registro manual
-      toast.error('Pagamento confirmado, mas não foi possível lançar no financeiro. Registre manualmente.')
-    } else {
-      setTransactions(prev => [txData as FinancialTransaction, ...prev])
-      toast.success('Pagamento confirmado e lançado no financeiro.')
-    }
-    // Remove da lista de pendentes independente do resultado do lançamento
-    setPendingPurchases(prev => prev.filter(p => p.id !== purchase.id))
-    setConfirmingPurchase(null)
+  const handleEbookConfirmed = (tx: FinancialTransaction, purchaseId: string) => {
+    setTransactions(prev => [tx, ...prev])
+    setPendingPurchases(prev => prev.filter(p => p.id !== purchaseId))
+    toast.success('Pagamento confirmado e lançado no financeiro.')
   }
 
   // Descrição da transação sendo excluída (para exibir no modal de confirmação)
@@ -284,15 +251,14 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
                       {p.buyer_name || p.buyer_email || 'Comprador desconhecido'} · {formatCurrencyBRL(p.amount)}
                     </p>
                   </div>
-                  {/* Botão confirmar pagamento — libera e-book e lança no financeiro */}
+                  {/* Botão confirmar pagamento — abre modal (método/data/justificativa) e libera e-book + lança no financeiro via RPC atômica */}
                   <button
                     type="button"
-                    disabled={confirmingPurchase === p.id}
-                    onClick={() => confirmEbookPurchase(p)}
+                    onClick={() => openConfirmEbookPurchase(p)}
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#10B981]/12 px-3 py-1.5 text-xs font-bold text-[#34D399] transition-all hover:bg-[#10B981]/20 disabled:opacity-50"
                   >
                     <CheckCircle2 size={13} aria-hidden="true" />
-                    {confirmingPurchase === p.id ? 'Confirmando...' : 'Confirmar pagamento'}
+                    Confirmar pagamento
                   </button>
                 </div>
               ))}
@@ -419,6 +385,13 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
         saving={saving}
         error={error}
         onSubmit={handleSubmit}
+      />
+
+      {/* ── MODAL: confirmação de recebimento manual de e-book ── */}
+      <ConfirmEbookPaymentModal
+        purchase={confirmingPurchase}
+        onClose={() => setConfirmingPurchase(null)}
+        onConfirmed={handleEbookConfirmed}
       />
 
       {/* ── MODAL: confirmação de exclusão permanente ── */}

@@ -24,6 +24,10 @@
 -- também não são reproduzíveis do zero só com `supabase db reset`. Isso é
 -- uma limitação separada, pré-existente, não coberta por esta migration.
 
+-- Duplicado (idempotente) em 20260702100000 desde 2026-09-27 — aquela
+-- migration, mesmo sendo anterior a esta, já tinha policies referenciando
+-- profiles.role. Mantido aqui também por clareza histórica e porque
+-- `add column if not exists` não tem custo em rodar 2x.
 alter table public.profiles
   add column if not exists role      text not null default 'client',
   add column if not exists phone     text,

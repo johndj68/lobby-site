@@ -4,7 +4,6 @@ import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { captureException } from '@/lib/monitoring'
 import { sendEmail, buildCreditReceiptEmailHtml } from '@/lib/notifications'
-import { completeWebhookJob, retryWebhookJob } from '@/lib/webhook-queue'
 import { confirmReservationOrFlagConflict } from '@/lib/services/campaigns'
 import { logAppAdminEvent } from '@/lib/services/app-publish'
 
@@ -50,14 +49,17 @@ export async function POST(req: NextRequest) {
         // Unhandled event type — acknowledge so Stripe doesn't retry
         break
     }
-
-    // Mark webhook as completed
-    await completeWebhookJob(event.id)
   } catch (err) {
     captureException(err, { event_type: event.type, event_id: event.id })
-    // Queue for retry instead of failing silently
-    await retryWebhookJob(event.id)
-    return NextResponse.json({ received: true, queued_for_retry: true }, { status: 200 })
+    // Não finge sucesso: devolve erro pra Stripe reentregar o evento com o
+    // retry nativo dele (backoff automático, visível no Dashboard, até
+    // vários dias). A fila própria que existia aqui (webhook_queue via
+    // lib/webhook-queue.ts) nunca era populada — enqueueWebhookJob não era
+    // chamado em lugar nenhum — e o cron de retry (/api/webhook-retry) só
+    // marcava o job como concluído sem reprocessar nada. Os handlers abaixo
+    // já são idempotentes (SELECT...FOR UPDATE + checagem de status antes de
+    // agir), então uma redelivery do Stripe nunca duplica crédito/lançamento.
+    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
   }
 
   return NextResponse.json({ received: true })
