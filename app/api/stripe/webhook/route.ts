@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { captureException } from '@/lib/monitoring'
-import { sendEmail, buildCreditReceiptEmailHtml, buildAppPurchaseReceiptEmailHtml, buildSubscriptionPaymentFailedEmailHtml } from '@/lib/notifications'
+import { sendEmail, buildCreditReceiptEmailHtml, buildAppPurchaseReceiptEmailHtml, buildSubscriptionPaymentFailedEmailHtml, buildDisputeCreatedEmailHtml } from '@/lib/notifications'
 import { confirmReservationOrFlagConflict } from '@/lib/services/campaigns'
 import { logAppAdminEvent } from '@/lib/services/app-publish'
 
@@ -59,6 +59,14 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+        break
+
+      case 'charge.dispute.created':
+        await handleDisputeCreated(event.data.object as Stripe.Dispute)
+        break
+
+      case 'charge.dispute.closed':
+        await handleDisputeClosed(event.data.object as Stripe.Dispute)
         break
 
       default:
@@ -666,4 +674,160 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
     .update({ status: 'canceled', canceled_at: new Date().toISOString() })
     .eq('stripe_subscription_id', sub.id)
   console.info('[stripe/webhook] Subscription canceled:', sub.id)
+}
+
+// Marca também usada pra reconhecer, no dispute.closed, que foi ESTA
+// automação que pausou a campanha — não desfaz uma pausa manual que já
+// existia antes da disputa por outro motivo.
+const DISPUTE_PAUSE_REASON = 'Disputa Stripe aberta automaticamente'
+
+/**
+ * charge.dispute.created — decisão do usuário: além de registrar e
+ * notificar o líder, congela automaticamente o que a cobrança disputada
+ * liberou. ebook_purchases nunca entra aqui: e-book só é pago via
+ * crédito ou manual, nunca tem payment_intent Stripe próprio.
+ *
+ * Assinatura (subscription_invoices) não guarda payment_intent_id
+ * direto — a cobrança de uma invoice não expõe isso como campo simples
+ * nesta versão da API (confirmado em node_modules/stripe/cjs/resources/
+ * Invoices.d.ts: sem campo `payment_intent`/`charge` na Invoice, só um
+ * relacionamento via invoice_payments). Por isso, quando não bate com
+ * nenhuma das 3 tabelas com stripe_payment_intent_id direto, busca o
+ * invoice pelo payment_intent via stripe.invoicePayments.list.
+ */
+async function handleDisputeCreated(dispute: Stripe.Dispute) {
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin.from('payment_disputes').select('id').eq('stripe_dispute_id', dispute.id).maybeSingle()
+  if (existing) {
+    console.info('[stripe/webhook] Redelivery of already-recorded dispute — skipping:', dispute.id)
+    return
+  }
+
+  const paymentIntentId = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : dispute.payment_intent?.id
+  const amount   = dispute.amount / 100
+  const currency = dispute.currency.toUpperCase()
+
+  let sourceType: 'credit_purchases' | 'app_purchases' | 'campaign_purchases' | 'subscription_invoices' | null = null
+  let sourceId:   string | null = null
+  let heldAmount: number | null = null
+
+  if (paymentIntentId) {
+    const { data: campaignPurchase } = await admin.from('campaign_purchases').select('id, campaign_id').eq('stripe_payment_intent_id', paymentIntentId).maybeSingle()
+    if (campaignPurchase) {
+      sourceType = 'campaign_purchases'
+      sourceId   = campaignPurchase.id
+      await admin.from('campaign_purchases').update({ status: 'disputed' }).eq('id', campaignPurchase.id)
+      await admin
+        .from('sponsored_campaigns')
+        .update({ paused_at: new Date().toISOString(), paused_by: null, paused_reason: DISPUTE_PAUSE_REASON })
+        .eq('id', campaignPurchase.campaign_id)
+        .is('paused_at', null)
+        .is('cancelled_at', null)
+    } else {
+      const { data: creditPurchase } = await admin.from('credit_purchases').select('id').eq('stripe_payment_intent_id', paymentIntentId).maybeSingle()
+      if (creditPurchase) {
+        sourceType = 'credit_purchases'
+        sourceId   = creditPurchase.id
+        const { data: held } = await admin.rpc('freeze_credit_purchase_for_dispute', { p_purchase_id: creditPurchase.id })
+        heldAmount = held ?? 0
+      } else {
+        const { data: appPurchase } = await admin.from('app_purchases').select('id').eq('stripe_payment_intent_id', paymentIntentId).maybeSingle()
+        if (appPurchase) {
+          sourceType = 'app_purchases'
+          sourceId   = appPurchase.id
+          await admin.from('app_purchases').update({ status: 'disputed' }).eq('id', appPurchase.id)
+        } else {
+          const invoicePayments = await stripe.invoicePayments.list({ payment: { type: 'payment_intent', payment_intent: paymentIntentId }, limit: 1 })
+          const invoiceRef = invoicePayments.data[0]?.invoice
+          const invoiceId  = typeof invoiceRef === 'string' ? invoiceRef : invoiceRef?.id
+          if (invoiceId) {
+            const { data: subInvoice } = await admin.from('subscription_invoices').select('id, subscription_id').eq('stripe_invoice_id', invoiceId).maybeSingle()
+            if (subInvoice) {
+              sourceType = 'subscription_invoices'
+              sourceId   = subInvoice.id
+              await admin.from('subscriptions').update({ disputed: true }).eq('id', subInvoice.subscription_id)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (!sourceType) {
+    console.error('[stripe/webhook] Dispute created but no matching purchase found:', dispute.id, paymentIntentId)
+  }
+
+  await admin.from('payment_disputes').insert({
+    stripe_dispute_id:        dispute.id,
+    stripe_payment_intent_id: paymentIntentId ?? null,
+    source_type:              sourceType,
+    source_id:                sourceId,
+    amount,
+    currency,
+    reason:                   dispute.reason,
+    status:                   dispute.status,
+    held_amount:              heldAmount,
+    opened_at:                new Date(dispute.created * 1000).toISOString(),
+  })
+
+  console.info('[stripe/webhook] Dispute recorded and frozen:', dispute.id, sourceType, sourceId)
+
+  const { data: leaders } = await admin.from('profiles').select('email').eq('role', 'technician').eq('is_leader', true)
+  const leaderEmails = (leaders ?? []).map(l => l.email as string | null).filter((e): e is string => Boolean(e))
+  if (leaderEmails.length === 0) return
+
+  const html = buildDisputeCreatedEmailHtml({
+    amountFormatted: new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount),
+    reason:          dispute.reason,
+    sourceType,
+    ctaUrl:          `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/admin/disputas`,
+  })
+  await Promise.all(leaderEmails.map(email => sendEmail(email, '[LOBBY] Disputa Stripe aberta', html)))
+}
+
+/** charge.dispute.closed — 'won' desfaz o congelamento (dinheiro voltou
+ *  pra LOBBY); qualquer outro status terminal (lost, warning_closed)
+ *  mantém o congelamento pra sempre — decisão manual do líder a partir
+ *  daqui, o sistema não reverte sozinho quando a LOBBY perdeu a disputa. */
+async function handleDisputeClosed(dispute: Stripe.Dispute) {
+  const admin = createAdminClient()
+
+  const { data: record } = await admin.from('payment_disputes').select('*').eq('stripe_dispute_id', dispute.id).maybeSingle()
+  if (!record) {
+    console.error('[stripe/webhook] dispute.closed for unknown dispute:', dispute.id)
+    return
+  }
+  if (record.closed_at) {
+    console.info('[stripe/webhook] Redelivery of already-closed dispute — skipping:', dispute.id)
+    return
+  }
+
+  await admin.from('payment_disputes').update({ status: dispute.status, closed_at: new Date().toISOString() }).eq('id', record.id)
+
+  if (dispute.status !== 'won') {
+    console.info('[stripe/webhook] Dispute closed as', dispute.status, '— congelamento permanente:', dispute.id)
+    return
+  }
+
+  if (record.source_type === 'credit_purchases' && record.source_id) {
+    await admin.rpc('unfreeze_credit_purchase_for_dispute', { p_purchase_id: record.source_id, p_held_amount: record.held_amount })
+  } else if (record.source_type === 'app_purchases' && record.source_id) {
+    await admin.from('app_purchases').update({ status: 'paid' }).eq('id', record.source_id).eq('status', 'disputed')
+  } else if (record.source_type === 'campaign_purchases' && record.source_id) {
+    const { data: cp } = await admin.from('campaign_purchases').select('campaign_id').eq('id', record.source_id).single()
+    await admin.from('campaign_purchases').update({ status: 'paid' }).eq('id', record.source_id).eq('status', 'disputed')
+    if (cp) {
+      await admin
+        .from('sponsored_campaigns')
+        .update({ paused_at: null, paused_by: null, paused_reason: null })
+        .eq('id', cp.campaign_id)
+        .eq('paused_reason', DISPUTE_PAUSE_REASON)
+    }
+  } else if (record.source_type === 'subscription_invoices' && record.source_id) {
+    const { data: si } = await admin.from('subscription_invoices').select('subscription_id').eq('id', record.source_id).single()
+    if (si) await admin.from('subscriptions').update({ disputed: false }).eq('id', si.subscription_id)
+  }
+
+  console.info('[stripe/webhook] Dispute won, unfrozen:', dispute.id, record.source_type, record.source_id)
 }

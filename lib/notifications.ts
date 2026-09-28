@@ -287,6 +287,57 @@ export function buildSubscriptionPaymentFailedEmailHtml({
 </html>`
 }
 
+const DISPUTE_SOURCE_LABEL: Record<string, string> = {
+  credit_purchases:      'compra de créditos',
+  app_purchases:         'compra de app',
+  campaign_purchases:    'campanha patrocinada',
+  subscription_invoices: 'assinatura',
+}
+
+export function buildDisputeCreatedEmailHtml({
+  amountFormatted,
+  reason,
+  sourceType,
+  ctaUrl,
+}: {
+  amountFormatted: string
+  reason:          string | null
+  sourceType:      string | null
+  ctaUrl:          string
+}): string {
+  const eUrl    = safeUrl(ctaUrl)
+  const eReason = reason ? escapeHtml(reason) : 'não informado'
+  const eSource = escapeHtml(sourceType ? (DISPUTE_SOURCE_LABEL[sourceType] ?? sourceType) : 'não identificada')
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F7F8FC;font-family:'Inter',Arial,sans-serif;">
+  <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E3E7F0;box-shadow:0 4px 24px rgba(11,16,32,0.07);">
+    <div style="background:linear-gradient(135deg,#DC2626,#7F1D1D);padding:24px 32px;">
+      <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.7);">LOBBY · Financeiro</p>
+      <h1 style="margin:6px 0 0;font-size:20px;font-weight:800;color:#fff;">Disputa Stripe aberta</h1>
+      <p style="margin:4px 0 0;font-size:13px;color:rgba(255,255,255,.75);">Ação automática já aplicada</p>
+    </div>
+    <div style="padding:24px 32px;">
+      <p style="margin:0 0 12px;font-size:14px;color:#374151;">Uma disputa de <strong>${amountFormatted}</strong> foi aberta contra uma cobrança de <strong>${eSource}</strong>.</p>
+      <p style="margin:0 0 16px;font-size:13px;color:#6B7280;">Motivo informado pelo banco: ${eReason}.</p>
+      <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:14px 18px;margin-bottom:20px;">
+        <p style="margin:0;font-size:12px;color:#991B1B;">O sistema já congelou automaticamente o que essa cobrança liberou (créditos, acesso, campanha ou assinatura, conforme o caso). Nenhuma ação manual é necessária pra isso — só acompanhe o resultado da disputa no painel.</p>
+      </div>
+      <a href="${eUrl}" target="_blank"
+        style="display:inline-block;background:linear-gradient(135deg,#DC2626,#7F1D1D);color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 24px;border-radius:10px;">
+        Ver disputas no painel
+      </a>
+    </div>
+    <div style="padding:14px 32px;background:#F7F8FC;border-top:1px solid #E3E7F0;">
+      <p style="margin:0;font-size:11px;color:#9CA3AF;">LOBBY · Aviso automático de disputa Stripe</p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
 export function buildMessageEmailHtml({
   recipientName,
   senderLabel,
