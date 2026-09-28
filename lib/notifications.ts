@@ -151,14 +151,14 @@ export function buildCreditReceiptEmailHtml({
 }
 
 /**
- * Recibo + acesso de compra de app. "Acesso" aqui é sempre o que o
- * parceiro configurou em app_activation_config (link/e-mail de
- * suporte/instruções) — nunca um código de ativação automático, porque
- * essa parte do sistema (app_activation_codes) nunca foi ligada de
- * verdade (upload de lote valida arquivo mas nunca grava nada — ver
- * app/api/apps/activation/[appId]/upload-codes/route.ts). Quando nenhuma
- * dessas 3 coisas está configurada, o e-mail diz isso explicitamente em
- * vez de fingir que tem instrução.
+ * Recibo + acesso de compra de app. "Acesso" combina o que o parceiro
+ * configurou em app_activation_config (link/e-mail de suporte/
+ * instruções) com o código de ativação entregue atomicamente na
+ * confirmação do pagamento (deliver_activation_code, gap 4) quando o
+ * plano tem lote de códigos com estoque. Sem estoque, activationCode
+ * chega null e o e-mail cai pro bloco de link/instruções manuais. Quando
+ * nenhuma das 4 coisas está configurada, o e-mail diz isso explicitamente
+ * em vez de fingir que tem instrução.
  */
 export function buildAppPurchaseReceiptEmailHtml({
   recipientName,
@@ -170,6 +170,7 @@ export function buildAppPurchaseReceiptEmailHtml({
   supportEmail,
   instructions,
   ctaUrl,
+  activationCode,
 }: {
   recipientName:    string
   appName:          string
@@ -180,16 +181,18 @@ export function buildAppPurchaseReceiptEmailHtml({
   supportEmail?:    string | null
   instructions?:    string | null
   ctaUrl:           string
+  activationCode?:  string | null
 }): string {
   const eName  = escapeHtml(recipientName)
   const eApp   = escapeHtml(appName)
   const ePlan  = escapeHtml(planName)
   const eUrl   = safeUrl(ctaUrl)
 
-  const accessBlock = activationLink || supportEmail || instructions
+  const accessBlock = activationCode || activationLink || supportEmail || instructions
     ? `
       <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
         <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.05em;">Como acessar</p>
+        ${activationCode ? `<p style="margin:0 0 8px;font-size:13px;color:#374151;">Seu código de ativação: <code style="background:#fff;border:1px solid #BBF7D0;border-radius:6px;padding:2px 8px;font-weight:700;color:#059669;">${escapeHtml(activationCode)}</code></p>` : ''}
         ${instructions ? `<p style="margin:0 0 8px;font-size:13px;color:#374151;white-space:pre-line;">${escapeHtml(instructions)}</p>` : ''}
         ${activationLink ? `<p style="margin:0 0 6px;font-size:13px;"><a href="${safeUrl(activationLink)}" target="_blank" style="color:#059669;font-weight:700;">${escapeHtml(activationLink)}</a></p>` : ''}
         ${supportEmail ? `<p style="margin:0;font-size:12px;color:#6B7280;">Suporte: ${escapeHtml(supportEmail)}</p>` : ''}

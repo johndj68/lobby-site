@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { ShoppingBag, Loader2, ExternalLink, Mail } from 'lucide-react'
+import { ShoppingBag, Loader2, ExternalLink, Mail, KeyRound } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import { formatCurrencyBRL } from '@/lib/finance'
@@ -18,6 +18,7 @@ interface AccessInfo {
   activation_link: string | null
   support_email:   string | null
   instructions:    unknown
+  activation_code: string | null
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
@@ -28,11 +29,10 @@ const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }>
   refunded: { label: 'Reembolsado',          color: '#94A3B8', bg: 'rgba(148,163,184,0.1)' },
 }
 
-/** Instruções de acesso vêm sempre de app_activation_config, buscadas sob
- *  demanda (por compra) via RPC get_my_app_purchase_access — nunca um
- *  código de ativação automático (app_activation_codes nunca foi ligado
- *  de verdade no sistema, ver comentário em
- *  lib/notifications.ts:buildAppPurchaseReceiptEmailHtml). */
+/** Acesso combina app_activation_config (link/e-mail/instruções) com o
+ *  código de ativação entregue atomicamente na confirmação do pagamento
+ *  quando o plano usa lote de códigos com estoque (deliver_activation_code,
+ *  gap 4) — buscados sob demanda por compra via get_my_app_purchase_access. */
 function AccessPanel({ purchaseId }: { purchaseId: string }) {
   const [access, setAccess] = useState<AccessInfo | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,12 +54,18 @@ function AccessPanel({ purchaseId }: { purchaseId: string }) {
     ? Object.values(access.instructions as Record<string, string>).filter(Boolean).join(' · ')
     : (typeof access?.instructions === 'string' ? access.instructions : null)
 
-  if (!access || (!access.activation_link && !access.support_email && !instructionsText)) {
+  if (!access || (!access.activation_code && !access.activation_link && !access.support_email && !instructionsText)) {
     return <p className="text-xs text-[#92400E]">O parceiro ainda não configurou instruções de acesso — recebeu um e-mail e nossa equipe vai liberar manualmente.</p>
   }
 
   return (
     <div className="mt-3 rounded-xl bg-[#F0FDF4] p-3 text-xs text-[#166534]">
+      {access.activation_code && (
+        <p className="mb-1.5 flex items-center gap-1.5 font-semibold">
+          <KeyRound size={12} aria-hidden="true" />
+          Código: <code className="rounded bg-white px-1.5 py-0.5 text-[#166534]">{access.activation_code}</code>
+        </p>
+      )}
       {instructionsText && <p className="mb-1.5">{instructionsText}</p>}
       {access.activation_link && (
         <a href={access.activation_link} target="_blank" rel="noopener noreferrer" className="mb-1 flex items-center gap-1.5 font-semibold hover:underline">

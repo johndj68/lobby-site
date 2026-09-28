@@ -42,11 +42,20 @@ export default async function AtivacaoPage({ params }: PageProps) {
     .eq('app_draft_id', appId)
     .order('display_order')
 
+  // Lotes de código de ativação por plano — usado na aba "Planos e
+  // preços" pra mostrar estoque disponível/entregue (gap 4).
+  const { data: batches } = await supabase
+    .from('app_activation_codes_batch')
+    .select('id, plan_id, batch_name, total_codes, available, delivered, imported_at')
+    .eq('app_draft_id', appId)
+    .order('imported_at', { ascending: false })
+
   return (
     <ActivationClient
       draft={draft}
       config={config}
       plans={plans || []}
+      batches={batches || []}
     />
   )
 }

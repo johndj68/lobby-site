@@ -343,7 +343,24 @@ async function handleAppPurchaseCheckoutCompleted(session: Stripe.Checkout.Sessi
 
   console.info('[stripe/webhook] App purchase confirmed:', purchaseId)
 
-  sendAppPurchaseReceiptEmail(purchase, admin)
+  // Entrega de código é best-effort: estoque zerado não pode derrubar a
+  // confirmação de pagamento já feita acima (o dinheiro já foi cobrado).
+  // Fica sem código entregue — get_my_app_purchase_access devolve null e
+  // o comprador vê só link/instruções manuais, mesmo estado de antes
+  // desta função existir. Fica logado pra resolução manual.
+  let deliveredCode: string | null = null
+  const { data: delivery, error: deliveryErr } = await admin.rpc('deliver_activation_code', { p_app_purchase_id: purchaseId })
+  if (deliveryErr) {
+    if (deliveryErr.message?.includes('SEM_CODIGO_DISPONIVEL')) {
+      console.error('[stripe/webhook] Sem código de ativação disponível pro plano:', purchase.plan_id, 'compra:', purchaseId)
+    } else {
+      console.error('[stripe/webhook] deliver_activation_code RPC failed:', deliveryErr)
+    }
+  } else {
+    deliveredCode = delivery?.code ?? null
+  }
+
+  sendAppPurchaseReceiptEmail(purchase, admin, deliveredCode)
     .catch(err => console.error('[stripe/webhook] App purchase receipt email error:', err))
 }
 
@@ -356,7 +373,7 @@ interface AppPurchaseForEmail {
   currency:         string
 }
 
-async function sendAppPurchaseReceiptEmail(purchase: AppPurchaseForEmail, admin: SupabaseAdmin) {
+async function sendAppPurchaseReceiptEmail(purchase: AppPurchaseForEmail, admin: SupabaseAdmin, deliveredCode: string | null) {
   const [profileRes, planRes] = await Promise.all([
     admin.from('profiles').select('full_name, email').eq('id', purchase.buyer_user_id).single(),
     admin.from('app_plans').select('app_draft_id').eq('id', purchase.plan_id).single(),
@@ -388,6 +405,7 @@ async function sendAppPurchaseReceiptEmail(purchase: AppPurchaseForEmail, admin:
     supportEmail:    activation?.support_email ?? null,
     instructions:    instructionsText,
     ctaUrl:          `${SITE_URL}/dashboard/minhas-compras`,
+    activationCode:  deliveredCode,
   })
 
   await sendEmail(email, `[LOBBY] Compra de ${purchase.application_name} confirmada`, html)

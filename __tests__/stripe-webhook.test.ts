@@ -528,4 +528,150 @@ describe('POST /api/stripe/webhook', () => {
     })
 
   })
+
+  // ── checkout.session.completed (kind=app_purchase) — gap 4: entrega de código ──
+
+  describe('compra de app com entrega de código de ativação (gap 4)', () => {
+
+    const makeAppPurchaseCheckoutEvent = () => ({
+      type: 'checkout.session.completed',
+      id:   'evt_app_purchase_test',
+      data: {
+        object: {
+          id:             'cs_app_test',
+          payment_intent: 'pi_app_test',
+          metadata: {
+            kind:        'app_purchase',
+            purchase_id: 'app-purchase-1',
+          },
+        },
+      },
+    })
+
+    const makePurchaseRow = () => ({
+      id: 'app-purchase-1', buyer_user_id: 'buyer-1', plan_id: 'plan-1',
+      application_name: 'App Teste', plan_name: 'Plano Único',
+      amount: 100, commission_amount: 20, currency: 'BRL',
+    })
+
+    // Mock flexível — cobre app_purchases (status pré-RPC + update),
+    // financial_transactions e a RPC deliver_activation_code com resposta
+    // configurável (código entregue ou SEM_CODIGO_DISPONIVEL).
+    const makeAppPurchaseAdmin = (opts: {
+      purchaseStatusBeforeRpc?: string | null
+      deliverResult?: { data?: unknown; error?: { message: string } }
+    } = {}) => {
+      const inserted: Record<string, unknown[]> = {}
+      const updated:  Record<string, unknown[]> = {}
+
+      return {
+        inserted,
+        updated,
+        rpc: vi.fn((fn: string) => {
+          if (fn === 'deliver_activation_code') {
+            return Promise.resolve(opts.deliverResult ?? { data: { code: 'ABCD-1234' }, error: null })
+          }
+          return Promise.resolve({ data: null, error: null })
+        }),
+        from: vi.fn((table: string) => {
+          const chain: Record<string, any> = {} // eslint-disable-line @typescript-eslint/no-explicit-any
+          chain.select = () => chain
+          chain.eq     = () => chain
+          chain.insert = (payload: unknown) => { inserted[table] = inserted[table] ?? []; inserted[table].push(payload); return chain }
+          chain.update = (payload: unknown) => { updated[table]  = updated[table]  ?? []; updated[table].push(payload);  return chain }
+          chain.single = vi.fn().mockResolvedValue({
+            data: table === 'app_purchases'
+              ? (opts.purchaseStatusBeforeRpc !== undefined
+                  ? (opts.purchaseStatusBeforeRpc === null ? null : { status: opts.purchaseStatusBeforeRpc })
+                  : null)
+              : null,
+            error: null,
+          })
+          return chain
+        }),
+      }
+    }
+
+    it('confirma a compra e entrega o código atomicamente', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeAppPurchaseAdmin()
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeAppPurchaseCheckoutEvent() as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      // Simula o .select().single() final do update de app_purchases
+      // devolvendo a linha da compra pra sendAppPurchaseReceiptEmail.
+      admin.from = vi.fn((table: string) => {
+        const chain: Record<string, any> = {} // eslint-disable-line @typescript-eslint/no-explicit-any
+        chain.select = () => chain
+        chain.eq     = () => chain
+        chain.maybeSingle = () => chain.single()
+        chain.insert = (payload: unknown) => { admin.inserted[table] = admin.inserted[table] ?? []; admin.inserted[table].push(payload); return chain }
+        chain.update = (payload: unknown) => { admin.updated[table]  = admin.updated[table]  ?? []; admin.updated[table].push(payload);  chain.single = vi.fn().mockResolvedValue({ data: table === 'app_purchases' ? makePurchaseRow() : null, error: null }); return chain }
+        chain.single = vi.fn().mockResolvedValue({
+          data: table === 'profiles' ? { full_name: 'Cliente Teste', email: 'cliente@teste.com' }
+              : table === 'app_plans' ? { app_draft_id: 'draft-1' }
+              : null,
+          error: null,
+        })
+        return chain
+      })
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+
+      expect(admin.rpc).toHaveBeenCalledWith('deliver_activation_code', { p_app_purchase_id: 'app-purchase-1' })
+
+      const { buildAppPurchaseReceiptEmailHtml } = await import('@/lib/notifications')
+      await flush()
+      expect(vi.mocked(buildAppPurchaseReceiptEmailHtml)).toHaveBeenCalledWith(
+        expect.objectContaining({ activationCode: 'ABCD-1234' })
+      )
+    })
+
+    it('estoque zerado (SEM_CODIGO_DISPONIVEL) não derruba a confirmação de pagamento', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeAppPurchaseAdmin({ deliverResult: { data: null, error: { message: 'SEM_CODIGO_DISPONIVEL' } } })
+      admin.from = vi.fn((table: string) => {
+        const chain: Record<string, any> = {} // eslint-disable-line @typescript-eslint/no-explicit-any
+        chain.select = () => chain
+        chain.eq     = () => chain
+        chain.maybeSingle = () => chain.single()
+        chain.insert = (payload: unknown) => { admin.inserted[table] = admin.inserted[table] ?? []; admin.inserted[table].push(payload); return chain }
+        chain.update = (payload: unknown) => { admin.updated[table]  = admin.updated[table]  ?? []; admin.updated[table].push(payload);  chain.single = vi.fn().mockResolvedValue({ data: table === 'app_purchases' ? makePurchaseRow() : null, error: null }); return chain }
+        chain.single = vi.fn().mockResolvedValue({
+          data: table === 'profiles' ? { full_name: 'Cliente Teste', email: 'cliente@teste.com' }
+              : table === 'app_plans' ? { app_draft_id: 'draft-1' }
+              : null,
+          error: null,
+        })
+        return chain
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeAppPurchaseCheckoutEvent() as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+
+      const { buildAppPurchaseReceiptEmailHtml } = await import('@/lib/notifications')
+      await flush()
+      expect(vi.mocked(buildAppPurchaseReceiptEmailHtml)).toHaveBeenCalledWith(
+        expect.objectContaining({ activationCode: null })
+      )
+    })
+
+    it('redelivery de compra já confirmada não chama deliver_activation_code de novo', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeAppPurchaseAdmin({ purchaseStatusBeforeRpc: 'paid' })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeAppPurchaseCheckoutEvent() as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      expect(admin.rpc).not.toHaveBeenCalled()
+    })
+
+  })
 })
