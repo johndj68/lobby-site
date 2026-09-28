@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 // Ícones da interface
 import {
   Wallet, Plus, Download, TrendingUp, TrendingDown, BookOpen,
-  Briefcase, MapPin, Receipt, Users, Search, ChevronDown, Trash2, CheckCircle2,
+  Briefcase, MapPin, Receipt, Users, Search, ChevronDown, Trash2, CheckCircle2, AlertTriangle,
 } from 'lucide-react'
 // Layout padrão das páginas admin
 import AdminShell from '@/components/layout/AdminShell'
@@ -240,6 +240,18 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
+            {/* Contas a pagar/receber (lançamentos manuais + repasse/cobranças pendentes já rastreados) */}
+            <a href="/admin/financeiro/contas"
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/60 transition-all hover:border-white/20 hover:text-white">
+              <Receipt size={15} aria-hidden="true" />
+              Contas
+            </a>
+            {/* Disputas Stripe (congeladas automaticamente) — registro fica em tela própria */}
+            <a href="/admin/disputas"
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/60 transition-all hover:border-white/20 hover:text-white">
+              <AlertTriangle size={15} aria-hidden="true" />
+              Disputas
+            </a>
             {/* Exporta as transações filtradas como arquivo CSV */}
             <button type="button" onClick={() => exportFinanceCSV(filtered)} disabled={filtered.length === 0}
               className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/60 transition-all hover:border-white/20 hover:text-white disabled:opacity-40">
