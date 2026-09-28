@@ -46,7 +46,7 @@ export default async function AtivacaoPage({ params }: PageProps) {
   // preços" pra mostrar estoque disponível/entregue (gap 4).
   const { data: batches } = await supabase
     .from('app_activation_codes_batch')
-    .select('id, plan_id, batch_name, total_codes, available, delivered, imported_at')
+    .select('id, plan_id, batch_name, total_codes, available, delivered, imported_at, expires_at')
     .eq('app_draft_id', appId)
     .order('imported_at', { ascending: false })
 

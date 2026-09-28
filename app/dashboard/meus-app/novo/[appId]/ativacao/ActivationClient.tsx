@@ -21,6 +21,7 @@ interface Batch {
   available: number
   delivered: number
   imported_at: string | null
+  expires_at?: string | null
 }
 
 /** Estado de importação de um plano — prévia (upload-codes) antes de
@@ -104,6 +105,40 @@ export default function ActivationClient({ draft, config, plans, batches }: Acti
     } catch (err: any) {
       setUploadByPlan((prev) => ({ ...prev, [planId]: { ...state, status: 'error', error: err.message || 'Falha ao salvar os códigos' } }))
     }
+  }
+
+  const handleRevokeBatch = async (batchId: string) => {
+    if (!confirm('Revogar todos os códigos ainda disponíveis deste lote? Códigos já entregues não são afetados.')) return
+    const res = await fetch(`/api/apps/activation/${draft.id}/batches/${batchId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'revoke' }),
+    })
+    const data = await res.json()
+    if (!res.ok) { alert(data.error || 'Falha ao revogar'); return }
+    setBatchList((prev) => prev.map((b) => b.id === batchId
+      ? { ...b, available: 0, total_codes: b.total_codes - data.revoked }
+      : b
+    ))
+  }
+
+  const handleDeleteBatch = async (batchId: string) => {
+    if (!confirm('Excluir este lote? Só é possível se nenhum código dele já foi entregue.')) return
+    const res = await fetch(`/api/apps/activation/${draft.id}/batches/${batchId}`, { method: 'DELETE' })
+    const data = await res.json()
+    if (!res.ok) { alert(data.error || 'Falha ao excluir'); return }
+    setBatchList((prev) => prev.filter((b) => b.id !== batchId))
+  }
+
+  const handleSetExpiry = async (batchId: string, expiresAt: string | null) => {
+    const res = await fetch(`/api/apps/activation/${draft.id}/batches/${batchId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_expiry', expiresAt }),
+    })
+    const data = await res.json()
+    if (!res.ok) { alert(data.error || 'Falha ao salvar validade'); return }
+    setBatchList((prev) => prev.map((b) => b.id === batchId ? { ...b, expires_at: expiresAt } : b))
   }
 
   return (
@@ -232,12 +267,39 @@ export default function ActivationClient({ draft, config, plans, batches }: Acti
 
                     {planBatches.length > 0 && (
                       <div className="space-y-1 mb-4">
-                        {planBatches.map((b) => (
-                          <div key={b.id} className="flex items-center justify-between text-xs px-3 py-2 bg-gray-50 rounded" style={{ color: colors.textSecondary }}>
-                            <span>{b.batch_name || 'Lote'}</span>
-                            <span>{b.total_codes} total · {b.available} disponível · {b.delivered} entregue</span>
-                          </div>
-                        ))}
+                        {planBatches.map((b) => {
+                          const expired = b.expires_at && new Date(b.expires_at) <= new Date()
+                          return (
+                            <div key={b.id} className="flex flex-col gap-1.5 text-xs px-3 py-2 bg-gray-50 rounded" style={{ color: colors.textSecondary }}>
+                              <div className="flex items-center justify-between">
+                                <span>{b.batch_name || 'Lote'}</span>
+                                <span>{b.total_codes} total · {b.available} disponível · {b.delivered} entregue{expired ? ' · expirado' : ''}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-1.5">
+                                  Validade:
+                                  <input
+                                    type="date"
+                                    defaultValue={b.expires_at ? b.expires_at.slice(0, 10) : ''}
+                                    onChange={(e) => handleSetExpiry(b.id, e.target.value ? new Date(e.target.value).toISOString() : null)}
+                                    className="border rounded px-2 py-1"
+                                    style={{ borderColor: colors.border }}
+                                  />
+                                </label>
+                                {b.available > 0 && (
+                                  <button onClick={() => handleRevokeBatch(b.id)} className="text-red-600 font-semibold hover:underline">
+                                    Revogar disponíveis
+                                  </button>
+                                )}
+                                {b.delivered === 0 && (
+                                  <button onClick={() => handleDeleteBatch(b.id)} className="text-red-600 font-semibold hover:underline">
+                                    Excluir lote
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
 
