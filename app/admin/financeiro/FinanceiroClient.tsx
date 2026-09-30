@@ -37,6 +37,7 @@ import FinanceTransactionModal, {
 import ConfirmEbookPaymentModal from '@/components/admin/finance/ConfirmEbookPaymentModal'
 import RefundFinanceTransactionModal from '@/components/admin/finance/RefundFinanceTransactionModal'
 import RefundEbookPurchaseModal, { type PaidEbookPurchase } from '@/components/admin/finance/RefundEbookPurchaseModal'
+import RefundAppPurchaseModal, { type PaidAppPurchase } from '@/components/admin/finance/RefundAppPurchaseModal'
 // Tipos globais para transações financeiras
 import type { FinancialTransaction, FinanceType, FinanceStatus, PaymentMethod } from '@/types'
 // Tipo para compras de e-books pendentes de confirmação
@@ -50,6 +51,7 @@ interface Props {
   initialTransactions:      FinancialTransaction[]       // Transações pré-carregadas no servidor
   initialPendingPurchases:  PendingEbookPurchase[]       // E-books aguardando confirmação de pagamento
   initialPaidEbookPurchases: PaidEbookPurchase[]         // E-books já pagos — ação de reembolso
+  initialPaidAppPurchases: PaidAppPurchase[]        // Apps já pagos — ação de reembolso
 }
 
 // Opções de filtro de período para as transações
@@ -62,7 +64,7 @@ const PERIOD_OPTIONS: { value: FinanceFilters['period']; label: string }[] = [
   { value: 'todos', label: 'Todos' },
 ]
 
-export default function FinanceiroClient({ user, profile, initialTransactions, initialPendingPurchases, initialPaidEbookPurchases }: Props) {
+export default function FinanceiroClient({ user, profile, initialTransactions, initialPendingPurchases, initialPaidEbookPurchases, initialPaidAppPurchases }: Props) {
   // Lista de transações exibida (atualizada otimisticamente)
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(initialTransactions)
   // E-books com pagamento pendente de confirmação manual
@@ -71,6 +73,10 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
   const [paidEbookPurchases, setPaidEbookPurchases] = useState<PaidEbookPurchase[]>(initialPaidEbookPurchases)
   // E-book selecionado para reembolsar via modal (null = fechado)
   const [refundingEbook, setRefundingEbook] = useState<PaidEbookPurchase | null>(null)
+  // Apps já pagos — lista pra ação de reembolso
+  const [paidAppPurchases, setPaidAppPurchases] = useState<PaidAppPurchase[]>(initialPaidAppPurchases)
+  // App selecionado para reembolsar via modal (null = fechado)
+  const [refundingApp, setRefundingApp] = useState<PaidAppPurchase | null>(null)
   // Compra de e-book selecionada para confirmar via modal (null = fechado)
   const [confirmingPurchase, setConfirmingPurchase] = useState<PendingEbookPurchase | null>(null)
   // Transação selecionada para reembolsar via modal (null = fechado)
@@ -221,6 +227,14 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
     toast.success('E-book reembolsado e acesso revogado.')
   }
 
+  /* Chamado pelo modal de reembolso de app depois que a rota confirmou o
+     Stripe + a RPC — reflete refunded_amount/refund_status atualizados
+     (estado 'processing' até o webhook confirmar de vez). */
+  const handleAppRefunded = (updated: PaidAppPurchase) => {
+    setPaidAppPurchases(prev => prev.map(p => p.id === updated.id ? updated : p))
+    toast.success('Reembolso solicitado — aguardando confirmação do Stripe.')
+  }
+
   // Descrição da transação sendo excluída (para exibir no modal de confirmação)
   const deletingTitle = transactions.find(t => t.id === confirmDel)?.description ?? ''
 
@@ -323,6 +337,36 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
                   <button type="button" onClick={() => setRefundingEbook(p)}
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 transition-all hover:bg-red-500/20">
                     Reembolsar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* ── APPS VENDIDOS: lista compacta pra reembolso via Stripe (parcial ou total) ── */}
+        {paidAppPurchases.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
+            className="rounded-3xl border border-white/[0.08] bg-[#111827]/80 p-5"
+            aria-label="Apps vendidos"
+          >
+            <h2 className="mb-3 text-sm font-bold text-white/70">
+              Apps vendidos ({paidAppPurchases.length})
+            </h2>
+            <div className="max-h-64 space-y-2 overflow-y-auto">
+              {paidAppPurchases.filter(p => p.refunded_amount < p.amount).map(p => (
+                <div key={p.id} className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{p.application_name} — {p.plan_name}</p>
+                    <p className="truncate text-xs text-white/40">
+                      {p.buyer_name || p.buyer_email || 'Comprador desconhecido'} · {formatCurrencyBRL(p.amount)}
+                      {p.refunded_amount > 0 && <> · reembolsado: {formatCurrencyBRL(p.refunded_amount)}</>}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setRefundingApp(p)} disabled={p.refund_status === 'processing'}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-40">
+                    {p.refund_status === 'processing' ? 'Reembolso em andamento' : 'Reembolsar'}
                   </button>
                 </div>
               ))}
@@ -471,6 +515,13 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
         purchase={refundingEbook}
         onClose={() => setRefundingEbook(null)}
         onRefunded={handleEbookRefunded}
+      />
+
+      {/* ── MODAL: reembolso de app (Stripe, parcial ou total) ── */}
+      <RefundAppPurchaseModal
+        purchase={refundingApp}
+        onClose={() => setRefundingApp(null)}
+        onRefunded={handleAppRefunded}
       />
 
       {/* ── MODAL: confirmação de exclusão permanente ── */}
