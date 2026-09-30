@@ -212,7 +212,7 @@ passa a descontar a fatia proporcional já reembolsada:
 
 ```sql
 select count(*), coalesce(sum(
-    ap.partner_amount - round(ap.refunded_amount * ap.partner_amount / ap.amount)
+    ap.partner_amount - round(ap.refunded_amount * ap.partner_amount / ap.amount, 2)
   ), 0)
   into v_app_valid_count, v_app_total
 from public.app_purchases ap
