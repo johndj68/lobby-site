@@ -89,7 +89,10 @@ describe('POST /api/admin/app-purchases/[purchaseId]/refund', () => {
     const res = await POST(makeReq({ amount: 50, reason: 'Cliente desistiu' }), { params: Promise.resolve({ purchaseId: 'app-purchase-1' }) })
 
     expect(res.status).toBe(200)
-    expect(vi.mocked(stripe.refunds.create)).toHaveBeenCalledWith({ payment_intent: 'pi_test', amount: 5000 })
+    expect(vi.mocked(stripe.refunds.create)).toHaveBeenCalledWith(
+      expect.objectContaining({ payment_intent: 'pi_test', amount: 5000 }),
+      expect.objectContaining({ idempotencyKey: expect.any(String) })
+    )
     expect(supabase.rpc).toHaveBeenCalledWith('refund_app_purchase', { p_purchase_id: 'app-purchase-1', p_amount: 50, p_reason: 'Cliente desistiu' })
   })
 

@@ -420,9 +420,10 @@ async function sendAppPurchaseReceiptEmail(purchase: AppPurchaseForEmail, admin:
 }
 
 /** Reembolso confirmado pelo provedor — só agora o estado vira definitivo
- *  (nunca antes, seção 20). Redelivery é idempotente. Tenta campaign_purchases
- *  primeiro, depois credit_purchases (mesmo branch duplo que
- *  handleCheckoutCompleted já usa pra distinguir tipo de compra). */
+ *  (nunca antes, seção 20). Redelivery é idempotente. Tenta
+ *  campaign_purchases, depois credit_purchases, depois app_purchases
+ *  (mesmo branch triplo que handleCheckoutCompleted já usa pra distinguir
+ *  tipo de compra). */
 async function handleChargeRefunded(charge: Stripe.Charge) {
   const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
   if (!paymentIntentId) return
@@ -479,18 +480,36 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   // retenção de repasse de 16 dias garantem que isso nunca acontece
   // depois de um repasse já confirmado (spec: 2026-09-30-app-purchase-
   // refund-design.md) — sem necessidade de clawback.
-  const { data: appPurchase } = await admin
+  //
+  // Diferente dos branches acima: aqui toda escrita checa error e lança
+  // (nunca finge sucesso — seção 20 do pedido original também cobre isso,
+  // e é o que garante que o retry nativo do Stripe reentrega o evento se
+  // algo falhar no banco em vez do webhook responder 200 pra uma falha).
+  const { data: appPurchase, error: appPurchaseSelectError } = await admin
     .from('app_purchases')
     .select('id, amount, commission_amount, refunded_amount, refund_status')
     .eq('stripe_payment_intent_id', paymentIntentId)
     .maybeSingle()
+  if (appPurchaseSelectError) {
+    throw new Error(`[stripe/webhook] failed to look up app_purchases for refund: ${appPurchaseSelectError.message}`)
+  }
   if (appPurchase) {
     if (appPurchase.refund_status === 'refunded') return // redelivery — já processado
 
     const amountRefundedTotal = charge.amount_refunded / 100
+
+    // Redelivery fora de ordem: um evento mais antigo (ex: o primeiro de
+    // dois reembolsos parciais) reentregue depois de um mais recente já
+    // processado não pode reabrir saldo — amount_refunded é cumulativo,
+    // só avança o estado, nunca retrocede.
+    if (amountRefundedTotal < Number(appPurchase.refunded_amount)) {
+      console.warn('[stripe/webhook] Refund event older than current state — ignoring:', appPurchase.id, amountRefundedTotal, '<', appPurchase.refunded_amount)
+      return
+    }
+
     const fullyRefunded = amountRefundedTotal >= Number(appPurchase.amount)
 
-    await admin
+    const { error: appPurchaseUpdateError } = await admin
       .from('app_purchases')
       .update({
         refunded_amount: amountRefundedTotal,
@@ -499,6 +518,9 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
         ...(fullyRefunded ? { status: 'refunded' } : {}),
       })
       .eq('id', appPurchase.id)
+    if (appPurchaseUpdateError) {
+      throw new Error(`[stripe/webhook] failed to update app_purchases refund state: ${appPurchaseUpdateError.message}`)
+    }
 
     // financial_transactions guarda só a fatia de comissão da LOBBY (nunca
     // o valor bruto — mesmo princípio de app_purchases/checkout). O
@@ -509,23 +531,36 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       amountRefundedTotal * (Number(appPurchase.commission_amount) / Number(appPurchase.amount)) * 100
     ) / 100
 
-    const { data: tx } = await admin
+    const { data: tx, error: txSelectError } = await admin
       .from('financial_transactions')
-      .select('amount')
+      .select('amount, status')
       .eq('source_type', 'app_purchases')
       .eq('source_id', appPurchase.id)
       .maybeSingle()
+    if (txSelectError) {
+      throw new Error(`[stripe/webhook] failed to look up financial_transactions for app purchase refund: ${txSelectError.message}`)
+    }
 
     if (tx) {
-      await admin
+      const { error: txUpdateError } = await admin
         .from('financial_transactions')
         .update({
           refunded_amount: commissionRefunded,
-          status: commissionRefunded >= Number(tx.amount) ? 'reembolsado' : 'pago',
+          status: commissionRefunded >= Number(tx.amount) ? 'reembolsado' : tx.status,
           updated_at: new Date().toISOString(),
         })
         .eq('source_type', 'app_purchases')
         .eq('source_id', appPurchase.id)
+      if (txUpdateError) {
+        throw new Error(`[stripe/webhook] failed to update financial_transactions for app purchase refund: ${txUpdateError.message}`)
+      }
+    } else {
+      // Sinal de integridade: toda app_purchases paga deveria ter uma
+      // financial_transactions correspondente (lançada em
+      // handleAppPurchaseCheckoutCompleted). Não impede o reembolso em si
+      // (já confirmado no Stripe e em app_purchases acima), só fica
+      // visível pra investigação manual em vez de sumir sem rastro.
+      console.warn('[stripe/webhook] app purchase paid refund confirmed but no matching financial_transactions row found:', appPurchase.id)
     }
 
     console.info('[stripe/webhook] App purchase refund confirmed:', appPurchase.id, fullyRefunded ? 'total' : 'parcial')

@@ -63,7 +63,7 @@ export default function RefundAppPurchaseModal({ purchase, onClose, onRefunded }
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Não foi possível processar o reembolso.')
-      onRefunded(data.purchase as PaidAppPurchase)
+      onRefunded({ ...purchase, ...(data.purchase as Partial<PaidAppPurchase>) })
       reset()
       onClose()
     } catch (err) {

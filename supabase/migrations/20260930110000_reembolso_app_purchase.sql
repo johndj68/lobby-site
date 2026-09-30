@@ -200,3 +200,67 @@ begin
   return v_payout;
 end;
 $$;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 4) refund_financial_transaction ganha guard contra lançamento type='app'
+--    — achado na revisão final: o RPC genérico (20260927170000) não sabia
+--    da existência do fluxo dedicado de app_purchases (Stripe real +
+--    acesso + repasse) e continuava aceitando reembolsar um lançamento
+--    'app' direto, deixando o sistema incoerente (ledger diz reembolsado,
+--    cliente nunca recebeu o dinheiro de volta via Stripe). A UI (Task 4)
+--    já esconde o botão genérico pra esse tipo — este guard fecha a porta
+--    também no RPC, pra quem chamar direto (API, client desatualizado).
+--    CREATE OR REPLACE sobre a assinatura idêntica — grants existentes
+--    sobrevivem.
+-- ─────────────────────────────────────────────────────────────────────────
+
+create or replace function public.refund_financial_transaction(
+  "p_transaction_id" uuid,
+  "p_amount"          numeric,
+  "p_reason"          text
+)
+returns public.financial_transactions
+language plpgsql security definer
+set search_path to 'public'
+as $$
+declare
+  tx public.financial_transactions;
+begin
+  if not public.is_leader(auth.uid()) then
+    raise exception 'Somente Técnico Líder pode registrar reembolso.';
+  end if;
+  if p_reason is null or length(trim(p_reason)) = 0 then
+    raise exception 'Informe o motivo do reembolso.';
+  end if;
+  if p_amount is null or p_amount <= 0 then
+    raise exception 'Valor de reembolso inválido.';
+  end if;
+
+  select * into tx from public.financial_transactions where id = p_transaction_id for update;
+  if not found then
+    raise exception 'Lançamento não encontrado.';
+  end if;
+  if tx.type = 'app' then
+    raise exception 'Use o fluxo dedicado de reembolso de compra de app (RefundAppPurchaseModal) — este lançamento não pode ser reembolsado por aqui.';
+  end if;
+  if tx.status <> 'pago' then
+    raise exception 'Só é possível reembolsar um lançamento pago.';
+  end if;
+  if p_amount > (tx.amount - tx.refunded_amount) then
+    raise exception 'Valor maior que o saldo ainda reembolsável (R$ %).', (tx.amount - tx.refunded_amount);
+  end if;
+
+  update public.financial_transactions
+    set refunded_amount = tx.refunded_amount + p_amount,
+        status      = case when tx.refunded_amount + p_amount >= tx.amount then 'reembolsado' else status end,
+        notes       = coalesce(notes || E'\n', '') || 'Reembolso de ' || to_char(p_amount, 'FM999999990.00') || ' em ' || to_char(now(), 'DD/MM/YYYY') || ': ' || p_reason,
+        updated_at  = now()
+    where id = p_transaction_id
+    returning * into tx;
+
+  return tx;
+end;
+$$;
+
+revoke execute on function public.refund_financial_transaction(uuid, numeric, text) from public, anon, authenticated;
+grant execute on function public.refund_financial_transaction(uuid, numeric, text) to authenticated;

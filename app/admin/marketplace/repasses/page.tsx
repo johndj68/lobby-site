@@ -12,7 +12,7 @@ export default async function RepassesPage() {
   const [{ data: purchases }, { data: subInvoices }, { data: items }, { data: payouts }] = await Promise.all([
     supabase
       .from('app_purchases')
-      .select('id, partner_id, application_name, plan_name, amount, partner_amount, paid_at')
+      .select('id, partner_id, application_name, plan_name, amount, partner_amount, refunded_amount, paid_at')
       .eq('status', 'paid')
       .not('partner_id', 'is', null)
       .order('paid_at', { ascending: true }),
@@ -82,18 +82,25 @@ export default async function RepassesPage() {
     const status = classifyPurchasePayoutStatus(p.paid_at, coveredIds.has(p.id))
     if (status === 'pago') continue // já repassada, não entra na fila
 
+    // Reembolso parcial confirmado reduz o valor líquido a repassar, na
+    // mesma proporção usada pela RPC create_partner_payout (Etapa 5,
+    // peça 6) — esta tela não pode mostrar um total maior do que o
+    // repasse de verdade vai pagar quando o líder clicar em confirmar.
+    const refundedShare = Math.round(Number(p.refunded_amount ?? 0) * p.partner_amount / p.amount * 100) / 100
+    const netPartnerAmount = p.partner_amount - refundedShare
+
     const g = getGroup(p.partner_id as string)
     const row: EligiblePurchaseRow = {
       id: p.id, kind: 'app_purchase',
       applicationName: p.application_name,
       planName: p.plan_name,
       amount: p.amount,
-      partnerAmount: p.partner_amount,
+      partnerAmount: netPartnerAmount,
       paidAt: p.paid_at,
       status,
     }
-    if (status === 'retido') g.retidoTotal += p.partner_amount
-    else { g.elegivelTotal += p.partner_amount; g.eligiblePurchases.push(row) }
+    if (status === 'retido') g.retidoTotal += netPartnerAmount
+    else { g.elegivelTotal += netPartnerAmount; g.eligiblePurchases.push(row) }
   }
 
   for (const si of subInvoiceRows) {

@@ -99,6 +99,10 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
   const filtered = useMemo(() => filterFinanceTransactions(transactions, filters), [transactions, filters])
   // Métricas calculadas a partir das transações filtradas
   const metrics  = useMemo(() => calculateFinanceMetrics(filtered), [filtered])
+  // Apps pagos ainda com saldo reembolsável (exclui os totalmente
+  // reembolsados) — usado tanto na contagem do cabeçalho quanto na lista
+  // abaixo, pra nunca divergir entre os dois.
+  const visibleAppPurchases = useMemo(() => paidAppPurchases.filter(p => p.refunded_amount < p.amount), [paidAppPurchases])
   // Detecta se há algum filtro ativo (para exibir contador de resultados)
   const hasActiveFilters = filters.period !== 'todos' || filters.type !== 'todos' || filters.status !== 'todos'
     || filters.paymentMethod !== 'todos' || filters.search.trim() !== ''
@@ -345,17 +349,17 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
         )}
 
         {/* ── APPS VENDIDOS: lista compacta pra reembolso via Stripe (parcial ou total) ── */}
-        {paidAppPurchases.length > 0 && (
+        {visibleAppPurchases.length > 0 && (
           <motion.section
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
             className="rounded-3xl border border-white/[0.08] bg-[#111827]/80 p-5"
             aria-label="Apps vendidos"
           >
             <h2 className="mb-3 text-sm font-bold text-white/70">
-              Apps vendidos ({paidAppPurchases.length})
+              Apps vendidos ({visibleAppPurchases.length})
             </h2>
             <div className="max-h-64 space-y-2 overflow-y-auto">
-              {paidAppPurchases.filter(p => p.refunded_amount < p.amount).map(p => (
+              {visibleAppPurchases.map(p => (
                 <div key={p.id} className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white">{p.application_name} — {p.plan_name}</p>

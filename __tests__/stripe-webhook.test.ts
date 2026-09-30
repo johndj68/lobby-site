@@ -925,6 +925,7 @@ describe('POST /api/stripe/webhook', () => {
     // comissão correspondente.
     const makeRefundAdmin = (opts: {
       appPurchase?: Record<string, unknown> | null
+      appPurchaseError?: Record<string, unknown> | null
       financialTx?: Record<string, unknown> | null
     } = {}) => {
       const updated: Record<string, unknown[]> = {}
@@ -935,12 +936,16 @@ describe('POST /api/stripe/webhook', () => {
           chain.select = () => chain
           chain.eq     = () => chain
           chain.update = (payload: unknown) => { updated[table] = updated[table] ?? []; updated[table].push(payload); return chain }
-          chain.maybeSingle = vi.fn().mockResolvedValue({
-            data: table === 'app_purchases'      ? (opts.appPurchase !== undefined ? opts.appPurchase : makeAppPurchaseRow())
-                : table === 'financial_transactions' ? (opts.financialTx !== undefined ? opts.financialTx : { amount: 20 })
-                : null,
-            error: null,
-          })
+          chain.maybeSingle = vi.fn().mockResolvedValue(
+            table === 'app_purchases' && opts.appPurchaseError
+              ? { data: null, error: opts.appPurchaseError }
+              : {
+                  data: table === 'app_purchases'      ? (opts.appPurchase !== undefined ? opts.appPurchase : makeAppPurchaseRow())
+                      : table === 'financial_transactions' ? (opts.financialTx !== undefined ? opts.financialTx : { amount: 20, status: 'pago' })
+                      : null,
+                  error: null,
+                }
+          )
           return chain
         }),
         rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -1009,6 +1014,48 @@ describe('POST /api/stripe/webhook', () => {
       const res = await POST(makeReq())
       expect(res.status).toBe(200)
       expect(admin.updated['app_purchases']).toBeUndefined()
+    })
+
+    it('redelivery fora de ordem (evento mais antigo que o estado atual) não atualiza app_purchases', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      // Purchase já tem refunded_amount: 60 (um reembolso mais recente já
+      // processado). Evento reentregue traz amount_refunded: 3000 (=30),
+      // menor que 60 — deve ser ignorado, nunca reabrir saldo.
+      const admin = makeRefundAdmin({ appPurchase: makeAppPurchaseRow({ refunded_amount: 60 }) })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeRefundEvent(3000) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      expect(admin.updated['app_purchases']).toBeUndefined()
+    })
+
+    it('retorna 500 quando a leitura de app_purchases falha', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeRefundAdmin({ appPurchaseError: { message: 'select error' } })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeRefundEvent(10000) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res  = await POST(makeReq())
+      const body = await res.json()
+      expect(res.status).toBe(500)
+      expect(body.error).toBeTruthy()
+    })
+
+    it('avisa via console.warn quando não há financial_transactions correspondente', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const admin = makeRefundAdmin({ financialTx: null })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeRefundEvent(3000) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      expect(warnSpy).toHaveBeenCalled()
+      warnSpy.mockRestore()
     })
 
   })
