@@ -6,6 +6,15 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 /**
+ * "Teste"/"Produção" derivado do prefixo da própria chave configurada — não
+ * existe flag de ambiente separada no projeto (uma única STRIPE_SECRET_KEY).
+ * Nunca expor a chave em si, só a palavra derivada.
+ */
+export function getStripeEnvironmentLabel(): 'Teste' | 'Produção' {
+  return process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_') ? 'Produção' : 'Teste'
+}
+
+/**
  * Retorna o Stripe Customer do usuário, criando se ainda não existir.
  * Assinatura (diferente de checkout avulso de crédito/campanha/app)
  * precisa de um Customer persistente — é o que o Stripe usa pra agrupar

@@ -6,6 +6,7 @@ import {
   calculateFinanceMetrics,
   getFinanceTypeStyle,
   getFinanceStatusStyle,
+  escapeCsvField,
 } from '@/lib/finance'
 import type { FinancialTransaction, FinanceFilters } from '@/lib/finance'
 
@@ -352,5 +353,25 @@ describe('filterFinanceTransactions — períodos com fake timers', () => {
   it('period=todos não filtra por data', () => {
     const result = filterFinanceTransactions(rows, { ...base, period: 'todos' })
     expect(result).toHaveLength(4)
+  })
+})
+
+describe('escapeCsvField', () => {
+  it('escapa aspas duplas normalmente', () => {
+    expect(escapeCsvField('João "Silva"')).toBe('"João ""Silva"""')
+  })
+
+  it('neutraliza valor começando com = (CSV/fórmula injection)', () => {
+    expect(escapeCsvField('=cmd|/c calc')).toBe('"\'=cmd|/c calc"')
+  })
+
+  it('neutraliza valor começando com +, - e @', () => {
+    expect(escapeCsvField('+1234')).toBe('"\'+1234"')
+    expect(escapeCsvField('-1234')).toBe('"\'-1234"')
+    expect(escapeCsvField('@SUM(A1:A2)')).toBe('"\'@SUM(A1:A2)"')
+  })
+
+  it('não mexe em valor normal', () => {
+    expect(escapeCsvField('Compra de e-book')).toBe('"Compra de e-book"')
   })
 })

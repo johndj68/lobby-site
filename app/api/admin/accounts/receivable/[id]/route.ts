@@ -1,33 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { requireLeaderApi, ApiAuthError } from '@/lib/services/admin-auth'
 
+// Mesma regra de accounts_payable/[id]/route.ts — só edição pré-liquidação,
+// concorrência otimista via .eq('amount_settled', 0).eq('status', 'pendente').
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
   const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
-
-  const { data: profile } = await supabase.from('profiles').select('role, is_leader').eq('id', user.id).single()
-  if (profile?.role !== 'technician' || profile.is_leader !== true) {
-    return NextResponse.json({ error: 'Contas a receber requer técnico líder.' }, { status: 403 })
+  let userId: string
+  try {
+    const { user } = await requireLeaderApi(supabase)
+    userId = user.id
+  } catch (err) {
+    if (err instanceof ApiAuthError) return NextResponse.json({ error: err.message }, { status: err.status })
+    throw err
   }
 
   const body = await req.json().catch(() => null)
-  const status = body?.status as string | undefined
-  if (!status || !['pendente', 'recebido', 'cancelado'].includes(status)) {
-    return NextResponse.json({ error: 'Status inválido.' }, { status: 400 })
-  }
+  if (!body) return NextResponse.json({ error: 'Corpo inválido.' }, { status: 400 })
+  const { description, amount, payerName, dueDate, notes, attachmentPath, reference } = body
 
-  const update: Record<string, unknown> = { status }
-  if (status === 'recebido') {
-    update.received_at = new Date().toISOString()
-    update.received_by = user.id
+  const update: Record<string, unknown> = { updated_by: userId, updated_at: new Date().toISOString() }
+  if (description !== undefined) {
+    if (typeof description !== 'string' || !description.trim()) return NextResponse.json({ error: 'Descrição inválida.' }, { status: 400 })
+    update.description = description.trim()
   }
+  if (amount !== undefined) {
+    if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) return NextResponse.json({ error: 'Valor inválido.' }, { status: 400 })
+    update.amount = amount
+  }
+  if (payerName !== undefined) update.payer_name = payerName || null
+  if (dueDate !== undefined) update.due_date = dueDate || null
+  if (notes !== undefined) update.notes = notes || null
+  if (attachmentPath !== undefined) update.attachment_path = attachmentPath || null
+  if (reference !== undefined) update.reference = reference || null
 
-  const { error } = await supabase.from('accounts_receivable').update(update).eq('id', id)
+  const { data: rows, error } = await supabase
+    .from('accounts_receivable')
+    .update(update)
+    .eq('id', id).eq('amount_settled', 0).eq('status', 'pendente')
+    .select('id')
   if (error) return NextResponse.json({ error: 'Não foi possível atualizar.' }, { status: 500 })
+  if (!rows || rows.length === 0) {
+    return NextResponse.json({ error: 'Conta não encontrada ou já liquidada/cancelada — não é mais editável.' }, { status: 409 })
+  }
+
+  await supabase.from('account_audit_events').insert({ account_kind: 'receivable', account_id: id, actor_id: userId, action: 'editado' })
+
   return NextResponse.json({ ok: true })
 }

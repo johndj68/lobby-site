@@ -9,10 +9,11 @@ import { toast } from 'sonner'
 // Ícones da interface
 import {
   Wallet, Plus, Download, TrendingUp, TrendingDown, BookOpen,
-  Briefcase, MapPin, Receipt, Users, Search, ChevronDown, Trash2, CheckCircle2, AlertTriangle, ScanSearch,
+  Briefcase, MapPin, Receipt, Users, Search, ChevronDown, Trash2, CheckCircle2, AlertTriangle,
 } from 'lucide-react'
 // Layout padrão das páginas admin
 import AdminShell from '@/components/layout/AdminShell'
+import FinanceiroSubNav from '@/components/admin/finance/FinanceiroSubNav'
 // Modal de confirmação de exclusão
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
 // Cliente do Supabase para operações no banco
@@ -227,6 +228,8 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
     <AdminShell user={user} profile={profile}>
       <div className="space-y-6">
 
+        <FinanceiroSubNav />
+
         {/* ── HEADER: título, botão exportar CSV e botão nova entrada ─── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
           className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -240,18 +243,6 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            {/* Conciliação manual Stripe vs local, sob demanda */}
-            <a href="/admin/financeiro/conciliacao"
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/60 transition-all hover:border-white/20 hover:text-white">
-              <ScanSearch size={15} aria-hidden="true" />
-              Conciliação
-            </a>
-            {/* Contas a pagar/receber (lançamentos manuais + repasse/cobranças pendentes já rastreados) */}
-            <a href="/admin/financeiro/contas"
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/60 transition-all hover:border-white/20 hover:text-white">
-              <Receipt size={15} aria-hidden="true" />
-              Contas
-            </a>
             {/* Disputas Stripe (congeladas automaticamente) — registro fica em tela própria */}
             <a href="/admin/disputas"
               className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/60 transition-all hover:border-white/20 hover:text-white">

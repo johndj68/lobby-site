@@ -1,7 +1,19 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireLeaderSession } from '@/lib/services/profile'
 import { classifyPurchasePayoutStatus } from '@/lib/services/payouts'
-import ContasClient, { type AccountRow } from './ContasClient'
+import ContasClient from './ContasClient'
+import type { AccountEntry, AccountKind } from '@/types'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapRow(row: any, kind: AccountKind): AccountEntry {
+  return {
+    id: row.id, kind, description: row.description, amount: Number(row.amount),
+    amountSettled: Number(row.amount_settled ?? 0), category: row.category ?? null,
+    payerName: row.payer_name ?? null, reference: row.reference ?? null, dueDate: row.due_date, status: row.status,
+    notes: row.notes, attachmentPath: row.attachment_path ?? null,
+    createdAt: row.created_at, updatedAt: row.updated_at ?? row.created_at,
+  }
+}
 
 export default async function ContasPage() {
   const supabase = await createServerSupabaseClient()
@@ -57,8 +69,8 @@ export default async function ContasPage() {
     <ContasClient
       user={user}
       profile={profile}
-      payable={(payable ?? []) as AccountRow[]}
-      receivable={(receivable ?? []) as AccountRow[]}
+      payable={(payable ?? []).map(r => mapRow(r, 'payable'))}
+      receivable={(receivable ?? []).map(r => mapRow(r, 'receivable'))}
       payoutPendingTotal={payoutPendingTotal}
       payoutPendingCount={payoutPendingCount}
       chargesPendingTotal={creditsPendingTotal + ebooksPendingTotal}

@@ -438,6 +438,136 @@ export interface FinancialTransaction {
   updated_at:           string
 }
 
+// Conciliação Stripe × registros locais (migration 20260929120000). Só os 4
+// tipos de operação abaixo são realmente casáveis via identificador Stripe —
+// e-books não têm coluna de payment_intent, ficam de fora por desenho, não
+// por esquecimento.
+export type ReconciliationOperationType = 'creditos' | 'apps' | 'destaques' | 'assinaturas'
+
+// 8 categorias de resultado por item checado. 'nao_verificavel' cobre tanto
+// runs parciais (Stripe não varrido por completo) quanto itens na borda do
+// período (ambiguidade de fuso) — nunca uma afirmação falsa de ausência.
+export type ReconciliationResultType =
+  | 'correspondente' | 'diferenca_valor' | 'diferenca_moeda' | 'diferenca_status'
+  | 'sem_registro_local' | 'sem_correspondencia_provedor' | 'possivel_duplicidade' | 'nao_verificavel'
+
+export type ReconciliationRunStatus = 'em_processamento' | 'concluido' | 'concluido_parcialmente' | 'falhou'
+
+export interface ReconciliationCurrencySummary {
+  currency:         string
+  providerAmount:   number
+  localAmount:      number
+  difference:       number
+}
+
+export interface ReconciliationCoverage {
+  tablesChecked:     ReconciliationOperationType[]
+  stripePagesFetched: number
+  truncated:          boolean
+}
+
+// Linha de reconciliation_items — um item checado (correspondente ou não).
+export interface ReconciliationItem {
+  id:                       string
+  runId:                    string
+  resultType:               ReconciliationResultType
+  operationType:            ReconciliationOperationType | null
+  stripeChargeId:           string | null
+  stripePaymentIntentId:    string | null
+  providerAmount:           number | null
+  providerCurrency:         string | null
+  providerCreatedAt:        string | null
+  localTable:               string | null
+  localId:                  string | null
+  localAmount:              number | null
+  localCurrency:            string | null
+  localStatus:              string | null
+  localRefundedAmount:      number | null
+  localCreatedAt:           string | null
+  note:                     string | null
+}
+
+// Linha de reconciliation_runs — cabeçalho de uma execução de conciliação.
+// Contas a pagar/receber (migration 20260930100000). `kind` distingue as 2
+// tabelas de origem (accounts_payable/accounts_receivable) numa listagem
+// unificada no client — não existe union real no banco.
+export type AccountKind   = 'payable' | 'receivable'
+export type AccountStatus = 'pendente' | 'pago' | 'recebido' | 'parcial' | 'cancelado'
+
+export interface AccountEntry {
+  id:              string
+  kind:            AccountKind
+  description:     string
+  amount:          number
+  amountSettled:   number
+  category:        string | null   // payable: categoria/fornecedor
+  payerName:       string | null   // receivable: pagador
+  reference:       string | null
+  dueDate:         string | null
+  status:          AccountStatus
+  notes:           string | null
+  attachmentPath:  string | null
+  createdAt:       string
+  updatedAt:       string
+}
+
+export interface AccountSettlement {
+  id:              string
+  accountKind:     AccountKind
+  accountId:       string
+  amount:          number
+  effectiveDate:   string
+  paymentMethod:   string | null
+  reference:       string | null
+  receiptPath:     string | null
+  notes:           string | null
+  createdBy:       string
+  reversedAt:      string | null
+  reversedBy:      string | null
+  reversalReason:  string | null
+  createdAt:       string
+}
+
+export type AccountAuditAction = 'criado' | 'editado' | 'liquidado' | 'estorno_liquidacao' | 'cancelado'
+
+export interface AccountAuditEvent {
+  id:              string
+  accountKind:     AccountKind
+  accountId:       string
+  actorId:         string | null
+  action:          AccountAuditAction
+  amount:          number | null
+  previousStatus:  string | null
+  newStatus:       string | null
+  reason:          string | null
+  createdAt:       string
+}
+
+export interface ReconciliationRun {
+  id:                    string
+  requestedBy:           string
+  provider:              string
+  environment:           'test' | 'live'
+  periodStart:           string
+  periodEnd:             string
+  timezone:              string
+  operationTypes:        ReconciliationOperationType[]
+  comparisonRuleVersion: string
+  status:                ReconciliationRunStatus
+  startedAt:             string
+  finishedAt:            string | null
+  checkedCount:          number
+  matchedCount:          number
+  divergenceCount:       number
+  noLocalMatchCount:     number
+  noProviderMatchCount:  number
+  notVerifiableCount:    number
+  currencySummary:       ReconciliationCurrencySummary[]
+  coverage:              ReconciliationCoverage
+  limitations:           string[]
+  errorMessage:          string | null
+}
+
 // ── Sistema de créditos ──────────────────────────────────────────────
 
 // Tipo de movimentação na carteira de créditos do cliente.
