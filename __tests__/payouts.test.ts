@@ -18,6 +18,16 @@ describe('classifyPurchasePayoutStatus', () => {
     expect(classifyPurchasePayoutStatus(paidAt, false)).toBe('elegivel')
   })
 
+  it('classifica como elegível exatamente no limite de 16 dias', () => {
+    const paidAt = new Date(Date.now() - 16 * 86400_000 - 1000).toISOString()
+    expect(classifyPurchasePayoutStatus(paidAt, false)).toBe('elegivel')
+  })
+
+  it('classifica como retido um pouco antes do limite de 16 dias', () => {
+    const paidAt = new Date(Date.now() - (16 * 86400_000 - 1000)).toISOString()
+    expect(classifyPurchasePayoutStatus(paidAt, false)).toBe('retido')
+  })
+
   it('classifica como pago quando já coberto por repasse confirmado, mesmo dentro da retenção', () => {
     const paidAt = new Date(Date.now() - 1 * 86400_000).toISOString()
     expect(classifyPurchasePayoutStatus(paidAt, true)).toBe('pago')

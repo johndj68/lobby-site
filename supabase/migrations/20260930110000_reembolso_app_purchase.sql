@@ -136,7 +136,7 @@ begin
     perform 1 from public.app_purchases where id = any(p_app_purchase_ids) for update;
 
     select count(*), coalesce(sum(
-        ap.partner_amount - round(ap.refunded_amount * ap.partner_amount / ap.amount)
+        ap.partner_amount - round(ap.refunded_amount * ap.partner_amount / ap.amount, 2)
       ), 0)
       into v_app_valid_count, v_app_total
     from public.app_purchases ap
@@ -185,7 +185,7 @@ begin
 
   if v_app_requested > 0 then
     insert into public.partner_payout_items (payout_id, app_purchase_id, amount)
-    select v_payout.id, ap.id, ap.partner_amount - round(ap.refunded_amount * ap.partner_amount / ap.amount)
+    select v_payout.id, ap.id, ap.partner_amount - round(ap.refunded_amount * ap.partner_amount / ap.amount, 2)
     from public.app_purchases ap
     where ap.id = any(p_app_purchase_ids);
   end if;
