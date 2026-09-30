@@ -85,7 +85,11 @@ export default function FinanceTransactionTable({ transactions, onView, onEdit, 
                   <Ban size={14} aria-hidden="true" />
                 </button>
               )}
-              {t.status === 'pago' && t.refunded_amount < t.amount && (
+              {/* type='app' tem fluxo de reembolso dedicado (Stripe real +
+                  acesso + repasse) na seção "Apps vendidos" — o botão
+                  genérico aqui só mexeria no lançamento de comissão,
+                  nunca no Stripe nem no acesso do comprador. */}
+              {t.status === 'pago' && t.refunded_amount < t.amount && t.type !== 'app' && (
                 <button type="button" onClick={() => onRefund(t)} aria-label="Reembolsar"
                   className="rounded-lg bg-red-500/10 p-2 text-red-400 transition-all hover:bg-red-500/20">
                   <Undo2 size={14} aria-hidden="true" />
