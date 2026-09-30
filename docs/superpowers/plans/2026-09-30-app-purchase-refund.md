@@ -308,6 +308,8 @@ Run: `supabase db push --linked`
 
 This is a schema change to the live database — confirm the diff it prints before accepting. It adds columns/constraints (additive, safe) and replaces two functions (`refund_app_purchase` new, `create_partner_payout` same signature — existing grants on `create_partner_payout` survive a `CREATE OR REPLACE`).
 
+**Deploy ordering is load-bearing:** this push must happen BEFORE the application code from Tasks 2-5 is deployed, not after. Every query in those tasks that selects the new columns (`refunded_amount`/`refund_status` on `app_purchases`) degrades silently, not loudly, if the migration isn't live yet — `page.tsx`'s select fails and the "Apps vendidos" section is just absent, the admin route's select fails and returns a generic "Compra não encontrada", and the webhook's select fails and the refund branch no-ops. None of these crash; they just don't work. Push the migration first.
+
 - [ ] **Step 6: Commit**
 
 ```bash
