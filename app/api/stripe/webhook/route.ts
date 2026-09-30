@@ -471,6 +471,64 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       .eq('id', creditPurchase.id)
 
     console.info('[stripe/webhook] Credit purchase refund confirmed:', creditPurchase.id, fullyRefunded ? 'total' : 'parcial')
+    return
+  }
+
+  // Reembolso de compra de app — mesmo padrão idempotente de
+  // credit_purchases acima. Janela de 15 dias (refund_app_purchase) e
+  // retenção de repasse de 16 dias garantem que isso nunca acontece
+  // depois de um repasse já confirmado (spec: 2026-09-30-app-purchase-
+  // refund-design.md) — sem necessidade de clawback.
+  const { data: appPurchase } = await admin
+    .from('app_purchases')
+    .select('id, amount, commission_amount, refunded_amount, refund_status')
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .maybeSingle()
+  if (appPurchase) {
+    if (appPurchase.refund_status === 'refunded') return // redelivery — já processado
+
+    const amountRefundedTotal = charge.amount_refunded / 100
+    const fullyRefunded = amountRefundedTotal >= Number(appPurchase.amount)
+
+    await admin
+      .from('app_purchases')
+      .update({
+        refunded_amount: amountRefundedTotal,
+        refund_status: fullyRefunded ? 'refunded' : null,
+        refunded_at: fullyRefunded ? new Date().toISOString() : null,
+        ...(fullyRefunded ? { status: 'refunded' } : {}),
+      })
+      .eq('id', appPurchase.id)
+
+    // financial_transactions guarda só a fatia de comissão da LOBBY (nunca
+    // o valor bruto — mesmo princípio de app_purchases/checkout). O
+    // reembolso é descontado na mesma proporção do valor bruto devolvido
+    // ao cliente, reaproveitando a coluna genérica refunded_amount já
+    // criada em 20260927170000_reembolso_parcial.sql.
+    const commissionRefunded = Math.round(
+      amountRefundedTotal * (Number(appPurchase.commission_amount) / Number(appPurchase.amount)) * 100
+    ) / 100
+
+    const { data: tx } = await admin
+      .from('financial_transactions')
+      .select('amount')
+      .eq('source_type', 'app_purchases')
+      .eq('source_id', appPurchase.id)
+      .maybeSingle()
+
+    if (tx) {
+      await admin
+        .from('financial_transactions')
+        .update({
+          refunded_amount: commissionRefunded,
+          status: commissionRefunded >= Number(tx.amount) ? 'reembolsado' : 'pago',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('source_type', 'app_purchases')
+        .eq('source_id', appPurchase.id)
+    }
+
+    console.info('[stripe/webhook] App purchase refund confirmed:', appPurchase.id, fullyRefunded ? 'total' : 'parcial')
   }
 }
 

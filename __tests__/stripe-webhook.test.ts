@@ -895,4 +895,121 @@ describe('POST /api/stripe/webhook', () => {
     })
 
   })
+
+  // ── charge.refunded de compra de app (reembolso automatizado) ─────────────
+
+  describe('charge.refunded de compra de app', () => {
+
+    const makeRefundEvent = (amountRefundedCents: number, overrides: Record<string, unknown> = {}) => ({
+      type: 'charge.refunded',
+      id:   'evt_refund_test',
+      data: {
+        object: {
+          id:              'ch_test_123',
+          object:          'charge',
+          amount_refunded: amountRefundedCents,
+          payment_intent:  'pi_app_refund_test',
+          ...overrides,
+        },
+      },
+    })
+
+    const makeAppPurchaseRow = (overrides: Record<string, unknown> = {}) => ({
+      id: 'app-purchase-refund-1', amount: 100, commission_amount: 20,
+      refunded_amount: 0, refund_status: null, ...overrides,
+    })
+
+    // Mock flexível: campaign_purchases/credit_purchases sempre vazios
+    // (não é o caso testado aqui), app_purchases responde com a linha
+    // configurada, financial_transactions responde com o lançamento de
+    // comissão correspondente.
+    const makeRefundAdmin = (opts: {
+      appPurchase?: Record<string, unknown> | null
+      financialTx?: Record<string, unknown> | null
+    } = {}) => {
+      const updated: Record<string, unknown[]> = {}
+      return {
+        updated,
+        from: vi.fn((table: string) => {
+          const chain: Record<string, any> = {} // eslint-disable-line @typescript-eslint/no-explicit-any
+          chain.select = () => chain
+          chain.eq     = () => chain
+          chain.update = (payload: unknown) => { updated[table] = updated[table] ?? []; updated[table].push(payload); return chain }
+          chain.maybeSingle = vi.fn().mockResolvedValue({
+            data: table === 'app_purchases'      ? (opts.appPurchase !== undefined ? opts.appPurchase : makeAppPurchaseRow())
+                : table === 'financial_transactions' ? (opts.financialTx !== undefined ? opts.financialTx : { amount: 20 })
+                : null,
+            error: null,
+          })
+          return chain
+        }),
+        rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
+    }
+
+    it('reembolso parcial: atualiza refunded_amount, mantém status paid e desconta comissão proporcional', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeRefundAdmin()
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeRefundEvent(3000) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+
+      const appUpdate = admin.updated['app_purchases']?.[0] as Record<string, unknown>
+      expect(appUpdate.refunded_amount).toBe(30)
+      expect(appUpdate.refund_status).toBeNull()
+      expect(appUpdate.status).toBeUndefined() // não mexe em status quando parcial
+
+      const txUpdate = admin.updated['financial_transactions']?.[0] as Record<string, unknown>
+      expect(txUpdate.refunded_amount).toBe(6) // 30 * (20/100)
+      expect(txUpdate.status).toBe('pago') // não cobre o total da linha (20) ainda
+    })
+
+    it('reembolso total: marca status refunded (revoga acesso) e refund_status refunded', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeRefundAdmin()
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeRefundEvent(10000) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+
+      const appUpdate = admin.updated['app_purchases']?.[0] as Record<string, unknown>
+      expect(appUpdate.refunded_amount).toBe(100)
+      expect(appUpdate.refund_status).toBe('refunded')
+      expect(appUpdate.status).toBe('refunded')
+
+      const txUpdate = admin.updated['financial_transactions']?.[0] as Record<string, unknown>
+      expect(txUpdate.refunded_amount).toBe(20)
+      expect(txUpdate.status).toBe('reembolsado')
+    })
+
+    it('redelivery de reembolso já total não processa de novo', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeRefundAdmin({ appPurchase: makeAppPurchaseRow({ refund_status: 'refunded', refunded_amount: 100 }) })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeRefundEvent(10000) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      expect(admin.updated['app_purchases']).toBeUndefined()
+    })
+
+    it('sem app_purchases correspondente (é crédito/campanha) não faz nada nesse branch', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeRefundAdmin({ appPurchase: null })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeRefundEvent(10000) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      expect(admin.updated['app_purchases']).toBeUndefined()
+    })
+
+  })
 })
