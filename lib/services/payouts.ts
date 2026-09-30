@@ -1,9 +1,14 @@
 /**
- * Repasse manual ao parceiro. A regra de verdade (14 dias de retenção,
+ * Repasse manual ao parceiro. A regra de verdade (16 dias de retenção,
  * elegibilidade, soma) vive na RPC create_partner_payout — este arquivo só
  * espelha a constante pra exibição/filtro no client.
+ *
+ * 16 dias, não 14: a janela de reembolso de app_purchases é de 15 dias
+ * (refund_app_purchase) — a retenção de repasse fica sempre 1 dia depois
+ * pra garantir que as duas janelas nunca se sobrepõem (sem isso, existiria
+ * um caso de "já repassado mas ainda reembolsável" que exigiria clawback).
  */
-export const PAYOUT_RETENTION_DAYS = 14
+export const PAYOUT_RETENTION_DAYS = 16
 
 export type PartnerPayoutStatus = 'confirmado' | 'revertido'
 
