@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireLeaderSession } from '@/lib/services/profile'
-import { classifyPurchasePayoutStatus } from '@/lib/services/payouts'
+import { classifyPurchasePayoutStatus, calculateAppPurchasePayoutAmounts } from '@/lib/services/payouts'
 import ContasClient from './ContasClient'
 import type { AccountEntry, AccountKind } from '@/types'
 
@@ -31,7 +31,7 @@ export default async function ContasPage() {
   ] = await Promise.all([
     supabase.from('accounts_payable').select('*').order('status').order('due_date', { ascending: true, nullsFirst: false }),
     supabase.from('accounts_receivable').select('*').order('status').order('due_date', { ascending: true, nullsFirst: false }),
-    supabase.from('app_purchases').select('id, partner_amount, reserve_amount, reserve_status, paid_at').eq('status', 'paid').not('partner_id', 'is', null),
+    supabase.from('app_purchases').select('id, amount, partner_amount, reserve_amount, reserve_status, refunded_amount, paid_at').eq('status', 'paid').not('partner_id', 'is', null),
     supabase.from('subscription_invoices').select('id, partner_amount, paid_at, subscriptions(partner_id)'),
     supabase.from('partner_payout_items').select('app_purchase_id, subscription_invoice_id, kind, partner_payouts(status)'),
     supabase.from('credit_purchases').select('id, amount_paid').eq('status', 'pending'),
@@ -55,16 +55,22 @@ export default async function ContasPage() {
   let payoutPendingCount = 0
   for (const p of appPurchases ?? []) {
     if (!p.paid_at) continue
-    const mainAmount = Number(p.partner_amount) - Number(p.reserve_amount ?? 0)
+    // Mesma fórmula da RPC create_partner_payout, centralizada em
+    // lib/services/payouts.ts — nunca recalcular aqui por conta própria
+    // (já divergiu desta tela antes: mainAmount não descontava reembolso
+    // parcial, diferente da tela de repasses).
+    const { mainNet, reserveNet } = calculateAppPurchasePayoutAmounts({
+      amount: p.amount, partnerAmount: Number(p.partner_amount),
+      reserveAmount: Number(p.reserve_amount ?? 0), refundedAmount: Number(p.refunded_amount ?? 0),
+    })
     const status = classifyPurchasePayoutStatus(p.paid_at, coveredIds.has(p.id))
-    if (status !== 'pago') { payoutPendingTotal += mainAmount; payoutPendingCount++ }
+    if (status !== 'pago') { payoutPendingTotal += mainNet; payoutPendingCount++ }
     // Reserva retida é passivo real até ser liberada (120 dias) ou perdida
     // em disputa (clawed_back) — soma aqui independente da janela, porque
     // "pendente de pagar" inclui dinheiro ainda não liberado, não só o que
-    // já está na fila de hoje (achado na revisão final: reserva nunca
-    // entrava nesse total, subestimando o passivo).
+    // já está na fila de hoje.
     if (p.reserve_status === 'held' && Number(p.reserve_amount) > 0) {
-      payoutPendingTotal += Number(p.reserve_amount)
+      payoutPendingTotal += reserveNet
       payoutPendingCount++
     }
   }

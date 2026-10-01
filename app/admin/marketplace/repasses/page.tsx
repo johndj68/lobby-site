@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireLeaderSession } from '@/lib/services/profile'
 import { partnerDisplayName } from '@/lib/partners'
-import { classifyPurchasePayoutStatus, DISPUTE_RESERVE_WINDOW_DAYS } from '@/lib/services/payouts'
+import { classifyPurchasePayoutStatus, calculateAppPurchasePayoutAmounts, DISPUTE_RESERVE_WINDOW_DAYS } from '@/lib/services/payouts'
 import RepassesClient, { type PartnerGroup, type EligiblePurchaseRow, type PayoutHistoryRow } from './RepassesClient'
 
 export default async function RepassesPage() {
@@ -86,16 +86,13 @@ export default async function RepassesPage() {
     const status = classifyPurchasePayoutStatus(p.paid_at, coveredIds.has(p.id))
     if (status === 'pago') continue // já repassada, não entra na fila
 
-    // Reembolso parcial confirmado reduz o valor líquido a repassar, na
-    // mesma proporção usada pela RPC create_partner_payout (Etapa 5,
-    // peça 6) — esta tela não pode mostrar um total maior do que o
-    // repasse de verdade vai pagar quando o líder clicar em confirmar.
-    // Base é partner_amount MENOS a reserva (Etapa 5, peça 7) — a reserva
-    // nunca faz parte do que a fatia principal paga, ela só é liberada
-    // separadamente quando elegível (ver o segundo loop logo abaixo).
-    const mainBase = Number(p.partner_amount) - Number(p.reserve_amount ?? 0)
-    const refundedShare = Math.round(Number(p.refunded_amount ?? 0) * mainBase / p.amount * 100) / 100
-    const netPartnerAmount = mainBase - refundedShare
+    // Mesma fórmula da RPC create_partner_payout, centralizada em
+    // lib/services/payouts.ts — esta tela não pode mostrar um total maior
+    // do que o repasse de verdade vai pagar quando o líder confirmar.
+    const { mainNet: netPartnerAmount } = calculateAppPurchasePayoutAmounts({
+      amount: p.amount, partnerAmount: Number(p.partner_amount),
+      reserveAmount: Number(p.reserve_amount ?? 0), refundedAmount: Number(p.refunded_amount ?? 0),
+    })
 
     const g = getGroup(p.partner_id as string)
     const row: EligiblePurchaseRow = {
@@ -121,8 +118,10 @@ export default async function RepassesPage() {
     const reserveEligible = Date.now() - new Date(p.paid_at).getTime() >= RESERVE_WINDOW_MS
     if (!reserveEligible) continue // ainda dentro dos 120 dias — não aparece na fila nem como "retido" (reserva não tem indicador visual de retido nesta leva, só aparece quando fica elegível)
 
-    const refundedShare = Math.round(Number(p.refunded_amount ?? 0) * p.reserve_amount / p.amount * 100) / 100
-    const netReserveAmount = p.reserve_amount - refundedShare
+    const { reserveNet: netReserveAmount } = calculateAppPurchasePayoutAmounts({
+      amount: p.amount, partnerAmount: Number(p.partner_amount),
+      reserveAmount: p.reserve_amount, refundedAmount: Number(p.refunded_amount ?? 0),
+    })
 
     const g = getGroup(p.partner_id as string)
     const row: EligiblePurchaseRow = {
