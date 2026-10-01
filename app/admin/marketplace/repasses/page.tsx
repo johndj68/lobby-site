@@ -12,7 +12,7 @@ export default async function RepassesPage() {
   const [{ data: purchases }, { data: subInvoices }, { data: items }, { data: payouts }] = await Promise.all([
     supabase
       .from('app_purchases')
-      .select('id, partner_id, application_name, plan_name, amount, partner_amount, refunded_amount, paid_at')
+      .select('id, partner_id, application_name, plan_name, amount, partner_amount, refunded_amount, paid_at, reserve_amount, reserve_status')
       .eq('status', 'paid')
       .not('partner_id', 'is', null)
       .order('paid_at', { ascending: true }),
@@ -101,6 +101,33 @@ export default async function RepassesPage() {
     }
     if (status === 'retido') g.retidoTotal += netPartnerAmount
     else { g.elegivelTotal += netPartnerAmount; g.eligiblePurchases.push(row) }
+  }
+
+  // Reserva de disputa: mesma fila do parceiro, mas com sua própria
+  // janela de 120 dias e seu próprio kind — entra separada da fatia
+  // principal porque pode virar elegível bem depois (spec: 2026-09-30-
+  // partner-dispute-reserve-design.md).
+  const RESERVE_WINDOW_MS = 120 * 86400_000
+  for (const p of purchases ?? []) {
+    if (!p.paid_at || p.reserve_status !== 'held' || !p.reserve_amount || p.reserve_amount <= 0) continue
+    const reserveEligible = Date.now() - new Date(p.paid_at).getTime() >= RESERVE_WINDOW_MS
+    if (!reserveEligible) continue // ainda dentro dos 120 dias — não aparece na fila nem como "retido" (reserva não tem indicador visual de retido nesta leva, só aparece quando fica elegível)
+
+    const refundedShare = Math.round(Number(p.refunded_amount ?? 0) * p.reserve_amount / p.amount * 100) / 100
+    const netReserveAmount = p.reserve_amount - refundedShare
+
+    const g = getGroup(p.partner_id as string)
+    const row: EligiblePurchaseRow = {
+      id: p.id, kind: 'app_purchase_reserve',
+      applicationName: p.application_name,
+      planName: `${p.plan_name} (reserva)`,
+      amount: p.amount,
+      partnerAmount: netReserveAmount,
+      paidAt: p.paid_at,
+      status: 'elegivel',
+    }
+    g.elegivelTotal += netReserveAmount
+    g.eligiblePurchases.push(row)
   }
 
   for (const si of subInvoiceRows) {

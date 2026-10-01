@@ -12,10 +12,12 @@ import { PAYOUT_RETENTION_DAYS, type PartnerPayoutStatus } from '@/lib/services/
 
 export interface EligiblePurchaseRow {
   id:              string
-  /** app_purchase = venda avulsa de app; subscription_invoice = ciclo de
-   *  cobrança de assinatura (peça 5) — mesma fila, fontes diferentes na
-   *  hora de chamar create_partner_payout. */
-  kind:            'app_purchase' | 'subscription_invoice'
+  /** app_purchase = venda avulsa de app (fatia principal); subscription_invoice
+   *  = ciclo de cobrança de assinatura (peça 5); app_purchase_reserve =
+   *  reserva de disputa de 10% da mesma venda de app, liberada só depois
+   *  de 120 dias — mesma fila, fontes/parâmetros diferentes na hora de
+   *  chamar create_partner_payout. */
+  kind:            'app_purchase' | 'subscription_invoice' | 'app_purchase_reserve'
   applicationName: string
   planName:        string
   amount:          number
@@ -110,12 +112,14 @@ export default function RepassesClient({ user, profile, partnerGroups, history }
       const selectedRows = payingPartner.eligiblePurchases.filter(p => selected.has(p.id))
       const appPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase').map(p => p.id)
       const subscriptionInvoiceIds = selectedRows.filter(p => p.kind === 'subscription_invoice').map(p => p.id)
+      const reserveAppPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase_reserve').map(p => p.id)
       const { error: err } = await supabase.rpc('create_partner_payout', {
         p_partner_id: payingPartner.partnerId,
         p_app_purchase_ids: appPurchaseIds,
         p_reference: reference.trim(),
         p_notes: notes.trim() || null,
         p_subscription_invoice_ids: subscriptionInvoiceIds,
+        p_reserve_app_purchase_ids: reserveAppPurchaseIds,
       })
       if (err) throw err
       window.location.reload() // reflete elegibilidade/histórico sem duplicar o cálculo de agrupamento aqui
