@@ -741,9 +741,11 @@ describe('POST /api/stripe/webhook', () => {
               ? (opts.disputeRecord ?? opts.existingDispute ?? null)
               : table === 'financial_transactions'
                 ? (opts.financialTx !== undefined ? opts.financialTx : null)
-                : table === opts.matchTable
-                  ? { id: opts.matchId ?? 'matched-id', campaign_id: 'campaign-1', subscription_id: 'sub-row-1' }
-                  : null,
+                : table === 'app_purchases' && opts.appPurchaseRow !== undefined
+                  ? opts.appPurchaseRow
+                  : table === opts.matchTable
+                    ? { id: opts.matchId ?? 'matched-id', campaign_id: 'campaign-1', subscription_id: 'sub-row-1' }
+                    : null,
             error: null,
           })
           chain.single = vi.fn().mockResolvedValue({

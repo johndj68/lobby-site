@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireLeaderSession } from '@/lib/services/profile'
 import { partnerDisplayName } from '@/lib/partners'
-import { classifyPurchasePayoutStatus } from '@/lib/services/payouts'
+import { classifyPurchasePayoutStatus, DISPUTE_RESERVE_WINDOW_DAYS } from '@/lib/services/payouts'
 import RepassesClient, { type PartnerGroup, type EligiblePurchaseRow, type PayoutHistoryRow } from './RepassesClient'
 
 export default async function RepassesPage() {
@@ -24,7 +24,7 @@ export default async function RepassesPage() {
       .order('paid_at', { ascending: true }),
     supabase
       .from('partner_payout_items')
-      .select('app_purchase_id, subscription_invoice_id, partner_payouts(status)'),
+      .select('app_purchase_id, subscription_invoice_id, kind, partner_payouts(status)'),
     supabase
       .from('partner_payouts')
       .select('*')
@@ -37,8 +37,12 @@ export default async function RepassesPage() {
     const po = Array.isArray(i.partner_payouts) ? i.partner_payouts[0] : i.partner_payouts
     return po?.status === 'confirmado'
   })
-  const coveredIds = new Set(confirmedItems.map(i => i.app_purchase_id).filter(Boolean))
-  const coveredInvoiceIds = new Set(confirmedItems.map(i => i.subscription_invoice_id).filter(Boolean))
+  // Só item kind='main' cobre a fatia principal — um item kind='reserve'
+  // confirmado não significa que a fatia principal da mesma venda também
+  // foi paga (achado na revisão final: eram tratados como a mesma coisa).
+  const mainCoveredItems = confirmedItems.filter(i => i.kind === 'main')
+  const coveredIds = new Set(mainCoveredItems.map(i => i.app_purchase_id).filter(Boolean))
+  const coveredInvoiceIds = new Set(mainCoveredItems.map(i => i.subscription_invoice_id).filter(Boolean))
 
   const subInvoiceRows = (subInvoices ?? [])
     .map(si => {
@@ -86,8 +90,12 @@ export default async function RepassesPage() {
     // mesma proporção usada pela RPC create_partner_payout (Etapa 5,
     // peça 6) — esta tela não pode mostrar um total maior do que o
     // repasse de verdade vai pagar quando o líder clicar em confirmar.
-    const refundedShare = Math.round(Number(p.refunded_amount ?? 0) * p.partner_amount / p.amount * 100) / 100
-    const netPartnerAmount = p.partner_amount - refundedShare
+    // Base é partner_amount MENOS a reserva (Etapa 5, peça 7) — a reserva
+    // nunca faz parte do que a fatia principal paga, ela só é liberada
+    // separadamente quando elegível (ver o segundo loop logo abaixo).
+    const mainBase = Number(p.partner_amount) - Number(p.reserve_amount ?? 0)
+    const refundedShare = Math.round(Number(p.refunded_amount ?? 0) * mainBase / p.amount * 100) / 100
+    const netPartnerAmount = mainBase - refundedShare
 
     const g = getGroup(p.partner_id as string)
     const row: EligiblePurchaseRow = {
@@ -107,7 +115,7 @@ export default async function RepassesPage() {
   // janela de 120 dias e seu próprio kind — entra separada da fatia
   // principal porque pode virar elegível bem depois (spec: 2026-09-30-
   // partner-dispute-reserve-design.md).
-  const RESERVE_WINDOW_MS = 120 * 86400_000
+  const RESERVE_WINDOW_MS = DISPUTE_RESERVE_WINDOW_DAYS * 86400_000
   for (const p of purchases ?? []) {
     if (!p.paid_at || p.reserve_status !== 'held' || !p.reserve_amount || p.reserve_amount <= 0) continue
     const reserveEligible = Date.now() - new Date(p.paid_at).getTime() >= RESERVE_WINDOW_MS

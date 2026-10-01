@@ -224,3 +224,64 @@ $$;
 
 revoke execute on function public.create_partner_payout(uuid, uuid[], text, text, uuid[], uuid[]) from public, anon, authenticated;
 grant execute on function public.create_partner_payout(uuid, uuid[], text, text, uuid[], uuid[]) to authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 5) revert_partner_payout — restaura reserve_status='held' pras reservas
+--    cobertas pelo repasse revertido. Achado na revisão final: a função já
+--    existente só revertia partner_payouts.status, nunca mexia em
+--    app_purchases.reserve_status — como tanto a RPC de liberação quanto a
+--    tela de repasses exigem reserve_status='held' pra uma reserva
+--    reaparecer na fila, reverter um repasse que cobria uma liberação de
+--    reserva deixava essa reserva presa pra sempre (nunca mais elegível,
+--    sem erro nenhum avisando). Mesma assinatura (uuid, text) — CREATE OR
+--    REPLACE direto, sem precisar de DROP.
+--
+-- 'clawed_back' nunca é restaurado aqui de propósito — disputa perdida é
+-- definitiva, reverter um repasse não desfaz uma disputa já perdida.
+-- ─────────────────────────────────────────────────────────────────────────
+
+create or replace function public.revert_partner_payout(
+  "p_payout_id" uuid,
+  "p_reason"    text
+)
+returns public.partner_payouts
+language plpgsql security definer
+set search_path to 'public'
+as $$
+declare
+  v_payout public.partner_payouts;
+begin
+  if not public.is_leader(auth.uid()) then
+    raise exception 'Somente Técnico Líder pode reverter repasse.';
+  end if;
+  if p_reason is null or length(trim(p_reason)) = 0 then
+    raise exception 'Informe o motivo da reversão.';
+  end if;
+
+  select * into v_payout from public.partner_payouts where id = p_payout_id for update;
+  if not found then
+    raise exception 'Repasse não encontrado.';
+  end if;
+  if v_payout.status = 'revertido' then
+    raise exception 'Este repasse já foi revertido.';
+  end if;
+
+  update public.partner_payouts
+    set status = 'revertido', reverted_at = now(), reverted_by = auth.uid(), revert_reason = trim(p_reason)
+    where id = p_payout_id
+    returning * into v_payout;
+
+  update public.app_purchases ap
+    set reserve_status = 'held'
+    where ap.reserve_status = 'released'
+      and exists (
+        select 1 from public.partner_payout_items pi
+        where pi.payout_id = p_payout_id and pi.kind = 'reserve' and pi.app_purchase_id = ap.id
+      );
+
+  return v_payout;
+end;
+$$;
+
+revoke execute on function public.revert_partner_payout(uuid, text) from public, anon, authenticated;
+grant execute on function public.revert_partner_payout(uuid, text) to authenticated;

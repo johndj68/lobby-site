@@ -950,7 +950,7 @@ async function handleDisputeClosed(dispute: Stripe.Dispute) {
           .from('app_purchases')
           .select('reserve_status')
           .eq('id', record.source_id)
-          .single()
+          .maybeSingle()
         if (appPurchaseSelectError) {
           throw new Error(`[stripe/webhook] failed to look up app_purchases reserve for lost dispute: ${appPurchaseSelectError.message}`)
         }
