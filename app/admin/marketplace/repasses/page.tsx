@@ -118,7 +118,13 @@ export default async function RepassesPage() {
 
     const g = getGroup(p.partner_id as string)
     const row: EligiblePurchaseRow = {
-      id: p.id, kind: 'app_purchase_reserve',
+      // ':reserve' no id: a fatia principal da MESMA venda pode continuar
+      // elegível/retida ao mesmo tempo (16 dias vs 120 dias são janelas
+      // independentes) — sem o sufixo, as duas linhas compartilhariam
+      // app_purchase.id, colidindo como chave React e fundindo a seleção
+      // do checkbox (selecionar uma sempre selecionaria a outra também).
+      // RepassesClient remove o sufixo antes de mandar pra RPC.
+      id: `${p.id}:reserve`, kind: 'app_purchase_reserve',
       applicationName: p.application_name,
       planName: `${p.plan_name} (reserva)`,
       amount: p.amount,

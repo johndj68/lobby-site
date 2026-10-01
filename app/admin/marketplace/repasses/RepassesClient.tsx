@@ -112,7 +112,10 @@ export default function RepassesClient({ user, profile, partnerGroups, history }
       const selectedRows = payingPartner.eligiblePurchases.filter(p => selected.has(p.id))
       const appPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase').map(p => p.id)
       const subscriptionInvoiceIds = selectedRows.filter(p => p.kind === 'subscription_invoice').map(p => p.id)
-      const reserveAppPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase_reserve').map(p => p.id)
+      // Remove o sufixo ':reserve' (existe só pra desambiguar a chave da
+      // fatia principal da mesma venda — ver comentário em page.tsx) antes
+      // de mandar o uuid de verdade pra RPC.
+      const reserveAppPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase_reserve').map(p => p.id.replace(/:reserve$/, ''))
       const { error: err } = await supabase.rpc('create_partner_payout', {
         p_partner_id: payingPartner.partnerId,
         p_app_purchase_ids: appPurchaseIds,
