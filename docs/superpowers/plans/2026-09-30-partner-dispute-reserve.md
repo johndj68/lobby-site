@@ -705,7 +705,13 @@ After the existing `app_purchases` loop (the one computing `netPartnerAmount` fo
 
     const g = getGroup(p.partner_id as string)
     const row: EligiblePurchaseRow = {
-      id: p.id, kind: 'app_purchase_reserve',
+      // ':reserve' no id: a fatia principal da MESMA venda pode continuar
+      // elegível/retida ao mesmo tempo (16 dias vs 120 dias são janelas
+      // independentes) — sem o sufixo, as duas linhas compartilhariam
+      // app_purchase.id, colidindo como chave React e fundindo a seleção
+      // do checkbox (selecionar uma sempre selecionaria a outra também).
+      // RepassesClient remove o sufixo antes de mandar pra RPC.
+      id: `${p.id}:reserve`, kind: 'app_purchase_reserve',
       applicationName: p.application_name,
       planName: `${p.plan_name} (reserva)`,
       amount: p.amount,
@@ -761,7 +767,10 @@ Replace with:
       const selectedRows = payingPartner.eligiblePurchases.filter(p => selected.has(p.id))
       const appPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase').map(p => p.id)
       const subscriptionInvoiceIds = selectedRows.filter(p => p.kind === 'subscription_invoice').map(p => p.id)
-      const reserveAppPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase_reserve').map(p => p.id)
+      // Remove o sufixo ':reserve' (existe só pra desambiguar a chave da
+      // fatia principal da mesma venda — ver comentário em page.tsx) antes
+      // de mandar o uuid de verdade pra RPC.
+      const reserveAppPurchaseIds = selectedRows.filter(p => p.kind === 'app_purchase_reserve').map(p => p.id.replace(/:reserve$/, ''))
       const { error: err } = await supabase.rpc('create_partner_payout', {
         p_partner_id: payingPartner.partnerId,
         p_app_purchase_ids: appPurchaseIds,
