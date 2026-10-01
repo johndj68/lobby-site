@@ -59,9 +59,17 @@ export async function POST(
   }
 
   try {
+    // Idempotency key derivado do estado ANTES desta chamada (refunded_amount
+    // atual + valor pedido) — uma retentativa do mesmo pedido lógico (ex:
+    // admin clica de novo depois do RPC ter falhado mas o Stripe já ter
+    // aceitado) reusa a mesma chave e o Stripe devolve o reembolso original
+    // em vez de criar um segundo. Mesmo padrão de
+    // app/api/admin/app-purchases/[purchaseId]/refund/route.ts.
     await stripe.refunds.create({
       payment_intent: purchase.stripe_payment_intent_id,
       amount: Math.round(amount * 100),
+    }, {
+      idempotencyKey: `credit-purchase-refund:${purchaseId}:${purchase.refunded_amount}:${Math.round(amount * 100)}`,
     })
   } catch (err) {
     console.error('[credit-purchases/refund] stripe error', err)
