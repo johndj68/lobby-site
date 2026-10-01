@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { calculateReserveAmountCents } from '@/lib/services/payouts'
 
 interface CheckoutBody {
   plan_id: string
@@ -107,6 +108,10 @@ export async function POST(
     commissionCents = Math.round((amountCents * commissionPercent) / 100)
   }
   const partnerCents = amountCents - commissionCents
+  // Reserva de disputa (10% do partner_amount, retida até 120 dias sem
+  // disputa — spec: 2026-09-30-partner-dispute-reserve-design.md). App da
+  // LOBBY (partnerId null) nunca reserva nada, sem parceiro pra reter.
+  const reserveCents = partnerId ? calculateReserveAmountCents(partnerCents) : 0
 
   const { data: purchase, error: insertError } = await admin
     .from('app_purchases')
@@ -122,6 +127,8 @@ export async function POST(
       commission_percent:  commissionPercent,
       commission_amount:   commissionCents / 100,
       partner_amount:      partnerCents / 100,
+      reserve_amount:      reserveCents / 100,
+      reserve_status:      partnerId ? 'held' : null,
       status:              'pending',
     })
     .select('id')
