@@ -710,6 +710,7 @@ describe('POST /api/stripe/webhook', () => {
       existingDispute?: unknown
       freezeResult?: { data?: unknown; error?: unknown }
       disputeRecord?: unknown
+      financialTx?: { amount: number; status: string } | null
     } = {}) => {
       const inserted: Record<string, unknown[]> = {}
       const updated:  Record<string, { table: string; payload: unknown; }[]> = {}
@@ -736,9 +737,11 @@ describe('POST /api/stripe/webhook', () => {
           chain.maybeSingle = vi.fn().mockResolvedValue({
             data: table === 'payment_disputes'
               ? (opts.disputeRecord ?? opts.existingDispute ?? null)
-              : table === opts.matchTable
-                ? { id: opts.matchId ?? 'matched-id', campaign_id: 'campaign-1', subscription_id: 'sub-row-1' }
-                : null,
+              : table === 'financial_transactions'
+                ? (opts.financialTx !== undefined ? opts.financialTx : null)
+                : table === opts.matchTable
+                  ? { id: opts.matchId ?? 'matched-id', campaign_id: 'campaign-1', subscription_id: 'sub-row-1' }
+                  : null,
             error: null,
           })
           chain.single = vi.fn().mockResolvedValue({
@@ -878,6 +881,54 @@ describe('POST /api/stripe/webhook', () => {
       const res = await POST(makeReq())
       expect(res.status).toBe(200)
       expect(admin.rpc).not.toHaveBeenCalledWith('unfreeze_credit_purchase_for_dispute', expect.anything())
+    })
+
+    it('dispute.closed com status lost desconta a comissão em financial_transactions (crédito)', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeDisputeAdmin({
+        disputeRecord: { id: 'dispute-row-1', source_type: 'credit_purchases', source_id: 'credit-purchase-1', held_amount: 50, closed_at: null },
+        financialTx: { amount: 20, status: 'pago' },
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeDisputeEvent('charge.dispute.closed', { status: 'lost' }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      const txUpdate = admin.updated['financial_transactions']?.[0]?.payload as Record<string, unknown>
+      expect(txUpdate.refunded_amount).toBe(20)
+      expect(txUpdate.status).toBe('reembolsado')
+    })
+
+    it('dispute.closed com status lost desconta a comissão em financial_transactions (app)', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeDisputeAdmin({
+        disputeRecord: { id: 'dispute-row-1', source_type: 'app_purchases', source_id: 'app-purchase-1', held_amount: null, closed_at: null },
+        financialTx: { amount: 35, status: 'pago' },
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeDisputeEvent('charge.dispute.closed', { status: 'lost' }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      const txUpdate = admin.updated['financial_transactions']?.[0]?.payload as Record<string, unknown>
+      expect(txUpdate.refunded_amount).toBe(35)
+      expect(txUpdate.status).toBe('reembolsado')
+    })
+
+    it('dispute.closed com status lost de campanha não mexe em financial_transactions (sem ledger pra campanha)', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeDisputeAdmin({
+        disputeRecord: { id: 'dispute-row-1', source_type: 'campaign_purchases', source_id: 'campaign-purchase-1', held_amount: null, closed_at: null },
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeDisputeEvent('charge.dispute.closed', { status: 'lost' }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      expect(admin.updated['financial_transactions']).toBeUndefined()
     })
 
     it('redelivery de dispute.closed já processada não roda de novo', async () => {

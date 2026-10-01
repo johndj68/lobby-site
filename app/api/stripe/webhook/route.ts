@@ -900,6 +900,44 @@ async function handleDisputeClosed(dispute: Stripe.Dispute) {
 
   if (dispute.status !== 'won') {
     console.info('[stripe/webhook] Dispute closed as', dispute.status, '— congelamento permanente:', dispute.id)
+
+    // Disputa perdida é chargeback definitivo — o dinheiro não volta pra
+    // LOBBY. O lançamento em financial_transactions (comissão própria,
+    // nunca o valor bruto — mesmo princípio usado no reembolso via
+    // charge.refunded) precisa refletir isso, senão a receita reportada
+    // fica superestimada pra sempre numa venda que na prática nunca foi
+    // paga de verdade. campaign_purchases nunca lança em
+    // financial_transactions (handleCampaignCheckoutCompleted não grava
+    // ledger) e subscription_invoices fica fora — mesmo limite de escopo
+    // do reembolso via charge.refunded (um ciclo disputado não é a
+    // assinatura inteira, que continua ativa).
+    if ((record.source_type === 'credit_purchases' || record.source_type === 'app_purchases') && record.source_id) {
+      const { data: tx, error: txSelectError } = await admin
+        .from('financial_transactions')
+        .select('amount, status')
+        .eq('source_type', record.source_type)
+        .eq('source_id', record.source_id)
+        .maybeSingle()
+      if (txSelectError) {
+        throw new Error(`[stripe/webhook] failed to look up financial_transactions for lost dispute: ${txSelectError.message}`)
+      }
+      if (tx && tx.status === 'pago') {
+        const { error: txUpdateError } = await admin
+          .from('financial_transactions')
+          .update({ refunded_amount: tx.amount, status: 'reembolsado', updated_at: new Date().toISOString() })
+          .eq('source_type', record.source_type)
+          .eq('source_id', record.source_id)
+        if (txUpdateError) {
+          throw new Error(`[stripe/webhook] failed to write down financial_transactions for lost dispute: ${txUpdateError.message}`)
+        }
+        console.info('[stripe/webhook] Lost dispute wrote down financial_transactions ledger:', record.source_type, record.source_id)
+      } else if (!tx) {
+        // Mesmo sinal de integridade do branch de reembolso de app acima —
+        // toda venda paga desses dois source_type deveria ter lançamento
+        // correspondente.
+        console.warn('[stripe/webhook] lost dispute confirmed but no matching financial_transactions row found:', record.source_type, record.source_id)
+      }
+    }
     return
   }
 
