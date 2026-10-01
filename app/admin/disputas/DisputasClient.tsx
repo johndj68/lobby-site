@@ -14,6 +14,7 @@ export interface DisputeRow {
   reason:                    string | null
   status:                    string
   held_amount:               number | null
+  partner_clawback_amount:   number | null
   opened_at:                 string
   closed_at:                 string | null
 }
@@ -67,6 +68,7 @@ export default function DisputasClient({ user, profile, disputes }: Props) {
                   <th className="px-4 py-3">Motivo</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Congelado</th>
+                  <th className="px-4 py-3">Cobrar do parceiro</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,6 +92,13 @@ export default function DisputasClient({ user, profile, disputes }: Props) {
                       <td className="px-4 py-3 text-[#5D6475]">
                         {d.closed_at && d.status === 'won' ? 'Desfeito' : (d.source_type ? 'Sim' : '—')}
                         {d.held_amount ? ` (${d.held_amount} créditos)` : ''}
+                      </td>
+                      <td className="px-4 py-3">
+                        {d.partner_clawback_amount && d.partner_clawback_amount > 0 ? (
+                          <span className="rounded-full px-2.5 py-1 text-xs font-bold" style={{ color: '#DC2626', background: 'rgba(220,38,38,0.1)' }}>
+                            {formatCurrencyBRL(d.partner_clawback_amount)}
+                          </span>
+                        ) : '—'}
                       </td>
                     </tr>
                   )
