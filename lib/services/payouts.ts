@@ -10,6 +10,22 @@
  */
 export const PAYOUT_RETENTION_DAYS = 16
 
+/**
+ * Reserva de disputa do parceiro: 10% do partner_amount fica retido até
+ * 120 dias sem disputa (janela de chargeback das bandeiras é bem maior
+ * que os 16 dias de retenção da fatia principal). Snapshot no checkout,
+ * nunca recalculado depois — mesmo princípio de PAYOUT_RETENTION_DAYS.
+ */
+export const RESERVE_PERCENT = 10
+export const DISPUTE_RESERVE_WINDOW_DAYS = 120
+
+/** Calcula a reserva em centavos — arredonda pro centavo mais próximo,
+ *  nunca trunca (mesmo padrão de arredondamento já usado em todo o
+ *  resto do fluxo financeiro). */
+export function calculateReserveAmountCents(partnerAmountCents: number): number {
+  return Math.round(partnerAmountCents * RESERVE_PERCENT / 100)
+}
+
 export type PartnerPayoutStatus = 'confirmado' | 'revertido'
 
 export interface PartnerPayout {
