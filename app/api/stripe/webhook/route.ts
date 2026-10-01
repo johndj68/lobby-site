@@ -937,6 +937,63 @@ async function handleDisputeClosed(dispute: Stripe.Dispute) {
         // correspondente.
         console.warn('[stripe/webhook] lost dispute confirmed but no matching financial_transactions row found:', record.source_type, record.source_id)
       }
+
+      // Reserva de disputa (só app_purchases — spec: 2026-09-30-partner-
+      // dispute-reserve-design.md). Reserva ainda não liberada é absorvida
+      // automaticamente (parceiro nunca recebe essa fatia). O que já foi
+      // pago ANTES da disputa chegar (fatia principal e/ou reserva, se já
+      // tinha passado dos 120 dias) não tem como ser recuperado
+      // automaticamente — sem API de débito bancário no sistema — só fica
+      // sinalizado pro líder cobrar manualmente.
+      if (record.source_type === 'app_purchases') {
+        const { data: appPurchase, error: appPurchaseSelectError } = await admin
+          .from('app_purchases')
+          .select('reserve_status')
+          .eq('id', record.source_id)
+          .single()
+        if (appPurchaseSelectError) {
+          throw new Error(`[stripe/webhook] failed to look up app_purchases reserve for lost dispute: ${appPurchaseSelectError.message}`)
+        }
+
+        if (appPurchase?.reserve_status === 'held') {
+          const { error: reserveUpdateError } = await admin
+            .from('app_purchases')
+            .update({ reserve_status: 'clawed_back' })
+            .eq('id', record.source_id)
+            .eq('reserve_status', 'held')
+          if (reserveUpdateError) {
+            throw new Error(`[stripe/webhook] failed to claw back reserve for lost dispute: ${reserveUpdateError.message}`)
+          }
+          console.info('[stripe/webhook] Lost dispute clawed back unreleased reserve:', record.source_id)
+        }
+
+        // Embed simples + filtro em JS — mesmo padrão já usado em
+        // app/admin/marketplace/repasses/page.tsx pra achar itens cobertos
+        // por repasse confirmado (nunca .eq() direto numa coluna da tabela
+        // aninhada, isso não é filtro suportado pelo supabase-js aqui).
+        const { data: paidItems, error: paidItemsError } = await admin
+          .from('partner_payout_items')
+          .select('amount, partner_payouts(status)')
+          .eq('app_purchase_id', record.source_id)
+        if (paidItemsError) {
+          throw new Error(`[stripe/webhook] failed to sum paid partner_payout_items for lost dispute: ${paidItemsError.message}`)
+        }
+
+        const alreadyPaidTotal = (paidItems ?? []).reduce((sum: number, row: { amount: number; partner_payouts: { status: string } | { status: string }[] | null }) => {
+          const po = Array.isArray(row.partner_payouts) ? row.partner_payouts[0] : row.partner_payouts
+          return po?.status === 'confirmado' ? sum + Number(row.amount) : sum
+        }, 0)
+        if (alreadyPaidTotal > 0) {
+          const { error: clawbackUpdateError } = await admin
+            .from('payment_disputes')
+            .update({ partner_clawback_amount: alreadyPaidTotal })
+            .eq('id', record.id)
+          if (clawbackUpdateError) {
+            throw new Error(`[stripe/webhook] failed to record partner_clawback_amount: ${clawbackUpdateError.message}`)
+          }
+          console.warn('[stripe/webhook] Lost dispute requires manual partner clawback:', record.source_id, alreadyPaidTotal)
+        }
+      }
     }
     return
   }

@@ -711,6 +711,8 @@ describe('POST /api/stripe/webhook', () => {
       freezeResult?: { data?: unknown; error?: unknown }
       disputeRecord?: unknown
       financialTx?: { amount: number; status: string } | null
+      appPurchaseRow?: { reserve_status: string | null } | null
+      paidPartnerAmountSum?: number | null
     } = {}) => {
       const inserted: Record<string, unknown[]> = {}
       const updated:  Record<string, { table: string; payload: unknown; }[]> = {}
@@ -751,9 +753,24 @@ describe('POST /api/stripe/webhook', () => {
                 ? { campaign_id: 'campaign-1' }
                 : table === 'subscription_invoices'
                   ? { subscription_id: 'sub-row-1' }
-                  : null,
+                  : table === 'app_purchases'
+                    ? (opts.appPurchaseRow ?? null)
+                    : null,
             error: null,
           })
+          chain.then = (resolve: (v: { data: unknown; error: null }) => void) => {
+            if (table === 'partner_payout_items') {
+              const amount = opts.paidPartnerAmountSum ?? 0
+              // Mesmo formato de embed que o código real lê (partner_payouts
+              // como objeto embutido com .status) — já vem pré-filtrado como
+              // 'confirmado' aqui porque o teste só precisa verificar a SOMA
+              // final, não a lógica de filtro em si (essa já é exercida
+              // implicitamente por sempre vir com status='confirmado').
+              resolve({ data: amount > 0 ? [{ amount, partner_payouts: { status: 'confirmado' } }] : [], error: null })
+            } else {
+              resolve({ data: [], error: null })
+            }
+          }
           return chain
         }),
       }
@@ -929,6 +946,73 @@ describe('POST /api/stripe/webhook', () => {
       const res = await POST(makeReq())
       expect(res.status).toBe(200)
       expect(admin.updated['financial_transactions']).toBeUndefined()
+    })
+
+    it('dispute.closed com status lost absorve a reserva ainda não liberada (clawed_back automático)', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeDisputeAdmin({
+        disputeRecord: { id: 'dispute-row-1', source_type: 'app_purchases', source_id: 'app-purchase-1', held_amount: null, closed_at: null },
+        appPurchaseRow: { reserve_status: 'held' },
+        paidPartnerAmountSum: 0,
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeDisputeEvent('charge.dispute.closed', { status: 'lost' }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      const reserveUpdate = admin.updated['app_purchases']?.find(u => (u.payload as Record<string, unknown>).reserve_status === 'clawed_back')
+      expect(reserveUpdate).toBeDefined()
+    })
+
+    it('dispute.closed com status lost calcula partner_clawback_amount quando já foi pago antes da disputa', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeDisputeAdmin({
+        disputeRecord: { id: 'dispute-row-1', source_type: 'app_purchases', source_id: 'app-purchase-1', held_amount: null, closed_at: null },
+        appPurchaseRow: { reserve_status: 'released' },
+        paidPartnerAmountSum: 90,
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeDisputeEvent('charge.dispute.closed', { status: 'lost' }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      const disputeUpdate = admin.updated['payment_disputes']?.find(u => (u.payload as Record<string, unknown>).partner_clawback_amount !== undefined)
+      expect((disputeUpdate?.payload as Record<string, unknown>).partner_clawback_amount).toBe(90)
+    })
+
+    it('dispute.closed com status lost não grava partner_clawback_amount quando nada foi pago ainda', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeDisputeAdmin({
+        disputeRecord: { id: 'dispute-row-1', source_type: 'app_purchases', source_id: 'app-purchase-1', held_amount: null, closed_at: null },
+        appPurchaseRow: { reserve_status: 'held' },
+        paidPartnerAmountSum: 0,
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeDisputeEvent('charge.dispute.closed', { status: 'lost' }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      const disputeUpdate = admin.updated['payment_disputes']?.find(u => (u.payload as Record<string, unknown>).partner_clawback_amount !== undefined)
+      expect(disputeUpdate).toBeUndefined()
+    })
+
+    it('dispute.closed com status lost de crédito (sem partner_id) não toca em reserva nem clawback', async () => {
+      const { stripe }            = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const admin = makeDisputeAdmin({
+        disputeRecord: { id: 'dispute-row-1', source_type: 'credit_purchases', source_id: 'credit-purchase-1', held_amount: 50, closed_at: null },
+        financialTx: { amount: 20, status: 'pago' },
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeDisputeEvent('charge.dispute.closed', { status: 'lost' }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const res = await POST(makeReq())
+      expect(res.status).toBe(200)
+      const reserveUpdate = admin.updated['app_purchases']?.find(u => (u.payload as Record<string, unknown>).reserve_status !== undefined)
+      expect(reserveUpdate).toBeUndefined()
     })
 
     it('redelivery de dispute.closed já processada não roda de novo', async () => {
