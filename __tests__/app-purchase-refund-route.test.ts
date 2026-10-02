@@ -44,7 +44,7 @@ const makeReq = (body: unknown) => new Request('http://x', { method: 'POST', bod
 const basePurchase = (overrides: Row = {}): Row => ({
   id: 'app-purchase-1', status: 'paid', amount: 100, refunded_amount: 0,
   refund_status: null, paid_at: new Date().toISOString(),
-  stripe_payment_intent_id: 'pi_test', ...overrides,
+  stripe_payment_intent_id: 'pi_test', refund_window_days: 15, ...overrides,
 })
 
 describe('POST /api/admin/app-purchases/[purchaseId]/refund', () => {
