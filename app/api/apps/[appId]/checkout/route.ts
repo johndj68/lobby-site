@@ -3,7 +3,7 @@ import { stripe } from '@/lib/stripe'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
-import { calculateReserveAmountCents } from '@/lib/services/payouts'
+import { calculateReserveAmountCents, REFUND_WINDOW_DAYS, PAYOUT_RETENTION_DAYS, DISPUTE_RESERVE_WINDOW_DAYS } from '@/lib/services/payouts'
 
 interface CheckoutBody {
   plan_id: string
@@ -129,6 +129,9 @@ export async function POST(
       partner_amount:      partnerCents / 100,
       reserve_amount:      reserveCents / 100,
       reserve_status:      partnerId ? 'held' : null,
+      refund_window_days:  REFUND_WINDOW_DAYS,
+      retention_days:       PAYOUT_RETENTION_DAYS,
+      reserve_window_days:   DISPUTE_RESERVE_WINDOW_DAYS,
       status:              'pending',
     })
     .select('id')
