@@ -3,8 +3,6 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { stripe } from '@/lib/stripe'
 
-const REFUND_WINDOW_DAYS = 15
-
 /**
  * Reembolso parcial ou total de compra de app via Stripe — só técnico
  * líder. Mesma ordem de app/api/admin/credit-purchases/[purchaseId]/refund/
@@ -41,7 +39,7 @@ export async function POST(
   const admin = createAdminClient()
   const { data: purchase } = await admin
     .from('app_purchases')
-    .select('id, status, amount, refunded_amount, refund_status, paid_at, stripe_payment_intent_id')
+    .select('id, status, amount, refunded_amount, refund_status, paid_at, stripe_payment_intent_id, refund_window_days')
     .eq('id', purchaseId)
     .single()
 
@@ -55,7 +53,7 @@ export async function POST(
   if (purchase.refund_status === 'processing') {
     return NextResponse.json({ error: 'Já existe um reembolso em andamento para esta compra.' }, { status: 409 })
   }
-  if (!purchase.paid_at || new Date(purchase.paid_at).getTime() <= Date.now() - REFUND_WINDOW_DAYS * 86400_000) {
+  if (!purchase.paid_at || new Date(purchase.paid_at).getTime() <= Date.now() - purchase.refund_window_days * 86400_000) {
     return NextResponse.json({ error: 'Fora do prazo de reembolso — só é possível solicitar até 15 dias após o pagamento.' }, { status: 400 })
   }
   const remaining = Number(purchase.amount) - Number(purchase.refunded_amount)

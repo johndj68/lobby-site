@@ -13,6 +13,7 @@ export interface PaidAppPurchase {
   refunded_amount:  number
   refund_status:    'processing' | 'refunded' | null
   paid_at:          string
+  refund_window_days: number
   buyer_name?:      string | null
   buyer_email?:     string | null
 }
@@ -22,8 +23,6 @@ interface Props {
   onClose:    () => void
   onRefunded: (purchase: PaidAppPurchase) => void
 }
-
-const REFUND_WINDOW_DAYS = 15
 
 /**
  * Reembolso de compra de app — parcial ou total, via Stripe. Chama a rota
@@ -42,7 +41,7 @@ export default function RefundAppPurchaseModal({ purchase, onClose, onRefunded }
 
   const remaining = purchase.amount - purchase.refunded_amount
   const daysSincePaid = (Date.now() - new Date(purchase.paid_at).getTime()) / 86400_000
-  const withinWindow = daysSincePaid <= REFUND_WINDOW_DAYS
+  const withinWindow = daysSincePaid <= purchase.refund_window_days
 
   const reset = () => { setAmount(''); setReason(''); setError('') }
   const handleClose = () => { if (saving) return; reset(); onClose() }
@@ -94,7 +93,7 @@ export default function RefundAppPurchaseModal({ purchase, onClose, onRefunded }
           )}
           <p>Ainda reembolsável: <span className="font-semibold text-white">{formatCurrencyBRL(remaining)}</span></p>
           {!withinWindow && (
-            <p className="text-red-400">Fora do prazo de reembolso — passaram mais de {REFUND_WINDOW_DAYS} dias desde o pagamento.</p>
+            <p className="text-red-400">Fora do prazo de reembolso — passaram mais de {purchase.refund_window_days} dias desde o pagamento.</p>
           )}
         </div>
 

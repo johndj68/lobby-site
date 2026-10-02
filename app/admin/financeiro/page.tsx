@@ -71,7 +71,7 @@ export default async function FinanceiroPage() {
   // ou não) — o reembolso funciona pros dois casos.
   const { data: paidApps } = await supabase
     .from('app_purchases')
-    .select('id, application_name, plan_name, amount, refunded_amount, refund_status, paid_at, profiles!app_purchases_buyer_user_id_fkey(full_name, email)')
+    .select('id, application_name, plan_name, amount, refunded_amount, refund_status, paid_at, refund_window_days, profiles!app_purchases_buyer_user_id_fkey(full_name, email)')
     .eq('status', 'paid')
     .order('paid_at', { ascending: false })
     .limit(200)
@@ -80,12 +80,13 @@ export default async function FinanceiroPage() {
     const row = p as unknown as {
       id: string; application_name: string; plan_name: string; amount: number
       refunded_amount: number; refund_status: 'processing' | 'refunded' | null; paid_at: string
+      refund_window_days: number
       profiles: { full_name: string | null; email: string | null } | null
     }
     return {
       id: row.id, application_name: row.application_name, plan_name: row.plan_name,
       amount: row.amount, refunded_amount: row.refunded_amount, refund_status: row.refund_status,
-      paid_at: row.paid_at,
+      paid_at: row.paid_at, refund_window_days: row.refund_window_days,
       buyer_name:  row.profiles?.full_name ?? null,
       buyer_email: row.profiles?.email ?? null,
     }
