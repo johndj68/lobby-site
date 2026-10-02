@@ -32,7 +32,16 @@ interface Props {
  * independente disso (o App Router não dá pra um layout impedir isso).
  * Páginas futuras que buscarem dado financeiro real devem fazer sua
  * própria checagem de vendedor antes de consultar, em vez de confiar só
- * neste componente pra evitar a query.
+ * neste componente pra evitar a query — *ainda não seguido* pelas
+ * páginas da Etapa 3 (Visão geral, Vendas): elas chamam a RPC direto
+ * após `requireClientSession`, sem checagem própria. Não é um buraco de
+ * segurança (as RPCs são `security definer` e se auto-restringem a
+ * `partner_id = auth.uid()`, então um não-vendedor só recebe zeros/lista
+ * vazia, e o resultado nem chega a ser exibido — este gate descarta o
+ * `children` pra quem não é vendedor), só uma query descartada a mais
+ * pra quem acessa a URL sem ser vendedor. Achado na review final da
+ * Etapa 3 (2026-10-02) — ver docs/superpowers/specs/2026-10-02-vendas-
+ * financeiro-visao-geral-vendas-design.md.
  *
  * NÃO renderiza <DashboardShell> — o layout raiz do dashboard
  * (app/dashboard/layout.tsx → DashboardLayoutWrapper) já envolve TODA
