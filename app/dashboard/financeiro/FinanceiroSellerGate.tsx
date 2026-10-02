@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Wallet, ArrowRight } from 'lucide-react'
 import { colors, shadows } from '@/lib/design-tokens'
 
@@ -13,6 +13,11 @@ const FINANCEIRO_TABS = [
   { label: 'Configurações de recebimento', href: '/dashboard/financeiro/configuracoes' },
 ]
 
+const isTabActive = (pathname: string, href: string): boolean =>
+  href === '/dashboard/financeiro'
+    ? pathname === href
+    : pathname === href || pathname.startsWith(href + '/')
+
 interface Props {
   isSeller: boolean
   children: React.ReactNode
@@ -21,8 +26,13 @@ interface Props {
 /**
  * Guarda de acesso da área "Vendas e financeiro" (Etapa 2 do roadmap —
  * só estrutura, sem dado financeiro real ainda). Quem não vende nenhum
- * app ainda nunca chega a montar `children` — vê só a apresentação com
- * CTA de cadastro.
+ * app ainda nunca vê `children` renderizado — vê só a apresentação com
+ * CTA de cadastro. Importante: isso é uma guarda de *exibição*, não de
+ * *busca de dado* — o Server Component da página filha roda no servidor
+ * independente disso (o App Router não dá pra um layout impedir isso).
+ * Páginas futuras que buscarem dado financeiro real devem fazer sua
+ * própria checagem de vendedor antes de consultar, em vez de confiar só
+ * neste componente pra evitar a query.
  *
  * NÃO renderiza <DashboardShell> — o layout raiz do dashboard
  * (app/dashboard/layout.tsx → DashboardLayoutWrapper) já envolve TODA
@@ -35,6 +45,7 @@ interface Props {
  */
 export default function FinanceiroSellerGate({ isSeller, children }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
 
   if (!isSeller) {
     return (
@@ -76,9 +87,7 @@ export default function FinanceiroSellerGate({ isSeller, children }: Props) {
       {/* Desktop: abas horizontais */}
       <div className="mb-6 hidden gap-1 overflow-x-auto border-b sm:flex" style={{ borderColor: colors.border }}>
         {FINANCEIRO_TABS.map(tab => {
-          const active = tab.href === '/dashboard/financeiro'
-            ? pathname === tab.href
-            : pathname.startsWith(tab.href)
+          const active = isTabActive(pathname, tab.href)
           return (
             <Link
               key={tab.href}
@@ -97,8 +106,8 @@ export default function FinanceiroSellerGate({ isSeller, children }: Props) {
       {/* Celular: seletor */}
       <div className="mb-6 sm:hidden">
         <select
-          value={FINANCEIRO_TABS.find(t => t.href === '/dashboard/financeiro' ? pathname === t.href : pathname.startsWith(t.href))?.href ?? FINANCEIRO_TABS[0].href}
-          onChange={e => { window.location.href = e.target.value }}
+          value={FINANCEIRO_TABS.find(t => isTabActive(pathname, t.href))?.href ?? FINANCEIRO_TABS[0].href}
+          onChange={e => router.push(e.target.value)}
           className="h-11 w-full rounded-xl border px-3 text-sm font-semibold"
           style={{ borderColor: colors.border, background: colors.card, color: colors.text }}
           aria-label="Navegar na área Vendas e financeiro"

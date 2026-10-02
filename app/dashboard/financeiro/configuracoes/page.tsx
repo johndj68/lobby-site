@@ -1,4 +1,7 @@
+import type { Metadata } from 'next'
 import { colors } from '@/lib/design-tokens'
+
+export const metadata: Metadata = { title: 'Configurações de recebimento | LOBBY', robots: { index: false, follow: false } }
 
 export default function FinanceiroConfiguracoesPage() {
   return (

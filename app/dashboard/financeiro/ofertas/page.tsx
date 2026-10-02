@@ -1,4 +1,7 @@
+import type { Metadata } from 'next'
 import { colors } from '@/lib/design-tokens'
+
+export const metadata: Metadata = { title: 'Ofertas e promoções | LOBBY', robots: { index: false, follow: false } }
 
 export default function FinanceiroOfertasPage() {
   return (
