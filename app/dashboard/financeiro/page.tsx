@@ -22,11 +22,17 @@ const EMPTY_OVERVIEW: OverviewRow = {
   vendas_mes_count: 0, vendas_mes_amount: 0, reembolsos_mes_count: 0, reembolsos_mes_amount: 0,
 }
 
-export default async function FinanceiroVisaoGeralPage() {
+interface SearchParams {
+  parceiro?: string
+}
+
+export default async function FinanceiroVisaoGeralPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const supabase = await createServerSupabaseClient()
   await requireClientSession(supabase)
+  const sp = await searchParams
+  const partnerId = sp.parceiro || null
 
-  const { data, error } = await supabase.rpc('get_partner_financeiro_overview') as unknown as { data: OverviewRow[] | null; error: unknown }
+  const { data, error } = await supabase.rpc('get_partner_financeiro_overview', { p_partner_id: partnerId }) as unknown as { data: OverviewRow[] | null; error: unknown }
 
   if (error) {
     return (

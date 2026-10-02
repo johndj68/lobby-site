@@ -36,14 +36,20 @@ interface HistoryRow {
 
 type RpcResult<T> = { data: T | null; error: { message: string } | null }
 
-export default async function FinanceiroRepassesPage() {
+interface SearchParams {
+  parceiro?: string
+}
+
+export default async function FinanceiroRepassesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const supabase = await createServerSupabaseClient()
   await requireClientSession(supabase)
+  const sp = await searchParams
+  const partnerId = sp.parceiro || null
 
   const [mainRes, reserveRes, historyRes] = await Promise.all([
-    supabase.rpc('get_partner_payout_queue_main'),
-    supabase.rpc('get_partner_payout_queue_reserve'),
-    supabase.rpc('get_partner_payout_history'),
+    supabase.rpc('get_partner_payout_queue_main', { p_partner_id: partnerId }),
+    supabase.rpc('get_partner_payout_queue_reserve', { p_partner_id: partnerId }),
+    supabase.rpc('get_partner_payout_history', { p_partner_id: partnerId }),
   ]) as unknown as [RpcResult<QueueRow[]>, RpcResult<QueueRow[]>, RpcResult<HistoryRow[]>]
 
   return (

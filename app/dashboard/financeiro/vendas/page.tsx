@@ -11,11 +11,17 @@ interface SoldApp {
   application_name: string
 }
 
-export default async function FinanceiroVendasPage() {
+interface SearchParams {
+  parceiro?: string
+}
+
+export default async function FinanceiroVendasPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const supabase = await createServerSupabaseClient()
   await requireClientSession(supabase)
+  const sp = await searchParams
+  const partnerId = sp.parceiro || null
 
-  const { data, error } = await supabase.rpc('get_partner_sold_apps') as unknown as { data: SoldApp[] | null; error: unknown }
+  const { data, error } = await supabase.rpc('get_partner_sold_apps', { p_partner_id: partnerId }) as unknown as { data: SoldApp[] | null; error: unknown }
 
   if (error) {
     return (
@@ -26,5 +32,5 @@ export default async function FinanceiroVendasPage() {
     )
   }
 
-  return <VendasClient soldApps={data ?? []} />
+  return <VendasClient soldApps={data ?? []} partnerId={partnerId} />
 }

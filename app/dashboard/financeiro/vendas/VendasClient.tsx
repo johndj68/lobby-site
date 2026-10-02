@@ -44,10 +44,11 @@ const RESERVE_STATUS_LABEL: Record<string, string> = {
 }
 
 interface Props {
-  soldApps: SoldApp[]
+  soldApps:  SoldApp[]
+  partnerId: string | null
 }
 
-export default function VendasClient({ soldApps }: Props) {
+export default function VendasClient({ soldApps, partnerId }: Props) {
   const [applicationId, setApplicationId] = useState<string>('')
   const [page, setPage] = useState(0)
   const [sales, setSales] = useState<SaleRow[]>([])
@@ -62,8 +63,8 @@ export default function VendasClient({ soldApps }: Props) {
     const supabase = createClient()
     const filterId = applicationId || null
     const [{ data: salesData, error: salesError }, { data: countData, error: countError }] = await Promise.all([
-      supabase.rpc('get_partner_sales', { p_application_id: filterId, p_limit: PAGE_SIZE, p_offset: page * PAGE_SIZE }),
-      supabase.rpc('get_partner_sales_count', { p_application_id: filterId }),
+      supabase.rpc('get_partner_sales', { p_application_id: filterId, p_limit: PAGE_SIZE, p_offset: page * PAGE_SIZE, p_partner_id: partnerId }),
+      supabase.rpc('get_partner_sales_count', { p_application_id: filterId, p_partner_id: partnerId }),
     ]) as unknown as [{ data: SaleRow[] | null; error: unknown }, { data: number | null; error: unknown }]
     if (salesError || countError) {
       setError(true)
@@ -75,7 +76,7 @@ export default function VendasClient({ soldApps }: Props) {
     setSales(salesData ?? [])
     setTotal(countData ?? 0)
     setLoading(false)
-  }, [applicationId, page])
+  }, [applicationId, page, partnerId])
 
   useEffect(() => { load() }, [load])
 
