@@ -11,6 +11,31 @@ sidebar, detecção de vendedor, layout com sub-navegação, páginas stub.
 Dado real (indicadores, vendas, repasses, ofertas) é Etapa 3 em diante,
 fora de escopo aqui.
 
+> **Correção pós-implementação (achado na review final, 2026-10-02):**
+> as seções 2 e 3 abaixo descrevem `FinanceiroSellerGate` renderizando
+> `<DashboardShell>` internamente — esse desenho tinha um bug real: o
+> layout raiz (`app/dashboard/layout.tsx` → `DashboardLayoutWrapper`) já
+> envolve TODA rota `/dashboard/**` em `DashboardShell`, então o gate
+> remontava o shell uma segunda vez. As duas instâncias tentavam abrir o
+> mesmo canal Realtime (`dash-msg-badge-${user.id}`) e a segunda
+> `.subscribe()` quebrava com "cannot add postgres_changes callbacks
+> after subscribe()" — toda a área caía com "Algo deu errado" pra
+> qualquer usuário real. Corrigido no código: `FinanceiroSellerGate`
+> **não** renderiza `DashboardShell`, só o próprio conteúdo (apresentação
+> ou sub-nav + `children`), confiando no shell que o layout raiz já
+> fornece — e não recebe mais `user`/`profile` como props (não eram
+> usados pra mais nada). Achado só foi possível rodando de verdade no
+> navegador — nem `tsc` nem a suite de testes detectam esse tipo de bug
+> de árvore de componentes + estado client-side do Supabase Realtime.
+> Também: **"`children` nunca é montado" (seção 2 abaixo) é impreciso**
+> — o App Router do Next.js sempre executa o Server Component da página
+> filha no servidor, independente do gate; o que o gate controla é só se
+> o resultado é *exibido* no client. Inofensivo nesta etapa (stubs
+> estáticos), mas relevante pra quem planejar a Etapa 3 em diante, onde
+> as páginas vão fazer query de dado real — nessas, uma checagem de
+> vendedor dedicada *dentro de cada página* (não só no layout) evita
+> rodar query desnecessária pra quem não é vendedor.
+
 ## Objetivo
 
 Todo cliente enxerga "Vendas e financeiro" na lateral. Quem já vende um

@@ -8,6 +8,24 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-02-vendas-financeiro-entrada-design.md`
 
+> **Correção pós-implementação (achado na review final, 2026-10-02):**
+> o código abaixo (Task 2) mostra `FinanceiroSellerGate` renderizando
+> `<DashboardShell user={user} profile={profile}>` e recebendo
+> `user`/`profile` como props. Isso tinha um bug real — o layout raiz
+> (`app/dashboard/layout.tsx`) já envolve toda rota `/dashboard/**` em
+> `DashboardShell`, então o gate remontava o shell uma segunda vez,
+> quebrando a assinatura Realtime de mensagens não lidas
+> (`dash-msg-badge-${user.id}`) com "cannot add postgres_changes
+> callbacks after subscribe()" — a área inteira caía com "Algo deu
+> errado" pra qualquer usuário real, só visível testando de verdade no
+> navegador (nem `tsc` nem a suite de testes pegam). Corrigido no
+> código final: `FinanceiroSellerGate` não renderiza `DashboardShell` e
+> não recebe `user`/`profile` — `Props` é só `{ isSeller, children }`.
+> Ver `git log` do commit que corrigiu (`fix: remove DashboardShell
+> duplicado em FinanceiroSellerGate`) pro código real. Os blocos de
+> código abaixo ficam como registro histórico do que foi escrito
+> primeiro, não como fonte de verdade pro estado atual do arquivo.
+
 ## Global Constraints
 
 - No real financial data anywhere in this plan — every one of the 5 pages under `/dashboard/financeiro/*` is a placeholder ("Em construção"). Do not query `app_purchases`, `partner_payouts`, or any financial table from these pages.
