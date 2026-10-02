@@ -31,7 +31,7 @@ export default async function ContasPage() {
   ] = await Promise.all([
     supabase.from('accounts_payable').select('*').order('status').order('due_date', { ascending: true, nullsFirst: false }),
     supabase.from('accounts_receivable').select('*').order('status').order('due_date', { ascending: true, nullsFirst: false }),
-    supabase.from('app_purchases').select('id, amount, partner_amount, reserve_amount, reserve_status, refunded_amount, paid_at').eq('status', 'paid').not('partner_id', 'is', null),
+    supabase.from('app_purchases').select('id, amount, partner_amount, reserve_amount, reserve_status, refunded_amount, paid_at, retention_days').eq('status', 'paid').not('partner_id', 'is', null),
     supabase.from('subscription_invoices').select('id, partner_amount, paid_at, subscriptions(partner_id)'),
     supabase.from('partner_payout_items').select('app_purchase_id, subscription_invoice_id, kind, partner_payouts(status)'),
     supabase.from('credit_purchases').select('id, amount_paid').eq('status', 'pending'),
@@ -63,7 +63,7 @@ export default async function ContasPage() {
       amount: p.amount, partnerAmount: Number(p.partner_amount),
       reserveAmount: Number(p.reserve_amount ?? 0), refundedAmount: Number(p.refunded_amount ?? 0),
     })
-    const status = classifyPurchasePayoutStatus(p.paid_at, coveredIds.has(p.id))
+    const status = classifyPurchasePayoutStatus(p.paid_at, coveredIds.has(p.id), p.retention_days)
     if (status !== 'pago') { payoutPendingTotal += mainNet; payoutPendingCount++ }
     // Reserva retida é passivo real até ser liberada (120 dias) ou perdida
     // em disputa (clawed_back) — soma aqui independente da janela, porque

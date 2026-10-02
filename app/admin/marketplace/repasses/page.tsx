@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireLeaderSession } from '@/lib/services/profile'
 import { partnerDisplayName } from '@/lib/partners'
-import { classifyPurchasePayoutStatus, calculateAppPurchasePayoutAmounts, DISPUTE_RESERVE_WINDOW_DAYS } from '@/lib/services/payouts'
+import { classifyPurchasePayoutStatus, calculateAppPurchasePayoutAmounts } from '@/lib/services/payouts'
 import RepassesClient, { type PartnerGroup, type EligiblePurchaseRow, type PayoutHistoryRow } from './RepassesClient'
 
 export default async function RepassesPage() {
@@ -12,7 +12,7 @@ export default async function RepassesPage() {
   const [{ data: purchases }, { data: subInvoices }, { data: items }, { data: payouts }] = await Promise.all([
     supabase
       .from('app_purchases')
-      .select('id, partner_id, application_name, plan_name, amount, partner_amount, refunded_amount, paid_at, reserve_amount, reserve_status')
+      .select('id, partner_id, application_name, plan_name, amount, partner_amount, refunded_amount, paid_at, reserve_amount, reserve_status, retention_days, reserve_window_days')
       .eq('status', 'paid')
       .not('partner_id', 'is', null)
       .order('paid_at', { ascending: true }),
@@ -83,7 +83,7 @@ export default async function RepassesPage() {
 
   for (const p of purchases ?? []) {
     if (!p.paid_at) continue
-    const status = classifyPurchasePayoutStatus(p.paid_at, coveredIds.has(p.id))
+    const status = classifyPurchasePayoutStatus(p.paid_at, coveredIds.has(p.id), p.retention_days)
     if (status === 'pago') continue // já repassada, não entra na fila
 
     // Mesma fórmula da RPC create_partner_payout, centralizada em
@@ -112,10 +112,9 @@ export default async function RepassesPage() {
   // janela de 120 dias e seu próprio kind — entra separada da fatia
   // principal porque pode virar elegível bem depois (spec: 2026-09-30-
   // partner-dispute-reserve-design.md).
-  const RESERVE_WINDOW_MS = DISPUTE_RESERVE_WINDOW_DAYS * 86400_000
   for (const p of purchases ?? []) {
     if (!p.paid_at || p.reserve_status !== 'held' || !p.reserve_amount || p.reserve_amount <= 0) continue
-    const reserveEligible = Date.now() - new Date(p.paid_at).getTime() >= RESERVE_WINDOW_MS
+    const reserveEligible = Date.now() - new Date(p.paid_at).getTime() >= p.reserve_window_days * 86400_000
     if (!reserveEligible) continue // ainda dentro dos 120 dias — não aparece na fila nem como "retido" (reserva não tem indicador visual de retido nesta leva, só aparece quando fica elegível)
 
     const { reserveNet: netReserveAmount } = calculateAppPurchasePayoutAmounts({
