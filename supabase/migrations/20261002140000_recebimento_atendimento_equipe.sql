@@ -12,6 +12,20 @@
 -- abaixo é idêntico ao já em produção, só com (a) a checagem de
 -- autorização no início e (b) toda referência a auth.uid() usada como
 -- filtro de dono trocada por v_partner_id.
+--
+-- Nota sobre tm.role = 'owner': todas as 8 funções abaixo tratam um
+-- membro de equipe com role='owner' como tendo acesso total ao
+-- financeiro do dono, sem precisar de nenhuma capacidade financeiro_*
+-- específica — mesmo padrão já usado em outras partes do código pra
+-- essa mesma coluna (ex: a checagem de 'edit' em app/dashboard/meus-app/
+-- page.tsx). Hoje isso é código morto: nenhum fluxo deste repositório
+-- jamais escreve role='owner' em app_team_members (o aceite de convite
+-- sempre grava role='member') — existe só por consistência forward-
+-- looking com o padrão já estabelecido. Quem futuramente implementar um
+-- fluxo de "co-dono" que grave role='owner' precisa saber que isso
+-- concede acesso financeiro total e irrestrito, não só permissão de
+-- editar o app — não é um bug, é a semântica pretendida, mas precisa
+-- ser uma decisão consciente de quem ligar esse fio, não uma surpresa.
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 1) get_partner_financeiro_overview
@@ -53,6 +67,7 @@ begin
       join public.app_drafts d on d.id = tm.app_draft_id
       where tm.user_id = auth.uid()
         and d.created_by = v_partner_id
+        -- owner: acesso total, ver nota no topo do arquivo
         and (tm.role = 'owner' or 'financeiro_visao_geral' = any(tm.permissions))
     ) then
       raise exception 'Sem permissão para ver o financeiro deste parceiro.';
@@ -682,6 +697,7 @@ begin
   join public.profiles pr on pr.id = d.created_by
   where tm.user_id = auth.uid()
     and d.created_by <> auth.uid()
+    -- owner: acesso total, ver nota no topo do arquivo
     and (tm.role = 'owner' or tm.permissions && array['financeiro_visao_geral','financeiro_vendas','financeiro_repasses'])
   order by 2;
 end;

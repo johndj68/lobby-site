@@ -96,6 +96,8 @@ export default function FinanceiroSellerGate({ isSeller, viewablePartners, child
     ...viewablePartners,
   ]
   const selectedPartnerId = searchParams.get('parceiro') ?? 'self'
+  const currentParceiro = searchParams.get('parceiro')
+  const parceiroQuery = currentParceiro ? `?parceiro=${currentParceiro}` : ''
 
   const handlePartnerChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -143,7 +145,7 @@ export default function FinanceiroSellerGate({ isSeller, viewablePartners, child
           return (
             <Link
               key={tab.href}
-              href={tab.href}
+              href={tab.href + parceiroQuery}
               className="shrink-0 px-3 py-2.5 text-sm font-semibold"
               style={active
                 ? { color: colors.primary, borderBottom: `2px solid ${colors.primary}` }
@@ -159,7 +161,7 @@ export default function FinanceiroSellerGate({ isSeller, viewablePartners, child
       <div className="mb-6 sm:hidden">
         <select
           value={FINANCEIRO_TABS.find(t => isTabActive(pathname, t.href))?.href ?? FINANCEIRO_TABS[0].href}
-          onChange={e => router.push(e.target.value)}
+          onChange={e => router.push(e.target.value + parceiroQuery)}
           className="h-11 w-full rounded-xl border px-3 text-sm font-semibold"
           style={{ borderColor: colors.border, background: colors.card, color: colors.text }}
           aria-label="Navegar na área Vendas e financeiro"
