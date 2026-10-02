@@ -47,7 +47,7 @@ declare
   v_tmp_count     integer;
   v_tmp_amount    numeric(12,2);
 begin
-  if v_partner_id <> auth.uid() then
+  if v_partner_id is distinct from auth.uid() then
     if not exists (
       select 1 from public.app_team_members tm
       join public.app_drafts d on d.id = tm.app_draft_id
@@ -193,7 +193,7 @@ as $$
 declare
   v_partner_id uuid := coalesce(p_partner_id, auth.uid());
 begin
-  if v_partner_id <> auth.uid() then
+  if v_partner_id is distinct from auth.uid() then
     if not exists (
       select 1 from public.app_team_members tm
       join public.app_drafts d on d.id = tm.app_draft_id
@@ -265,7 +265,7 @@ as $$
 declare
   v_partner_id uuid := coalesce(p_partner_id, auth.uid());
 begin
-  if v_partner_id <> auth.uid() then
+  if v_partner_id is distinct from auth.uid() then
     if not exists (
       select 1 from public.app_team_members tm
       join public.app_drafts d on d.id = tm.app_draft_id
@@ -371,7 +371,7 @@ declare
   v_partner_id uuid := coalesce(p_partner_id, auth.uid());
   v_count integer;
 begin
-  if v_partner_id <> auth.uid() then
+  if v_partner_id is distinct from auth.uid() then
     if not exists (
       select 1 from public.app_team_members tm
       join public.app_drafts d on d.id = tm.app_draft_id
@@ -437,7 +437,7 @@ as $$
 declare
   v_partner_id uuid := coalesce(p_partner_id, auth.uid());
 begin
-  if v_partner_id <> auth.uid() then
+  if v_partner_id is distinct from auth.uid() then
     if not exists (
       select 1 from public.app_team_members tm
       join public.app_drafts d on d.id = tm.app_draft_id
@@ -536,7 +536,7 @@ as $$
 declare
   v_partner_id uuid := coalesce(p_partner_id, auth.uid());
 begin
-  if v_partner_id <> auth.uid() then
+  if v_partner_id is distinct from auth.uid() then
     if not exists (
       select 1 from public.app_team_members tm
       join public.app_drafts d on d.id = tm.app_draft_id
@@ -611,7 +611,7 @@ as $$
 declare
   v_partner_id uuid := coalesce(p_partner_id, auth.uid());
 begin
-  if v_partner_id <> auth.uid() then
+  if v_partner_id is distinct from auth.uid() then
     if not exists (
       select 1 from public.app_team_members tm
       join public.app_drafts d on d.id = tm.app_draft_id
@@ -683,7 +683,7 @@ begin
   where tm.user_id = auth.uid()
     and d.created_by <> auth.uid()
     and (tm.role = 'owner' or tm.permissions && array['financeiro_visao_geral','financeiro_vendas','financeiro_repasses'])
-  order by partner_label;
+  order by 2;
 end;
 $$;
 
