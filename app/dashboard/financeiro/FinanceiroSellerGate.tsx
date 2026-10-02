@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Wallet, ArrowRight } from 'lucide-react'
 import { colors, shadows } from '@/lib/design-tokens'
 
@@ -18,30 +18,34 @@ const isTabActive = (pathname: string, href: string): boolean =>
     ? pathname === href
     : pathname === href || pathname.startsWith(href + '/')
 
+interface ViewablePartner {
+  partner_id:    string
+  partner_label: string
+}
+
 interface Props {
-  isSeller: boolean
-  children: React.ReactNode
+  isSeller:         boolean
+  viewablePartners: ViewablePartner[]
+  children:         React.ReactNode
 }
 
 /**
- * Guarda de acesso da área "Vendas e financeiro" (Etapa 2 do roadmap —
- * só estrutura, sem dado financeiro real ainda). Quem não vende nenhum
- * app ainda nunca vê `children` renderizado — vê só a apresentação com
- * CTA de cadastro. Importante: isso é uma guarda de *exibição*, não de
- * *busca de dado* — o Server Component da página filha roda no servidor
- * independente disso (o App Router não dá pra um layout impedir isso).
- * Páginas futuras que buscarem dado financeiro real devem fazer sua
- * própria checagem de vendedor antes de consultar, em vez de confiar só
- * neste componente pra evitar a query — *ainda não seguido* pelas
- * páginas da Etapa 3 (Visão geral, Vendas): elas chamam a RPC direto
- * após `requireClientSession`, sem checagem própria. Não é um buraco de
- * segurança (as RPCs são `security definer` e se auto-restringem a
- * `partner_id = auth.uid()`, então um não-vendedor só recebe zeros/lista
- * vazia, e o resultado nem chega a ser exibido — este gate descarta o
- * `children` pra quem não é vendedor), só uma query descartada a mais
- * pra quem acessa a URL sem ser vendedor. Achado na review final da
- * Etapa 3 (2026-10-02) — ver docs/superpowers/specs/2026-10-02-vendas-
- * financeiro-visao-geral-vendas-design.md.
+ * Guarda de acesso da área "Vendas e financeiro". Quem não é vendedor
+ * E não tem acesso ao financeiro de nenhum outro parceiro via equipe
+ * (Etapa 5) nunca vê `children` renderizado — vê só a apresentação com
+ * CTA de cadastro. Guarda de *exibição*, não de *busca de dado* — o
+ * Server Component da página filha roda no servidor independente disso.
+ * As 3 páginas com RPC real (Visão geral, Vendas, Repasses) fazem sua
+ * própria validação via o parâmetro `p_partner_id` de cada RPC (Etapa
+ * 5) — não dependem deste componente pra segurança, só pra navegação.
+ *
+ * Seletor de parceiro (Etapa 5): quando `viewablePartners` não está
+ * vazio, mostra um `<select>` com "Minha conta" (se `isSeller`) + um
+ * item por parceiro concedido. Troca de seleção escreve `?parceiro=
+ * <uuid>` na URL (via `URLSearchParams`, preservando a sub-rota atual)
+ * — cada página real lê esse param e passa como `p_partner_id` pras
+ * suas RPCs. `FinanceiroSellerGate` só renderiza o seletor; a
+ * autorização de verdade vive nas RPCs (Task 1), nunca só aqui.
  *
  * NÃO renderiza <DashboardShell> — o layout raiz do dashboard
  * (app/dashboard/layout.tsx → DashboardLayoutWrapper) já envolve TODA
@@ -52,11 +56,14 @@ interface Props {
  * callbacks ... after `subscribe()`" — achado ao testar de verdade no
  * navegador, não pego por tsc nem pelas reviews (nenhuma rodou a página).
  */
-export default function FinanceiroSellerGate({ isSeller, children }: Props) {
+export default function FinanceiroSellerGate({ isSeller, viewablePartners, children }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
-  if (!isSeller) {
+  const hasAnyAccess = isSeller || viewablePartners.length > 0
+
+  if (!hasAnyAccess) {
     return (
       <div className="mx-auto max-w-xl py-12 text-center" style={{ color: colors.text }}>
         <div
@@ -84,6 +91,23 @@ export default function FinanceiroSellerGate({ isSeller, children }: Props) {
     )
   }
 
+  const selectorOptions = [
+    ...(isSeller ? [{ partner_id: 'self', partner_label: 'Minha conta' }] : []),
+    ...viewablePartners,
+  ]
+  const selectedPartnerId = searchParams.get('parceiro') ?? 'self'
+
+  const handlePartnerChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (value === 'self') {
+      params.delete('parceiro')
+    } else {
+      params.set('parceiro', value)
+    }
+    const query = params.toString()
+    router.push(query ? `${pathname}?${query}` : pathname)
+  }
+
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold" style={{ color: colors.text, fontFamily: 'Space Grotesk, sans-serif' }}>
@@ -92,6 +116,25 @@ export default function FinanceiroSellerGate({ isSeller, children }: Props) {
       <p className="mb-5 text-sm" style={{ color: colors.textSecondary }}>
         Acompanhe as vendas dos seus aplicativos, os valores a receber e seus repasses.
       </p>
+
+      {selectorOptions.length > 1 && (
+        <div className="mb-4">
+          <label className="mb-1 block text-xs font-semibold" style={{ color: colors.textSecondary }}>
+            Visualizando financeiro de
+          </label>
+          <select
+            value={selectedPartnerId}
+            onChange={e => handlePartnerChange(e.target.value)}
+            className="h-10 w-full max-w-xs rounded-xl border px-3 text-sm font-semibold sm:w-auto"
+            style={{ borderColor: colors.border, background: colors.card, color: colors.text }}
+            aria-label="Visualizando financeiro de"
+          >
+            {selectorOptions.map(opt => (
+              <option key={opt.partner_id} value={opt.partner_id}>{opt.partner_label}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Desktop: abas horizontais */}
       <div className="mb-6 hidden gap-1 overflow-x-auto border-b sm:flex" style={{ borderColor: colors.border }}>
@@ -112,7 +155,7 @@ export default function FinanceiroSellerGate({ isSeller, children }: Props) {
         })}
       </div>
 
-      {/* Celular: seletor */}
+      {/* Celular: seletor de aba */}
       <div className="mb-6 sm:hidden">
         <select
           value={FINANCEIRO_TABS.find(t => isTabActive(pathname, t.href))?.href ?? FINANCEIRO_TABS[0].href}
