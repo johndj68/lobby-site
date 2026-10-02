@@ -10,7 +10,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Download, FolderKanban, MessageSquarePlus,
   User, LogOut, Bell, Menu, X, Plus,
-  ChevronDown, HelpCircle, Sparkles, ArrowRight, MessageCircle, Coins, History, LayoutGrid, ShoppingBag, RefreshCw,
+  ChevronDown, HelpCircle, Sparkles, ArrowRight, MessageCircle, Coins, History, LayoutGrid, ShoppingBag, RefreshCw, Wallet,
 } from 'lucide-react'
 // Cliente Supabase: autenticação e acesso ao banco de dados em tempo real
 import { createClient } from '@/lib/supabase'
@@ -33,6 +33,7 @@ const navItems = [
   { icon: Download,          label: 'Meus downloads',    href: '/dashboard/downloads'  },
   { icon: FolderKanban,      label: 'Projetos',          href: '/dashboard/projetos'   },
   { icon: LayoutGrid,        label: 'Meus apps',         href: '/dashboard/meus-app', matchPrefix: true },
+  { icon: Wallet,            label: 'Vendas e financeiro', href: '/dashboard/financeiro', matchPrefix: true },
   { icon: ShoppingBag,       label: 'Minhas compras',    href: '/dashboard/minhas-compras' },
   { icon: RefreshCw,         label: 'Assinaturas',       href: '/dashboard/assinaturas' },
   { icon: History,           label: 'Histórico',         href: '/dashboard/historico'  },
