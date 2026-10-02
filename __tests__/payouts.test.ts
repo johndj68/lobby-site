@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { PAYOUT_RETENTION_DAYS, classifyPurchasePayoutStatus, RESERVE_PERCENT, DISPUTE_RESERVE_WINDOW_DAYS, calculateReserveAmountCents, calculateAppPurchasePayoutAmounts } from '@/lib/services/payouts'
+import { PAYOUT_RETENTION_DAYS, REFUND_WINDOW_DAYS, classifyPurchasePayoutStatus, RESERVE_PERCENT, DISPUTE_RESERVE_WINDOW_DAYS, calculateReserveAmountCents, calculateAppPurchasePayoutAmounts } from '@/lib/services/payouts'
 
 describe('PAYOUT_RETENTION_DAYS', () => {
   it('é 16 dias — um dia depois do fim da janela de reembolso de 15 dias', () => {
     expect(PAYOUT_RETENTION_DAYS).toBe(16)
+  })
+})
+
+describe('REFUND_WINDOW_DAYS', () => {
+  it('é 15 dias', () => {
+    expect(REFUND_WINDOW_DAYS).toBe(15)
   })
 })
 
@@ -31,6 +37,16 @@ describe('classifyPurchasePayoutStatus', () => {
   it('classifica como pago quando já coberto por repasse confirmado, mesmo dentro da retenção', () => {
     const paidAt = new Date(Date.now() - 1 * 86400_000).toISOString()
     expect(classifyPurchasePayoutStatus(paidAt, true)).toBe('pago')
+  })
+
+  it('aceita retentionDays customizado — elegível antes dos 16 dias padrão se o prazo da venda for menor', () => {
+    const paidAt = new Date(Date.now() - 10 * 86400_000).toISOString()
+    expect(classifyPurchasePayoutStatus(paidAt, false, 7)).toBe('elegivel')
+  })
+
+  it('aceita retentionDays customizado — ainda retido depois dos 16 dias padrão se o prazo da venda for maior', () => {
+    const paidAt = new Date(Date.now() - 20 * 86400_000).toISOString()
+    expect(classifyPurchasePayoutStatus(paidAt, false, 30)).toBe('retido')
   })
 })
 

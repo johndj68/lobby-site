@@ -11,6 +11,15 @@
 export const PAYOUT_RETENTION_DAYS = 16
 
 /**
+ * Janela pra pedir reembolso voluntário de app_purchases — RPC
+ * refund_app_purchase. Sempre fecha antes de PAYOUT_RETENTION_DAYS
+ * (16 dias) ficar elegível, por desenho (spec: 2026-09-30-app-purchase-
+ * refund-design.md) — garante que nunca existe venda simultaneamente
+ * reembolsável e elegível pra repasse.
+ */
+export const REFUND_WINDOW_DAYS = 15
+
+/**
  * Reserva de disputa do parceiro: 10% do partner_amount fica retido até
  * 120 dias sem disputa (janela de chargeback das bandeiras é bem maior
  * que os 16 dias de retenção da fatia principal). Snapshot no checkout,
@@ -99,8 +108,9 @@ export function calculateAppPurchasePayoutAmounts({
 export function classifyPurchasePayoutStatus(
   paidAt: string,
   coveredByConfirmedPayout: boolean,
+  retentionDays: number = PAYOUT_RETENTION_DAYS,
 ): 'retido' | 'elegivel' | 'pago' {
   if (coveredByConfirmedPayout) return 'pago'
-  const cutoff = new Date(paidAt).getTime() + PAYOUT_RETENTION_DAYS * 86400_000
+  const cutoff = new Date(paidAt).getTime() + retentionDays * 86400_000
   return Date.now() >= cutoff ? 'elegivel' : 'retido'
 }
