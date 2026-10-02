@@ -76,6 +76,53 @@ describe('POST /api/admin/app-purchases/[purchaseId]/refund', () => {
     expect(body.error).toMatch(/prazo/)
   })
 
+  it('usa a janela gravada na própria venda, não a constante global — aceita reembolso aos 20 dias se a venda foi feita com janela de 30', async () => {
+    const { createServerSupabaseClient } = await import('@/lib/supabase-server')
+    const { createAdminClient } = await import('@/lib/supabase-admin')
+    const supabase = makeSupabase()
+    vi.mocked(createServerSupabaseClient).mockResolvedValue(supabase)
+    vi.mocked(createAdminClient).mockReturnValue(makeAdmin(basePurchase({
+      refund_window_days: 30,
+      paid_at: new Date(Date.now() - 20 * 86400_000).toISOString(),
+    })))
+    const { stripe } = await import('@/lib/stripe')
+    vi.mocked(stripe.refunds.create).mockResolvedValue({ id: 're_test' } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    const { POST } = await import('@/app/api/admin/app-purchases/[purchaseId]/refund/route')
+    const res = await POST(makeReq({ amount: 50, reason: 'motivo' }), { params: Promise.resolve({ purchaseId: 'app-purchase-1' }) })
+
+    expect(res.status).toBe(200)
+  })
+
+  it('erro de janela interpola o valor real da venda, não um "15" fixo', async () => {
+    const { createServerSupabaseClient } = await import('@/lib/supabase-server')
+    const { createAdminClient } = await import('@/lib/supabase-admin')
+    vi.mocked(createServerSupabaseClient).mockResolvedValue(makeSupabase())
+    vi.mocked(createAdminClient).mockReturnValue(makeAdmin(basePurchase({
+      refund_window_days: 7,
+      paid_at: new Date(Date.now() - 10 * 86400_000).toISOString(),
+    })))
+    const { POST } = await import('@/app/api/admin/app-purchases/[purchaseId]/refund/route')
+    const res = await POST(makeReq({ amount: 50, reason: 'motivo' }), { params: Promise.resolve({ purchaseId: 'app-purchase-1' }) })
+    const body = await res.json()
+    expect(res.status).toBe(400)
+    expect(body.error).toContain('7 dias')
+  })
+
+  it('cai pro valor padrão global se refund_window_days vier ausente da linha (defesa contra NaN)', async () => {
+    const { createServerSupabaseClient } = await import('@/lib/supabase-server')
+    const { createAdminClient } = await import('@/lib/supabase-admin')
+    vi.mocked(createServerSupabaseClient).mockResolvedValue(makeSupabase())
+    const purchaseWithoutWindow = basePurchase({ paid_at: new Date(Date.now() - 20 * 86400_000).toISOString() })
+    delete purchaseWithoutWindow.refund_window_days
+    vi.mocked(createAdminClient).mockReturnValue(makeAdmin(purchaseWithoutWindow))
+    const { POST } = await import('@/app/api/admin/app-purchases/[purchaseId]/refund/route')
+    const res = await POST(makeReq({ amount: 50, reason: 'motivo' }), { params: Promise.resolve({ purchaseId: 'app-purchase-1' }) })
+    const body = await res.json()
+    expect(res.status).toBe(400)
+    expect(body.error).toContain('15 dias')
+  })
+
   it('chama stripe.refunds.create e depois a RPC refund_app_purchase', async () => {
     const { createServerSupabaseClient } = await import('@/lib/supabase-server')
     const { createAdminClient } = await import('@/lib/supabase-admin')

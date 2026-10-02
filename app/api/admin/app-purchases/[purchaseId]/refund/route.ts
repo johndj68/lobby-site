@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { stripe } from '@/lib/stripe'
+import { REFUND_WINDOW_DAYS } from '@/lib/services/payouts'
 
 /**
  * Reembolso parcial ou total de compra de app via Stripe — só técnico
  * líder. Mesma ordem de app/api/admin/credit-purchases/[purchaseId]/refund/
  * route.ts: chama o Stripe PRIMEIRO, só grava estado local depois do
- * provedor aceitar o pedido. A janela de 15 dias é checada aqui também
- * (feedback mais rápido, sem round-trip ao Stripe) e de novo dentro da
- * RPC refund_app_purchase (fonte de verdade).
+ * provedor aceitar o pedido. A janela de reembolso vem de
+ * `purchase.refund_window_days` — snapshot da venda, não uma constante
+ * fixa — e é checada aqui também (feedback mais rápido, sem round-trip ao
+ * Stripe) e de novo dentro da RPC refund_app_purchase (fonte de verdade).
  */
 export async function POST(
   req: NextRequest,
@@ -53,8 +55,9 @@ export async function POST(
   if (purchase.refund_status === 'processing') {
     return NextResponse.json({ error: 'Já existe um reembolso em andamento para esta compra.' }, { status: 409 })
   }
-  if (!purchase.paid_at || new Date(purchase.paid_at).getTime() <= Date.now() - purchase.refund_window_days * 86400_000) {
-    return NextResponse.json({ error: 'Fora do prazo de reembolso — só é possível solicitar até 15 dias após o pagamento.' }, { status: 400 })
+  const refundWindowDays = purchase.refund_window_days ?? REFUND_WINDOW_DAYS
+  if (!purchase.paid_at || new Date(purchase.paid_at).getTime() <= Date.now() - refundWindowDays * 86400_000) {
+    return NextResponse.json({ error: `Fora do prazo de reembolso — só é possível solicitar até ${refundWindowDays} dias após o pagamento.` }, { status: 400 })
   }
   const remaining = Number(purchase.amount) - Number(purchase.refunded_amount)
   if (amount > remaining) {
