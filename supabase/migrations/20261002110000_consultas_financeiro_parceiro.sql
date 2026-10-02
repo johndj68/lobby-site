@@ -161,6 +161,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.get_partner_financeiro_overview() from public, anon, authenticated;
 grant execute on function public.get_partner_financeiro_overview() to authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────
@@ -196,6 +197,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.get_partner_sold_apps() from public, anon, authenticated;
 grant execute on function public.get_partner_sold_apps() to authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────
@@ -300,6 +302,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.get_partner_sales(uuid, integer, integer) from public, anon, authenticated;
 grant execute on function public.get_partner_sales(uuid, integer, integer) to authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────
@@ -339,6 +342,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.get_partner_sales_count(uuid) from public, anon, authenticated;
 grant execute on function public.get_partner_sales_count(uuid) to authenticated;
 
 comment on function public.get_partner_financeiro_overview() is
