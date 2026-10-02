@@ -53,16 +53,25 @@ export default function VendasClient({ soldApps }: Props) {
   const [sales, setSales] = useState<SaleRow[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError(false)
     const supabase = createClient()
     const filterId = applicationId || null
-    const [{ data: salesData }, { data: countData }] = await Promise.all([
+    const [{ data: salesData, error: salesError }, { data: countData, error: countError }] = await Promise.all([
       supabase.rpc('get_partner_sales', { p_application_id: filterId, p_limit: PAGE_SIZE, p_offset: page * PAGE_SIZE }),
       supabase.rpc('get_partner_sales_count', { p_application_id: filterId }),
-    ]) as unknown as [{ data: SaleRow[] | null }, { data: number | null }]
+    ]) as unknown as [{ data: SaleRow[] | null; error: unknown }, { data: number | null; error: unknown }]
+    if (salesError || countError) {
+      setError(true)
+      setSales([])
+      setTotal(0)
+      setLoading(false)
+      return
+    }
     setSales(salesData ?? [])
     setTotal(countData ?? 0)
     setLoading(false)
@@ -94,6 +103,17 @@ export default function VendasClient({ soldApps }: Props) {
 
       {loading ? (
         <p className="text-sm" style={{ color: colors.textSecondary }}>Carregando…</p>
+      ) : error ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm" style={{ color: colors.textSecondary }}>Não foi possível carregar as vendas. Tente novamente.</p>
+          <button
+            onClick={() => load()}
+            className="rounded-lg border px-3 py-1.5 text-xs font-semibold"
+            style={{ borderColor: colors.border, color: colors.text }}
+          >
+            Tentar novamente
+          </button>
+        </div>
       ) : sales.length === 0 ? (
         <p className="text-sm" style={{ color: colors.textSecondary }}>Nenhuma venda ainda.</p>
       ) : (
