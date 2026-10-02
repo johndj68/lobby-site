@@ -16,6 +16,8 @@
 - Both rewritten RPCs keep their existing parameter signatures — `CREATE OR REPLACE` only. Do NOT add a `DROP FUNCTION` (that's only needed when the parameter list itself changes, per the lesson from an earlier plan this session).
 - The Postgres pattern for a dynamic interval from an integer column is `(column || ' days')::interval` — use this exact pattern, not string concatenation into a literal `interval '...'`.
 
+**Deploy ordering is load-bearing (achado da review final):** the migration must be applied BEFORE this code deploys, not after — same class of requirement already noted in the two prior plans this session. Without the migration, every call that reads/writes the 3 new columns fails: checkout's insert errors out (every app purchase returns 500), the refund route's select returns null (misleading 404 "Compra não encontrada"), and — the worst case — `/admin/marketplace/repasses` and `/admin/financeiro/contas`'s selects fail silently (`{ data }` only, error discarded) and both pages render **R$ 0,00 sem nenhum erro visível**, exactly the kind of wrong-number-with-no-warning a líder could act on. Push the migration first.
+
 ---
 
 ### Task 1: Migration — schema, both RPCs, `REFUND_WINDOW_DAYS`, `classifyPurchasePayoutStatus`
