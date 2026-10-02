@@ -14,6 +14,11 @@ const PERMISSIONS = [
   { id: 'edit_app', label: 'Editar aplicativo', description: 'Atualizar textos, imagens e informações.' },
   { id: 'respond_qa', label: 'Responder perguntas e avaliações', description: 'Publicar respostas em nome da equipe.' },
   { id: 'manage_finance', label: 'Gerenciar financeiro', description: 'Acessar funções financeiras autorizadas.' },
+  { id: 'financeiro_visao_geral', label: 'Financeiro — Visão geral', description: 'Ver os indicadores financeiros agregados do dono em todos os apps dele.' },
+  { id: 'financeiro_vendas', label: 'Financeiro — Vendas', description: 'Ver o histórico de vendas do dono em todos os apps dele.' },
+  { id: 'financeiro_repasses', label: 'Financeiro — Repasses e extrato', description: 'Ver a fila de repasse e o extrato do dono em todos os apps dele.' },
+  { id: 'financeiro_ofertas', label: 'Financeiro — Ofertas e promoções', description: 'Ver e editar ofertas (ainda não disponível).' },
+  { id: 'financeiro_configuracoes', label: 'Financeiro — Configurações de recebimento', description: 'Ver e editar dados de recebimento (ainda não disponível).' },
 ]
 
 export default function TeamClient({ draft }: TeamClientProps) {
