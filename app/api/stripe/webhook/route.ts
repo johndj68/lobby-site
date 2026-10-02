@@ -514,7 +514,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       .update({
         refunded_amount: amountRefundedTotal,
         refund_status: fullyRefunded ? 'refunded' : null,
-        refunded_at: fullyRefunded ? new Date().toISOString() : null,
+        refunded_at: new Date().toISOString(),
         ...(fullyRefunded ? { status: 'refunded' } : {}),
       })
       .eq('id', appPurchase.id)

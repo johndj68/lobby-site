@@ -149,7 +149,7 @@ export default function VendasClient({ soldApps }: Props) {
                         </td>
                         <td className="py-2 pr-3" style={{ color: colors.textSecondary }}>{sale.plan_name}</td>
                         <td className="py-2 pr-3" style={{ color: colors.textSecondary }}>{sale.buyer_name}</td>
-                        <td className="py-2 pr-3" style={{ color: colors.textSecondary }}>{formatDateBR(sale.paid_at.slice(0, 10))}</td>
+                        <td className="py-2 pr-3" style={{ color: colors.textSecondary }}>{formatDateBR(sale.paid_at?.slice(0, 10))}</td>
                         <td className="py-2 pr-3 font-semibold" style={{ color: colors.text }}>{formatCurrencyBRL(sale.amount)}</td>
                         <td className="py-2">
                           <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ color: status.color, background: `${status.color}1A` }}>

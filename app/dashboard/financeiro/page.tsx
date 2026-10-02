@@ -26,7 +26,17 @@ export default async function FinanceiroVisaoGeralPage() {
   const supabase = await createServerSupabaseClient()
   await requireClientSession(supabase)
 
-  const { data } = await supabase.rpc('get_partner_financeiro_overview') as unknown as { data: OverviewRow[] | null }
+  const { data, error } = await supabase.rpc('get_partner_financeiro_overview') as unknown as { data: OverviewRow[] | null; error: unknown }
+
+  if (error) {
+    return (
+      <div>
+        <h2 className="mb-4 text-lg font-bold" style={{ color: colors.text }}>Visão geral</h2>
+        <p className="text-sm" style={{ color: colors.textSecondary }}>Não foi possível carregar seus indicadores financeiros. Tente novamente em instantes.</p>
+      </div>
+    )
+  }
+
   const overview = data?.[0] ?? EMPTY_OVERVIEW
 
   const cards: { label: string; value: number; sub: string; color: string }[] = [
