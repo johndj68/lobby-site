@@ -1,15 +1,20 @@
 import type { Metadata } from 'next'
-import { colors } from '@/lib/design-tokens'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { requireClientSession } from '@/lib/services/profile'
+import VendasClient from './VendasClient'
 
 export const metadata: Metadata = { title: 'Vendas | LOBBY', robots: { index: false, follow: false } }
 
-export default function FinanceiroVendasPage() {
-  return (
-    <div>
-      <h2 className="mb-2 text-lg font-bold" style={{ color: colors.text }}>Vendas</h2>
-      <p className="text-sm" style={{ color: colors.textSecondary }}>
-        Em construção — essa área está sendo desenvolvida.
-      </p>
-    </div>
-  )
+interface SoldApp {
+  application_id:   string
+  application_name: string
+}
+
+export default async function FinanceiroVendasPage() {
+  const supabase = await createServerSupabaseClient()
+  await requireClientSession(supabase)
+
+  const { data } = await supabase.rpc('get_partner_sold_apps') as unknown as { data: SoldApp[] | null }
+
+  return <VendasClient soldApps={data ?? []} />
 }
