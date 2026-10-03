@@ -41,9 +41,10 @@ interface Props {
   partnerId: string | null
   apps:      AppOption[]
   userId:    string
+  emptyStateCta: { label: string; href: string }
 }
 
-export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: Props) {
+export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emptyStateCta }: Props) {
   const [preset, setPreset] = useState<PeriodoPreset>('este_mes')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -190,6 +191,28 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
       <PendenciasAvisos data={pendencias} loading={loading} error={pendenciasError} onRetry={load} partnerId={partnerId} />
 
       <p className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: colors.textMuted }}>Resultados do período</p>
+      {!loading && !resumoError && resumo.vendas_confirmadas_qtd === 0 && (
+        <div className="mb-6 rounded-xl border p-4 text-center" style={{ borderColor: colors.border, background: colors.card }}>
+          <p className="text-sm" style={{ color: colors.textSecondary }}>
+            {applicationId || preset === 'personalizado'
+              ? 'Nenhuma venda encontrada com esse filtro.'
+              : 'Você ainda não tem vendas registradas.'}
+          </p>
+          {applicationId || preset === 'personalizado' ? (
+            <button
+              onClick={() => { setApplicationId(''); setPreset('este_mes') }}
+              className="mt-2 text-sm font-semibold"
+              style={{ color: colors.primary }}
+            >
+              Limpar filtros
+            </button>
+          ) : (
+            <Link href={emptyStateCta.href} className="mt-2 inline-block text-sm font-semibold" style={{ color: colors.primary }}>
+              {emptyStateCta.label} →
+            </Link>
+          )}
+        </div>
+      )}
       {resumoError ? (
         <div className="mb-6 flex items-center gap-3 rounded-xl border p-4 text-sm" style={{ borderColor: '#EF4444', color: colors.text }}>
           Não foi possível carregar os resultados do período.

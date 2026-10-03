@@ -21,5 +21,22 @@ export default async function FinanceiroVisaoGeralPage({ searchParams }: { searc
   // VendasClient.tsx).
   const { data: soldApps } = await supabase.rpc('get_partner_sold_apps', { p_partner_id: partnerId }) as unknown as { data: { application_id: string; application_name: string }[] | null }
 
-  return <VisaoGeralClient partnerId={partnerId} apps={soldApps ?? []} userId={user.id} />
+  // CTA adaptada pro estado "sem vendas" (seção 11 do pedido) — mesma
+  // lógica de app_drafts por created_by/status já usada em
+  // app/dashboard/meus-app/MeusAppsClient.tsx pra decidir "Continuar
+  // cadastro" vs "Ver meus aplicativos".
+  const { data: drafts } = await supabase
+    .from('app_drafts')
+    .select('id, status')
+    .eq('created_by', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const latestDraft = drafts?.[0] ?? null
+  const emptyStateCta = !latestDraft
+    ? { label: 'Cadastrar meu aplicativo', href: '/dashboard/meus-app/novo' }
+    : latestDraft.status !== 'published'
+      ? { label: 'Continuar cadastro', href: `/dashboard/meus-app/novo/${latestDraft.id}/editar` }
+      : { label: 'Ver meus aplicativos', href: '/dashboard/meus-app' }
+
+  return <VisaoGeralClient partnerId={partnerId} apps={soldApps ?? []} userId={user.id} emptyStateCta={emptyStateCta} />
 }
