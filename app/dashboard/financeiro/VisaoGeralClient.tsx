@@ -6,8 +6,10 @@ import { RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { colors, shadows } from '@/lib/design-tokens'
 import { formatCurrencyBRL, formatDateBR } from '@/lib/finance'
-import { resolvePeriodoRange, type PeriodoPreset } from '@/lib/services/financeiro-periodo'
+import { resolvePeriodoRange, resolveGranularidade, type PeriodoPreset } from '@/lib/services/financeiro-periodo'
 import FiltrosPeriodo, { type AppOption } from './FiltrosPeriodo'
+import EvolucaoChart, { type SerieBucket } from './EvolucaoChart'
+import ProximasLiberacoes, { type LiberacaoRow } from './ProximasLiberacoes'
 
 interface ResumoRow {
   vendas_confirmadas_valor: number
@@ -50,28 +52,57 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
   const [resumoError, setResumoError] = useState(false)
   const [overviewError, setOverviewError] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [serie, setSerie] = useState<SerieBucket[]>([])
+  const [serieError, setSerieError] = useState(false)
+  const [liberacoes, setLiberacoes] = useState<LiberacaoRow[]>([])
+  const [liberacoesError, setLiberacoesError] = useState(false)
 
   const range = useMemo(() => resolvePeriodoRange(preset, customFrom, customTo), [preset, customFrom, customTo])
+  const granularidade = useMemo(() => resolveGranularidade(range.from, range.to), [range])
 
   const load = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const [resumoRes, overviewRes] = await Promise.all([
+    const [resumoRes, overviewRes, serieRes, queueMainRes, queueReserveRes] = await Promise.all([
       supabase.rpc('get_partner_financeiro_periodo_resumo', {
         p_from: range.from, p_to: range.to,
         p_application_id: applicationId || null, p_partner_id: partnerId,
       }),
       supabase.rpc('get_partner_financeiro_overview', { p_partner_id: partnerId }),
-    ]) as unknown as [{ data: ResumoRow[] | null; error: unknown }, { data: OverviewRow[] | null; error: unknown }]
+      supabase.rpc('get_partner_financeiro_periodo_serie', {
+        p_from: range.from, p_to: range.to, p_granularidade: granularidade,
+        p_application_id: applicationId || null, p_partner_id: partnerId,
+      }),
+      supabase.rpc('get_partner_payout_queue_main', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_payout_queue_reserve', { p_partner_id: partnerId }),
+    ]) as unknown as [
+      { data: ResumoRow[] | null; error: unknown },
+      { data: OverviewRow[] | null; error: unknown },
+      { data: SerieBucket[] | null; error: unknown },
+      { data: { sale_id: string; application_name: string; plan_name: string; net_amount: number; release_date: string; days_remaining: number }[] | null; error: unknown },
+      { data: { sale_id: string; application_name: string; plan_name: string; net_amount: number; release_date: string; days_remaining: number }[] | null; error: unknown },
+    ]
 
     setResumoError(!!resumoRes.error)
     setResumo(resumoRes.data?.[0] ?? EMPTY_RESUMO)
     setOverviewError(!!overviewRes.error)
     setOverview(overviewRes.data?.[0] ?? EMPTY_OVERVIEW)
+    setSerieError(!!serieRes.error)
+    setSerie(serieRes.data ?? [])
 
-    if (!resumoRes.error && !overviewRes.error) setLastUpdated(new Date())
+    setLiberacoesError(!!queueMainRes.error || !!queueReserveRes.error)
+    const nameFilter = applicationId ? apps.find(a => a.application_id === applicationId)?.application_name : null
+    const main: LiberacaoRow[] = (queueMainRes.data ?? [])
+      .filter(r => !nameFilter || r.application_name === nameFilter)
+      .map(r => ({ ...r, tipo: 'retencao' as const }))
+    const reserve: LiberacaoRow[] = (queueReserveRes.data ?? [])
+      .filter(r => !nameFilter || r.application_name === nameFilter)
+      .map(r => ({ ...r, tipo: 'reserva' as const }))
+    setLiberacoes([...main, ...reserve].sort((a, b) => a.days_remaining - b.days_remaining))
+
+    if (!resumoRes.error && !overviewRes.error && !serieRes.error && !queueMainRes.error && !queueReserveRes.error) setLastUpdated(new Date())
     setLoading(false)
-  }, [range, applicationId, partnerId])
+  }, [range, applicationId, partnerId, granularidade, apps])
 
   useEffect(() => { load() }, [load])
 
@@ -173,6 +204,14 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
           </div>
         </div>
       )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="rounded-xl border p-4" style={{ borderColor: colors.border, background: colors.card }}>
+          <p className="mb-3 text-sm font-bold" style={{ color: colors.text }}>Evolução das vendas</p>
+          <EvolucaoChart data={serie} granularidade={granularidade} loading={loading} error={serieError} onRetry={load} />
+        </div>
+        <ProximasLiberacoes rows={liberacoes} loading={loading} error={liberacoesError} onRetry={load} partnerId={partnerId} />
+      </div>
     </div>
   )
 }
