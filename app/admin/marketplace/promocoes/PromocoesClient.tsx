@@ -40,6 +40,8 @@ interface Row {
   rejectionReason: string | null
   requesterName: string
   createdAt: string
+  unitLimit: number | null
+  eligibleForDailyDeals: boolean
 }
 
 interface Props {
@@ -147,6 +149,8 @@ export default function PromocoesClient({ user, profile, pending: initialPending
                       <p className="text-sm font-semibold" style={{ color: C.text }}>{row.appName} — {row.planName}</p>
                       <p className="text-xs" style={{ color: C.textSecondary }}>
                         {priceLabel(row)} · {formatDateTimeBR(row.startsAt)} → {formatDateTimeBR(row.endsAt)} · pedido por {row.requesterName} em {formatDateTimeBR(row.createdAt)}
+                        {row.unitLimit != null && <> · limite: {row.unitLimit} un</>}
+                        {row.eligibleForDailyDeals && <> · elegível p/ promoções do dia</>}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -216,8 +220,8 @@ export default function PromocoesClient({ user, profile, pending: initialPending
             value={rejectNotes}
             onChange={e => setRejectNotes(e.target.value)}
             placeholder="Motivo da rejeição (obrigatório)"
-            className="mt-3 w-full rounded-lg border p-2 text-sm"
-            style={{ borderColor: C.border, color: C.text }}
+            className="mt-3 w-full rounded-lg border bg-transparent p-2 text-sm outline-none"
+            style={{ borderColor: C.border }}
             rows={3}
           />
         </> : ''}
