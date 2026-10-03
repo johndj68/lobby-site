@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { checkPromotionOverlap, computePromoPriceFromPercent, roundCents } from '@/lib/services/offers'
+import { checkPromotionOverlap, computeDiscountPercent, computePromoPriceFromPercent, roundCents } from '@/lib/services/offers'
 
 /**
  * Pedido de promoção pelo PRÓPRIO dono do plano — nasce sempre
@@ -61,15 +61,12 @@ export async function POST(
     discountPercentage = Math.round(discountPercent)
   } else if (typeof promoPriceInput === 'number' && promoPriceInput >= 0) {
     promoPrice = roundCents(promoPriceInput)
-    discountPercentage = plan.price > 0 ? Math.round((1 - promoPrice / plan.price) * 100) : null
+    discountPercentage = computeDiscountPercent(promoPrice, plan.price, null)
   } else {
     return NextResponse.json({ error: 'Informe um desconto percentual ou um preço promocional.' }, { status: 400 })
   }
   if (promoPrice >= plan.price) {
     return NextResponse.json({ error: 'O preço promocional precisa ser menor que o preço regular atual.' }, { status: 400 })
-  }
-  if (promoPrice < 0) {
-    return NextResponse.json({ error: 'Preço promocional inválido.' }, { status: 400 })
   }
 
   // No máximo 1 pedido pendente por plano por vez — checkPromotionOverlap
