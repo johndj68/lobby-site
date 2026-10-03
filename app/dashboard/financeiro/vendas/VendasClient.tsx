@@ -44,11 +44,12 @@ const RESERVE_STATUS_LABEL: Record<string, string> = {
 }
 
 interface Props {
-  soldApps:  SoldApp[]
-  partnerId: string | null
+  soldApps:     SoldApp[]
+  partnerId:    string | null
+  focusSaleId?: string | null
 }
 
-export default function VendasClient({ soldApps, partnerId }: Props) {
+export default function VendasClient({ soldApps, partnerId, focusSaleId }: Props) {
   const [applicationId, setApplicationId] = useState<string>('')
   const [page, setPage] = useState(0)
   const [sales, setSales] = useState<SaleRow[]>([])
@@ -79,6 +80,12 @@ export default function VendasClient({ soldApps, partnerId }: Props) {
   }, [applicationId, page, partnerId])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (focusSaleId && sales.some(s => s.sale_id === focusSaleId)) {
+      setExpandedId(focusSaleId)
+    }
+  }, [focusSaleId, sales])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
