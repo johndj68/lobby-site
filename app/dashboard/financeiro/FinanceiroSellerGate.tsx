@@ -172,12 +172,19 @@ export default function FinanceiroSellerGate({ isSeller, viewablePartners, child
         </select>
       </div>
 
-      <div
-        className="rounded-2xl border p-6"
-        style={{ background: colors.card, borderColor: colors.border, boxShadow: shadows.card }}
-      >
-        {children}
-      </div>
+      {/* Visão geral (Task 3) monta suas próprias seções direto no fundo
+          da página — as outras 4 abas continuam exatamente como estão,
+          dentro do card externo. */}
+      {pathname === '/dashboard/financeiro' ? (
+        children
+      ) : (
+        <div
+          className="rounded-2xl border p-6"
+          style={{ background: colors.card, borderColor: colors.border, boxShadow: shadows.card }}
+        >
+          {children}
+        </div>
+      )}
     </div>
   )
 }
