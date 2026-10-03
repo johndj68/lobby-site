@@ -13,9 +13,9 @@ import { checkPromotionOverlap, computePromoPriceFromPercent, roundCents } from 
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ planId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { planId } = await params
+  const { id: planId } = await params
   const supabase = await createServerSupabaseClient()
 
   const { data: { user } } = await supabase.auth.getUser()
