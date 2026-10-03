@@ -12,6 +12,7 @@ import EvolucaoChart, { type SerieBucket } from './EvolucaoChart'
 import ProximasLiberacoes, { type LiberacaoRow } from './ProximasLiberacoes'
 import UltimasVendas, { type VendaRow } from './UltimasVendas'
 import DesempenhoPorApp, { type DesempenhoRow } from './DesempenhoPorApp'
+import PendenciasAvisos, { type PendenciasRow } from './PendenciasAvisos'
 
 interface ResumoRow {
   vendas_confirmadas_valor: number
@@ -62,6 +63,8 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
   const [vendasError, setVendasError] = useState(false)
   const [desempenho, setDesempenho] = useState<DesempenhoRow[]>([])
   const [desempenhoError, setDesempenhoError] = useState(false)
+  const [pendencias, setPendencias] = useState<PendenciasRow | null>(null)
+  const [pendenciasError, setPendenciasError] = useState(false)
 
   const range = useMemo(() => resolvePeriodoRange(preset, customFrom, customTo), [preset, customFrom, customTo])
   const granularidade = useMemo(() => resolveGranularidade(range.from, range.to), [range])
@@ -69,7 +72,7 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
   const load = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const [resumoRes, overviewRes, serieRes, queueMainRes, queueReserveRes, vendasRes, desempenhoRes] = await Promise.all([
+    const [resumoRes, overviewRes, serieRes, queueMainRes, queueReserveRes, vendasRes, desempenhoRes, pendenciasRes] = await Promise.all([
       supabase.rpc('get_partner_financeiro_periodo_resumo', {
         p_from: range.from, p_to: range.to,
         p_application_id: applicationId || null, p_partner_id: partnerId,
@@ -88,6 +91,7 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
       supabase.rpc('get_partner_financeiro_periodo_por_app', {
         p_from: range.from, p_to: range.to, p_partner_id: partnerId,
       }),
+      supabase.rpc('get_partner_financeiro_pendencias', { p_partner_id: partnerId }),
     ]) as unknown as [
       { data: ResumoRow[] | null; error: unknown },
       { data: OverviewRow[] | null; error: unknown },
@@ -96,6 +100,7 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
       { data: { sale_id: string; application_name: string; plan_name: string; net_amount: number; release_date: string; days_remaining: number }[] | null; error: unknown },
       { data: VendaRow[] | null; error: unknown },
       { data: DesempenhoRow[] | null; error: unknown },
+      { data: PendenciasRow[] | null; error: unknown },
     ]
 
     setResumoError(!!resumoRes.error)
@@ -119,8 +124,10 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
     setVendas(vendasRes.data ?? [])
     setDesempenhoError(!!desempenhoRes.error)
     setDesempenho(desempenhoRes.data ?? [])
+    setPendenciasError(!!pendenciasRes.error)
+    setPendencias(pendenciasRes.data?.[0] ?? null)
 
-    if (!resumoRes.error && !overviewRes.error && !serieRes.error && !queueMainRes.error && !queueReserveRes.error && !vendasRes.error && !desempenhoRes.error) {
+    if (!resumoRes.error && !overviewRes.error && !serieRes.error && !queueMainRes.error && !queueReserveRes.error && !vendasRes.error && !desempenhoRes.error && !pendenciasRes.error) {
       setLastUpdated(new Date())
     }
     setLoading(false)
@@ -179,6 +186,8 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
         onCustomChange={(f, t) => { setCustomFrom(f); setCustomTo(t) }}
         apps={apps} applicationId={applicationId} onAppChange={setApplicationId}
       />
+
+      <PendenciasAvisos data={pendencias} loading={loading} error={pendenciasError} onRetry={load} partnerId={partnerId} />
 
       <p className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: colors.textMuted }}>Resultados do período</p>
       {resumoError ? (
