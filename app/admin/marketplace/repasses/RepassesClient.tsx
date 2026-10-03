@@ -65,6 +65,7 @@ const NAV_TABS = [
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
   { label: 'Comissões', href: '/admin/marketplace/comissoes', enabled: true },
   { label: 'Repasses', href: '/admin/marketplace/repasses', enabled: true },
+  { label: 'Preços', href: '/admin/marketplace/precos', enabled: true },
 ]
 
 export default function RepassesClient({ user, profile, partnerGroups, history }: Props) {

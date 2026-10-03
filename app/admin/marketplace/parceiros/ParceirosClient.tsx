@@ -42,6 +42,7 @@ const NAV_TABS = [
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
   { label: 'Comissões', href: '/admin/marketplace/comissoes', enabled: true },
   { label: 'Repasses', href: '/admin/marketplace/repasses', enabled: true },
+  { label: 'Preços', href: '/admin/marketplace/precos', enabled: true },
 ]
 
 export default function ParceirosClient({ user, profile, rows, indicators, alerts, totalFiltered, page, pageSize, totalPages, loadError, filters }: Props) {
