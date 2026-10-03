@@ -11,10 +11,12 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Verify ownership via draft
+  // Verify ownership via draft — já busca price/billing_period atuais
+  // pra comparar com o payload (Etapa 6: mudança nesses dois campos
+  // exige aprovação do admin, nunca aplica direto).
   const { data: plan } = await supabase
     .from('app_plans')
-    .select('app_draft_id')
+    .select('app_draft_id, price, billing_period')
     .eq('id', id)
     .single()
 
@@ -31,9 +33,52 @@ export async function PATCH(
 
   const updates = await req.json()
 
+  const priceChanged = Object.prototype.hasOwnProperty.call(updates, 'price') && updates.price !== plan.price
+  const billingChanged = Object.prototype.hasOwnProperty.call(updates, 'billing_period') && updates.billing_period !== plan.billing_period
+  // price/billing_period nunca vão no UPDATE direto — ou não mudaram
+  // (otherUpdates já reflete isso, sem efeito) ou mudaram e precisam
+  // virar pedido (abaixo), nunca os dois ao mesmo tempo.
+  const { price: _price, billing_period: _billingPeriod, ...otherUpdates } = updates
+
+  let pendingRequest = null
+  if (priceChanged || billingChanged) {
+    const { data: existingPending } = await supabase
+      .from('plan_price_change_requests')
+      .select('id')
+      .eq('app_plan_id', id)
+      .eq('status', 'pendente')
+      .maybeSingle()
+
+    if (existingPending) {
+      return NextResponse.json(
+        { error: 'Já existe um pedido de mudança de preço aguardando aprovação pra este plano.' },
+        { status: 409 }
+      )
+    }
+
+    const { data: request, error: requestError } = await supabase
+      .from('plan_price_change_requests')
+      .insert({
+        app_plan_id: id,
+        requested_by: user.id,
+        current_price: plan.price,
+        requested_price: updates.price ?? plan.price,
+        current_billing_period: plan.billing_period,
+        requested_billing_period: updates.billing_period ?? plan.billing_period,
+      })
+      .select()
+      .single()
+
+    if (requestError || !request) {
+      console.error('[plans PATCH] failed to create price change request', requestError)
+      return NextResponse.json({ error: 'Não foi possível registrar o pedido de mudança de preço.' }, { status: 500 })
+    }
+    pendingRequest = request
+  }
+
   const { data, error } = await supabase
     .from('app_plans')
-    .update(updates)
+    .update(otherUpdates)
     .eq('id', id)
     .select()
     .single()
@@ -43,7 +88,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Update failed' }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json({ plan: data, pending_request: pendingRequest })
 }
 
 export async function DELETE(
