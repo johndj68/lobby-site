@@ -33,9 +33,11 @@ export default async function PlanosPage({ params }: { params: Promise<{ appId: 
   // Pedido mais recente de cada plano (já veio ordenado desc) — só
   // pendente/rejeitado viram badge; aprovado já está refletido no
   // price/billing_period atual do plano, não precisa de badge.
+  const seenPlanIds = new Set<string>()
   const pendingByPlan: Record<string, PendingRequest> = {}
   for (const r of priceRequests ?? []) {
-    if (pendingByPlan[r.app_plan_id]) continue
+    if (seenPlanIds.has(r.app_plan_id)) continue
+    seenPlanIds.add(r.app_plan_id)
     if (r.status === 'pendente' || r.status === 'rejeitado') {
       pendingByPlan[r.app_plan_id] = {
         id: r.id, status: r.status as 'pendente' | 'rejeitado',
