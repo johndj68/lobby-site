@@ -32,11 +32,18 @@ pendência que exige ação dele.
 2. **RPCs de período são novas, paralelas às 7 já existentes** — nenhuma
    RPC/página/componente hoje em produção (Vendas, Repasses, a própria
    Visão geral atual) é alterada ou tem assinatura trocada.
-3. **"Reembolsos do período" usa a data da venda original** (`paid_at`),
-   não a data do reembolso — não existe coluna de data de reembolso no
-   schema hoje, e criar uma exigiria editar `refund_app_purchase` (RPC
-   financeira sensível, já em produção). A UI deixa esse critério
-   explícito em todo lugar que mostra esse número.
+3. **Correção pós-pergunta ao usuário**: a pesquisa inicial dissera que
+   não existia coluna de data de reembolso — errado. `app_purchases.refunded_at`
+   existe desde `20260930110000_reembolso_app_purchase.sql:18` e **já é
+   o critério usado hoje** pelo card "Reembolsos do mês" em produção
+   (`get_partner_financeiro_overview`, linha `and ap.refunded_at >=
+   v_month_start`). **"Reembolsos do período" usa `refunded_at` (a data
+   real do reembolso)**, não `paid_at` — mais simples (zero migração
+   nova) e consistente com o que já está em produção. A pergunta feita
+   ao usuário partiu de uma premissa errada; corrigido aqui antes do
+   plano, sem precisar de nova pergunta (a opção certa — usar a data
+   real — já era a mais simples das duas, não uma mudança de
+   direção).
 4. **Biblioteca de gráfico: Recharts** — nenhuma lib de gráfico existe
    hoje no projeto (admin incluso); Recharts é a nova dependência.
 5. **"Ver detalhes" de uma venda linka pra `/dashboard/financeiro/vendas?venda=<id>`**
@@ -83,8 +90,8 @@ Uma linha:
 | `vendas_confirmadas_valor` | numeric(12,2) | soma de `amount` de `app_purchases.status='paid'` + `subscription_invoices` pagas, `paid_at` no período |
 | `vendas_confirmadas_qtd` | integer | contagem das mesmas linhas |
 | `comissao_valor` | numeric(12,2) | soma de `commission_amount` das mesmas linhas |
-| `reembolsos_valor` | numeric(12,2) | soma de `refunded_amount` onde a venda original (`paid_at`) caiu no período — **não** filtra pela data do reembolso (decisão #3) |
-| `reembolsos_qtd` | integer | contagem de vendas com `refunded_amount > 0` no período |
+| `reembolsos_valor` | numeric(12,2) | soma de `refunded_amount` onde `refunded_at` caiu no período (mesmo critério de `get_partner_financeiro_overview`, decisão #3) |
+| `reembolsos_qtd` | integer | contagem de linhas com `refunded_amount > 0` e `refunded_at` no período |
 | `participacao_valor` | numeric(12,2) | soma de `partner_amount` (já é `amount - commission_amount`, nunca subtrair de novo) |
 
 ### 2. `get_partner_financeiro_periodo_serie(p_partner_id, p_from, p_to, p_application_id, p_granularidade)`
@@ -171,8 +178,8 @@ brancos com borda suave — sem o card externo grande que existe hoje.
 1. **Vendas confirmadas** — valor + "N vendas" + texto pequeno "Valor
    pago, vendas confirmadas no período selecionado."
 2. **Comissão da plataforma** — valor.
-3. **Reembolsos** — valor + "N reembolsos" + texto "Reembolsos de vendas
-   pagas no período (pela data da venda, não do reembolso)."
+3. **Reembolsos** — valor + "N reembolsos" + texto "Reembolsos efetuados
+   no período selecionado."
 4. **Sua participação** — valor + ícone de tooltip: "Valor de venda menos
    a comissão da plataforma. Não é lucro — ainda não desconta custos
    próprios do parceiro." Nunca rotulado "lucro".
