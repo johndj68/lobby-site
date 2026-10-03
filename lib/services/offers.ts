@@ -127,6 +127,7 @@ export async function checkPromotionOverlap(
     .select('id')
     .eq('application_id', params.applicationId)
     .is('cancelled_at', null)
+    .is('rejected_at', null)
     .lt('starts_at', params.endsAt)
     .gt('ends_at', params.startsAt)
 

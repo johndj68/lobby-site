@@ -76,7 +76,7 @@ export async function POST(
   // cobre sobreposição de DATAS, não "já existe QUALQUER pendente" (ex:
   // um pedido pendente com datas futuras bem distantes de um novo pedido
   // também futuro, sem sobreposição de data, ainda deveria ser bloqueado).
-  const { data: existingPending } = await supabase
+  const { data: existingPending, error: existingPendingError } = await supabase
     .from('promotions')
     .select('id')
     .eq('plan_id', planId)
@@ -84,6 +84,10 @@ export async function POST(
     .is('rejected_at', null)
     .is('cancelled_at', null)
     .maybeSingle()
+  if (existingPendingError) {
+    console.error('[plan promotions POST] failed to check existing pending request', existingPendingError)
+    return NextResponse.json({ error: 'Não foi possível verificar pedidos pendentes. Tente novamente.' }, { status: 500 })
+  }
   if (existingPending) {
     return NextResponse.json({ error: 'Já existe um pedido de promoção aguardando aprovação pra este plano.' }, { status: 409 })
   }
@@ -114,6 +118,9 @@ export async function POST(
     .single()
 
   if (error || !created) {
+    if (error?.code === '23505') {
+      return NextResponse.json({ error: 'Já existe um pedido de promoção aguardando aprovação pra este plano.' }, { status: 409 })
+    }
     console.error('[plan promotions POST]', error)
     return NextResponse.json({ error: 'Não foi possível registrar o pedido de promoção. Tente novamente.' }, { status: 500 })
   }
