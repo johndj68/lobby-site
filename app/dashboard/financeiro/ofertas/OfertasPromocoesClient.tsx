@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Plus, Loader2 } from 'lucide-react'
 import { colors, shadows } from '@/lib/design-tokens'
-import { getPromotionStatus, formatOfferPrice } from '@/lib/services/offers'
+import { getPromotionStatus, formatOfferPrice, computePromoPriceFromPercent, computeDiscountPercent } from '@/lib/services/offers'
 
 export interface PlanOption {
   id: string
@@ -87,8 +87,13 @@ export default function OfertasPromocoesClient({ plans, promotions: initialPromo
         id: data.id, planId: selectedPlanId,
         appName: selectedPlan?.appName ?? '—', planName: selectedPlan?.planName ?? '—',
         currency: selectedPlan?.currency ?? 'BRL', billingPeriod: selectedPlan?.billingPeriod ?? null,
-        promoPrice: discountPercent ? 0 : Number(promoPrice), originalPrice: selectedPlan?.price ?? null,
-        discountPercentage: discountPercent ? Number(discountPercent) : null,
+        promoPrice: discountPercent && selectedPlan?.price != null
+          ? computePromoPriceFromPercent(selectedPlan.price, Number(discountPercent))
+          : Number(promoPrice),
+        originalPrice: selectedPlan?.price ?? null,
+        discountPercentage: discountPercent
+          ? Number(discountPercent)
+          : computeDiscountPercent(Number(promoPrice), selectedPlan?.price ?? null, null),
         startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(),
         isApproved: false, isActive: false, cancelledAt: null, pausedAt: null, rejectedAt: null, rejectionReason: null,
       }, ...prev])
