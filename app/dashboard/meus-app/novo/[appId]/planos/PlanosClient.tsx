@@ -14,12 +14,24 @@ interface Plan {
   features: string[]; users_limit: number | null; support_level: string | null
 }
 
+export interface PendingRequest {
+  id: string
+  status: 'pendente' | 'rejeitado'
+  current_price: number | null
+  requested_price: number
+  current_billing_period: string | null
+  requested_billing_period: string
+  review_notes: string | null
+}
+
 const BILLING_LABEL: Record<string, string> = { 'one-time': 'Pagamento único', monthly: 'Mensal', yearly: 'Anual', lifetime: 'Vitalício' }
 
-export default function PlanosClient({ appId, appName, initialPlans, completion }: {
-  appId: string; appName: string; initialPlans: Plan[]; completion: { 1: boolean; 2: boolean; 3: boolean }
+export default function PlanosClient({ appId, appName, initialPlans, initialPendingByPlan, completion }: {
+  appId: string; appName: string; initialPlans: Plan[]; initialPendingByPlan: Record<string, PendingRequest>
+  completion: { 1: boolean; 2: boolean; 3: boolean }
 }) {
   const [plans, setPlans] = useState<Plan[]>(initialPlans)
+  const [pendingByPlan, setPendingByPlan] = useState<Record<string, PendingRequest>>(initialPendingByPlan)
   const [editing, setEditing] = useState<Plan | 'new' | null>(null)
   const [deleting, setDeleting] = useState<Plan | null>(null)
   const [busy, setBusy] = useState(false)
@@ -40,10 +52,16 @@ export default function PlanosClient({ appId, appName, initialPlans, completion 
     }
   }
 
-  function handleSaved(plan: Plan) {
+  function handleSaved(plan: Plan, pendingRequest?: PendingRequest | null) {
     setPlans(prev => {
       const exists = prev.some(p => p.id === plan.id)
       return exists ? prev.map(p => (p.id === plan.id ? plan : p)) : [...prev, plan]
+    })
+    setPendingByPlan(prev => {
+      const next = { ...prev }
+      if (pendingRequest) next[plan.id] = pendingRequest
+      else delete next[plan.id]
+      return next
     })
     setEditing(null)
   }
@@ -92,6 +110,16 @@ export default function PlanosClient({ appId, appName, initialPlans, completion 
                   {plan.price != null ? (plan.currency === 'BRL' ? formatCurrencyBRL(plan.price) : `${plan.currency} ${plan.price}`) : 'Sem preço definido'}
                   {plan.billing_period && <span className="text-xs font-normal" style={{ color: colors.textSecondary }}> / {BILLING_LABEL[plan.billing_period] ?? plan.billing_period}</span>}
                 </p>
+                {pendingByPlan[plan.id] && (
+                  <p className="mt-1 rounded-lg px-2 py-1 text-xs font-semibold"
+                    style={pendingByPlan[plan.id].status === 'pendente'
+                      ? { background: '#F59E0B1A', color: '#F59E0B' }
+                      : { background: '#EF44441A', color: '#EF4444' }}>
+                    {pendingByPlan[plan.id].status === 'pendente'
+                      ? `Aguardando aprovação: ${formatCurrencyBRL(pendingByPlan[plan.id].requested_price)}`
+                      : `Pedido rejeitado: ${formatCurrencyBRL(pendingByPlan[plan.id].requested_price)}${pendingByPlan[plan.id].review_notes ? ` — ${pendingByPlan[plan.id].review_notes}` : ''}`}
+                  </p>
+                )}
                 {plan.features.length > 0 && (
                   <ul className="mt-2 space-y-0.5 text-xs" style={{ color: colors.textSecondary }}>
                     {plan.features.map((f, i) => <li key={i}>• {f}</li>)}
@@ -145,7 +173,7 @@ export default function PlanosClient({ appId, appName, initialPlans, completion 
   )
 }
 
-function PlanFormDialog({ appId, plan, onClose, onSaved }: { appId: string; plan: Plan | null; onClose: () => void; onSaved: (p: Plan) => void }) {
+function PlanFormDialog({ appId, plan, onClose, onSaved }: { appId: string; plan: Plan | null; onClose: () => void; onSaved: (p: Plan, pendingRequest?: PendingRequest | null) => void }) {
   const [name, setName] = useState(plan?.name ?? '')
   const [billingPeriod, setBillingPeriod] = useState(plan?.billing_period ?? 'monthly')
   const [price, setPrice] = useState(plan?.price != null ? String(plan.price) : '')
@@ -180,12 +208,21 @@ function PlanFormDialog({ appId, plan, onClose, onSaved }: { appId: string; plan
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(plan ? { ...body, app_draft_id: undefined } : body),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null)
+        throw new Error(errBody?.error || undefined)
+      }
       const saved = await res.json()
-      onSaved({ id: saved.id, name: saved.name, currency: saved.currency, price: saved.price, billing_period: saved.billing_period, features: saved.features ?? [], users_limit: saved.users_limit, support_level: saved.support_level })
-      toast.success('Plano salvo.')
-    } catch {
-      setError('Não foi possível salvar. Seus dados foram preservados — tente novamente.')
+      // PATCH (editar plano existente) devolve { plan, pending_request }
+      // desde a Etapa 6 — price/billing_period só mudam de verdade
+      // depois do admin aprovar. POST (plano novo) continua devolvendo
+      // o plano direto, nunca passa por aprovação.
+      const savedPlan = plan ? saved.plan : saved
+      const pendingRequest = plan ? saved.pending_request : null
+      onSaved({ id: savedPlan.id, name: savedPlan.name, currency: savedPlan.currency, price: savedPlan.price, billing_period: savedPlan.billing_period, features: savedPlan.features ?? [], users_limit: savedPlan.users_limit, support_level: savedPlan.support_level }, pendingRequest)
+      toast.success(pendingRequest ? 'Pedido de mudança de preço enviado pra aprovação.' : 'Plano salvo.')
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : 'Não foi possível salvar. Seus dados foram preservados — tente novamente.')
     } finally {
       setSaving(false)
     }
