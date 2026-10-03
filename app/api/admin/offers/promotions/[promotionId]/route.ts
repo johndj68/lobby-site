@@ -61,6 +61,7 @@ export async function PATCH(
       .update({ is_approved: true, is_active: true })
       .eq('id', promotionId)
       .eq('is_approved', false)
+      .is('cancelled_at', null)
       .select('id')
       .single()
     if (approveError || !resolved) {
@@ -73,6 +74,7 @@ export async function PATCH(
 
   if (action === 'reject') {
     if (promo.is_approved) return NextResponse.json({ error: 'Este pedido já foi aprovado — não pode mais ser rejeitado.' }, { status: 409 })
+    if (promo.cancelled_at) return NextResponse.json({ error: 'Este pedido já foi resolvido.' }, { status: 409 })
     if (promo.rejected_at) return NextResponse.json({ error: 'Este pedido já foi rejeitado.' }, { status: 409 })
     const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
     if (!reason) return NextResponse.json({ error: 'Informe o motivo da rejeição.' }, { status: 400 })
@@ -83,6 +85,7 @@ export async function PATCH(
       .eq('id', promotionId)
       .eq('is_approved', false)
       .is('rejected_at', null)
+      .is('cancelled_at', null)
       .select('id')
       .single()
     if (rejectError || !resolved) {
