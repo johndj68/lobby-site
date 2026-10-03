@@ -64,6 +64,15 @@ pendência que exige ação dele.
    `application_name`** nas filas existentes (`get_partner_payout_queue_main`/
    `_reserve` não retornam `application_id`) — limitação documentada,
    aceitável pois nome de app é praticamente único por parceiro.
+10. **`FinanceiroSellerGate.tsx` ganha uma prop `bare?: boolean`** — ele
+    hoje envolve o conteúdo de TODAS as 5 abas num card externo
+    (`rounded-2xl border p-6`, linha 175-180), não só a Visão geral.
+    Remover só o card interno da Visão geral sem mexer nesse wrapper
+    deixaria "caixa dentro de caixa" resolvido pela metade. A Visão
+    geral passa `bare` e renderiza suas seções direto no fundo cinza da
+    página; Vendas/Repasses/Ofertas/Configurações não passam essa prop
+    e continuam exatamente como estão, incluindo o card externo — nada
+    nelas muda.
 
 ## Modelo de dados — 4 RPCs novas
 
