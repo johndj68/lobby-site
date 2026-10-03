@@ -6,40 +6,63 @@ import OfertasPromocoesClient, { type PlanOption, type PromotionRow } from './Of
 
 export const metadata: Metadata = { title: 'Ofertas e promoções | LOBBY', robots: { index: false, follow: false } }
 
-export default async function FinanceiroOfertasPage() {
+interface SearchParams {
+  parceiro?: string
+}
+
+interface PlanRpcRow {
+  id: string
+  app_draft_id: string
+  app_name: string
+  plan_name: string
+  price: number | null
+  currency: string | null
+  billing_period: string | null
+}
+
+interface PromotionRpcRow {
+  id: string
+  plan_id: string
+  promo_price: number
+  original_price: number | null
+  discount_percentage: number | null
+  starts_at: string
+  ends_at: string
+  is_approved: boolean
+  is_active: boolean
+  cancelled_at: string | null
+  paused_at: string | null
+  rejected_at: string | null
+  rejection_reason: string | null
+}
+
+export default async function FinanceiroOfertasPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const supabase = await createServerSupabaseClient()
-  const { user } = await requireClientSession(supabase)
+  await requireClientSession(supabase)
+  const sp = await searchParams
+  const partnerId = sp.parceiro || null
 
-  // Todos os planos de todos os apps deste dono — mesma checagem de
-  // posse (app_drafts.created_by) já usada em toda rota de edição de
-  // plano, sem precisar de RPC.
-  const { data: drafts, error: draftsError } = await supabase.from('app_drafts').select('id, name').eq('created_by', user.id)
-  const draftIds = (drafts ?? []).map(d => d.id)
-  const draftNameById = new Map((drafts ?? []).map(d => [d.id, d.name]))
+  // RPCs (Etapa 8): mesmo padrão de permissão delegada que toda outra
+  // aba de /dashboard/financeiro/** já usa (p_partner_id + capacidade
+  // financeiro_ofertas/role=owner em app_team_members, checado dentro
+  // da RPC) — antes, esta página ignorava ?parceiro= e sempre mostrava
+  // o próprio usuário logado, mesmo quando um membro de equipe estava
+  // "vendo como" outro parceiro.
+  const [plansRes, promotionsRes] = await Promise.all([
+    supabase.rpc('get_partner_ofertas_plans', { p_partner_id: partnerId }) as unknown as Promise<{ data: PlanRpcRow[] | null; error: unknown }>,
+    supabase.rpc('get_partner_ofertas_promotions', { p_partner_id: partnerId }) as unknown as Promise<{ data: PromotionRpcRow[] | null; error: unknown }>,
+  ])
 
-  const { data: plans, error: plansError } = draftIds.length
-    ? await supabase.from('app_plans').select('id, app_draft_id, name, price, currency, billing_period').in('app_draft_id', draftIds)
-    : { data: [], error: null }
-
-  const planOptions: PlanOption[] = (plans ?? []).map(p => ({
+  const planOptions: PlanOption[] = (plansRes.data ?? []).map(p => ({
     id: p.id,
-    appName: draftNameById.get(p.app_draft_id) ?? 'Aplicativo sem nome',
-    planName: p.name,
+    appName: p.app_name ?? 'Aplicativo sem nome',
+    planName: p.plan_name,
     price: p.price,
     currency: p.currency ?? 'BRL',
     billingPeriod: p.billing_period,
   }))
 
-  const planIds = planOptions.map(p => p.id)
-  const { data: promotions, error: loadError } = planIds.length
-    ? await supabase
-        .from('promotions')
-        .select('id, plan_id, promo_price, original_price, discount_percentage, starts_at, ends_at, is_approved, is_active, cancelled_at, paused_at, rejected_at, rejection_reason')
-        .in('plan_id', planIds)
-        .order('created_at', { ascending: false })
-    : { data: [] as never[], error: null }
-
-  const promotionRows: PromotionRow[] = (promotions ?? []).map(p => {
+  const promotionRows: PromotionRow[] = (promotionsRes.data ?? []).map(p => {
     const plan = planOptions.find(opt => opt.id === p.plan_id)
     return {
       id: p.id,
@@ -68,7 +91,12 @@ export default async function FinanceiroOfertasPage() {
       <p className="mb-5 text-sm" style={{ color: colors.textSecondary }}>
         Peça um desconto por tempo limitado pra um dos seus planos — fica invisível pra compradores até o admin aprovar.
       </p>
-      <OfertasPromocoesClient plans={planOptions} promotions={promotionRows} loadError={!!loadError || !!draftsError || !!plansError} />
+      <OfertasPromocoesClient
+        plans={planOptions}
+        promotions={promotionRows}
+        loadError={!!plansRes.error || !!promotionsRes.error}
+        partnerId={partnerId}
+      />
     </div>
   )
 }

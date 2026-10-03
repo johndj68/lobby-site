@@ -41,9 +41,13 @@ interface Props {
   plans: PlanOption[]
   promotions: PromotionRow[]
   loadError: boolean
+  /** Etapa 8: dono "visto como" via o seletor de equipe da Etapa 5 —
+   *  null quando é o próprio usuário logado. Repassado pra rota de POST
+   *  pra que ela saiba em nome de quem o pedido está sendo feito. */
+  partnerId: string | null
 }
 
-export default function OfertasPromocoesClient({ plans, promotions: initialPromotions, loadError }: Props) {
+export default function OfertasPromocoesClient({ plans, promotions: initialPromotions, loadError, partnerId }: Props) {
   const [promotions, setPromotions] = useState(initialPromotions)
   const [showForm, setShowForm] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id ?? '')
@@ -76,6 +80,7 @@ export default function OfertasPromocoesClient({ plans, promotions: initialPromo
           endsAt: new Date(endsAt).toISOString(),
           unitLimit: unitLimit ? Number(unitLimit) : undefined,
           eligibleForDailyDeals,
+          partnerId: partnerId ?? undefined,
         }),
       })
       const data = await res.json()
