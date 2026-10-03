@@ -173,8 +173,15 @@ export default function OfertasPromocoesClient({ plans, promotions: initialPromo
           ) : (
             <div className="flex flex-col gap-2">
               {promotions.map(p => {
-                const status = getPromotionStatus({ is_approved: p.isApproved, is_active: p.isActive, starts_at: p.startsAt, ends_at: p.endsAt, cancelled_at: p.cancelledAt, paused_at: p.pausedAt })
-                const label = STATUS_LABEL_OVERRIDE[status.key] ?? status.label
+                // getPromotionStatus() não conhece rejected_at (coluna nova
+                // desta etapa, função compartilhada nunca alterada) — um
+                // pedido rejeitado tem is_approved=false e cairia no mesmo
+                // 'rascunho'/"Aguardando aprovação" de um pedido pendente
+                // de verdade. Resolvido aqui, antes de chamar a função.
+                const status = p.rejectedAt
+                  ? { key: 'rejeitado' as const, label: 'Rejeitado', color: '#EF4444' }
+                  : getPromotionStatus({ is_approved: p.isApproved, is_active: p.isActive, starts_at: p.startsAt, ends_at: p.endsAt, cancelled_at: p.cancelledAt, paused_at: p.pausedAt })
+                const label = STATUS_LABEL_OVERRIDE[status.key as keyof typeof STATUS_LABEL_OVERRIDE] ?? status.label
                 return (
                   <div key={p.id} className="rounded-2xl border p-4" style={{ borderColor: colors.border, background: colors.card, boxShadow: shadows.card }}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
