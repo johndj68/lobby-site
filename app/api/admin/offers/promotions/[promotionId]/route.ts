@@ -29,7 +29,7 @@ export async function PATCH(
 
   const { data: promo } = await supabase
     .from('promotions')
-    .select('id, application_id, plan_id, promo_price, starts_at, ends_at, is_approved, cancelled_at, paused_at, rejected_at, app_plans(app_draft_id, price)')
+    .select('id, application_id, plan_id, promo_price, original_price, starts_at, ends_at, is_approved, cancelled_at, paused_at, rejected_at, app_plans(app_draft_id, price)')
     .eq('id', promotionId)
     .single()
   if (!promo) return NextResponse.json({ error: 'Promoção não encontrada.' }, { status: 404 })
@@ -50,6 +50,9 @@ export async function PATCH(
     if (planInfo?.price != null && promo.promo_price >= planInfo.price) {
       return NextResponse.json({ error: 'O preço regular da oferta mudou desde o pedido — peça uma nova promoção com o preço atual.' }, { status: 400 })
     }
+    if (promo.original_price != null && planInfo?.price != null && promo.original_price !== planInfo.price) {
+      return NextResponse.json({ error: 'O preço regular da oferta mudou desde o pedido — peça uma nova promoção com o preço atual.' }, { status: 400 })
+    }
 
     const overlap = await checkPromotionOverlap(supabase, { applicationId: promo.application_id, planId: promo.plan_id, startsAt: promo.starts_at, endsAt: promo.ends_at, excludePromotionId: promotionId })
     if (overlap.conflict) {
@@ -62,6 +65,7 @@ export async function PATCH(
       .eq('id', promotionId)
       .eq('is_approved', false)
       .is('cancelled_at', null)
+      .is('rejected_at', null)
       .select('id')
       .single()
     if (approveError || !resolved) {
