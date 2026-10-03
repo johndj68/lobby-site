@@ -20,6 +20,14 @@ create table public.plan_price_change_requests (
   created_at                timestamptz not null default now()
 );
 
+alter table public.plan_price_change_requests
+  add constraint plan_price_change_requests_current_billing_period_check
+  check (current_billing_period is null or current_billing_period in ('one-time', 'monthly', 'yearly', 'lifetime'));
+
+alter table public.plan_price_change_requests
+  add constraint plan_price_change_requests_requested_billing_period_check
+  check (requested_billing_period in ('one-time', 'monthly', 'yearly', 'lifetime'));
+
 -- No máximo 1 pedido pendente por plano por vez — evita empilhar
 -- pedidos conflitantes pro mesmo plano (spec: "no máximo 1 pendente").
 create unique index plan_price_change_requests_one_pending_per_plan
