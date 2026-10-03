@@ -4,7 +4,7 @@
 
 **Goal:** Substituir o card único de 6 indicadores da aba "Visão geral" (`/dashboard/financeiro`) por um painel completo com filtros de período/app, resultados do período, saldos atuais, gráfico de evolução, próximas liberações, últimas vendas, desempenho por app e pendências — sem tocar Vendas/Repasses/Ofertas/Configurações.
 
-**Architecture:** 5 RPCs novas (`security definer`, mesmo padrão de permissão `financeiro_visao_geral`/`role='owner'` das 7 já existentes), paralelas — nenhuma RPC/página em produção é alterada. Um client component orquestrador (`VisaoGeralClient.tsx`, mesmo padrão de `VendasClient.tsx`: fetch via `createClient()` no navegador, RLS como segunda trava) busca tudo e distribui pra sub-componentes de apresentação. `FinanceiroSellerGate.tsx` ganha uma prop `bare` pra Visão geral escapar do card externo compartilhado sem afetar as outras 4 abas. Export novo em `GET /api/financeiro/export`.
+**Architecture:** 5 RPCs novas (`security definer`, mesmo padrão de permissão `financeiro_visao_geral`/`role='owner'` das 7 já existentes), paralelas — nenhuma RPC/página em produção é alterada. Um client component orquestrador (`VisaoGeralClient.tsx`, mesmo padrão de `VendasClient.tsx`: fetch via `createClient()` no navegador, RLS como segunda trava) busca tudo e distribui pra sub-componentes de apresentação. `FinanceiroSellerGate.tsx` (Client Component, já usa `usePathname()`) passa a decidir sozinho, internamente, quando pular o card externo compartilhado — sem prop nova, sem afetar as outras 4 abas nem `layout.tsx`. Export novo em `GET /api/financeiro/export`.
 
 **Tech Stack:** Next.js App Router, Supabase Postgres (RPCs `security definer`), Recharts (dependência nova) pro gráfico, Tailwind + design tokens já existentes (`lib/design-tokens.ts`).
 
@@ -464,7 +464,7 @@ git commit -m "feat: 5 RPCs de período pra Visão geral de Vendas e financeiro"
 
 ---
 
-### Task 2: Recharts + `bare` prop + filtros compartilhados
+### Task 2: Recharts + escape do card externo + filtros compartilhados
 
 **Files:**
 - Modify: `package.json` (via `npm install recharts`)
@@ -476,7 +476,7 @@ git commit -m "feat: 5 RPCs de período pra Visão geral de Vendas e financeiro"
 **Interfaces:**
 - Produces: `resolvePeriodoRange(preset, customFrom?, customTo?) -> { from: string; to: string }` (ISO, `from` inclusivo/`to` exclusivo), `resolveGranularidade(from, to) -> 'day' | 'month'`, `PeriodoPreset` type, `PERIODO_LABEL` map — consumidos por `VisaoGeralClient.tsx` (Task 3+) e pela rota de export (Task 8).
 - Produces: `<FiltrosPeriodo>` componente controlado (preset + app + datas custom), consumido por `VisaoGeralClient.tsx`.
-- Produces: `FinanceiroSellerGate`'s nova prop `bare?: boolean`.
+- Produces: `FinanceiroSellerGate` passa a pular o card externo sozinho quando `pathname === '/dashboard/financeiro'` — sem prop nova, interface pública inalterada.
 
 - [ ] **Step 1: Instalar Recharts**
 
@@ -750,7 +750,7 @@ Expected: limpo.
 
 ```bash
 git add package.json package-lock.json app/dashboard/financeiro/FinanceiroSellerGate.tsx lib/services/financeiro-periodo.ts lib/services/financeiro-periodo.test.ts app/dashboard/financeiro/FiltrosPeriodo.tsx
-git commit -m "feat: Recharts + prop bare + filtros compartilhados de período/app"
+git commit -m "feat: Recharts + escape do card externo + filtros compartilhados de período/app"
 ```
 
 ---
