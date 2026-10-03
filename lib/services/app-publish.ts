@@ -104,6 +104,7 @@ export async function logAppAdminEvent(
       // /admin/marketplace/ofertas
       | 'create_offer' | 'update_plan_price' | 'pause_offer' | 'resume_offer' | 'archive_offer'
       | 'create_promotion' | 'update_promotion' | 'pause_promotion' | 'cancel_promotion' | 'reactivate_promotion'
+      | 'reject_promotion'
       // /admin/marketplace/destaques
       | 'create_campaign' | 'submit_creative' | 'review_creative_approve' | 'review_creative_changes' | 'review_creative_reject'
       | 'promote_creative' | 'reserve_capacity' | 'confirm_payment' | 'payment_capacity_conflict' | 'grant_exemption'
