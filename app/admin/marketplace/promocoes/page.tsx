@@ -47,7 +47,7 @@ export default async function PromocoesPage() {
     : { data: [] }
   const requesterById = new Map((requesterProfiles ?? []).map(p => [p.id, p]))
 
-  const mapRow = (r: typeof rows[number]) => {
+  const mapRow = (r: typeof rows[number], useLivePrice: boolean) => {
     const plan = Array.isArray(r.app_plans) ? r.app_plans[0] : r.app_plans
     const draft = plan ? (Array.isArray(plan.app_drafts) ? plan.app_drafts[0] : plan.app_drafts) : null
     const requester = requesterById.get(r.created_by)
@@ -58,11 +58,14 @@ export default async function PromocoesPage() {
       planName: plan?.name ?? 'Plano removido',
       currency: plan?.currency ?? 'BRL',
       billingPeriod: plan?.billing_period ?? null,
-      // Preço regular LIVE do plano, não o snapshot gravado no pedido — um
-      // parceiro mal-intencionado não controla app_plans.price, só o que
-      // ele mesmo envia na request (ver RLS hardening em
-      // 20261003120000_promocoes_insert_check_hardening.sql).
-      originalPrice: plan?.price ?? r.original_price,
+      // Pendentes: preço regular LIVE do plano, não o snapshot gravado no
+      // pedido — um parceiro mal-intencionado não controla app_plans.price,
+      // só o que ele mesmo envia na request (ver RLS hardening em
+      // 20261003120000_promocoes_insert_check_hardening.sql). Resolvidas
+      // (histórico): o snapshot original mesmo — o preço do plano pode ter
+      // mudado desde a aprovação/rejeição, e o histórico precisa refletir o
+      // que foi decidido NA ÉPOCA, não reescrever com o preço de hoje.
+      originalPrice: useLivePrice ? (plan?.price ?? r.original_price) : r.original_price,
       promoPrice: r.promo_price,
       discountPercentage: r.discount_percentage,
       startsAt: r.starts_at,
@@ -75,8 +78,8 @@ export default async function PromocoesPage() {
     }
   }
 
-  const pending = (pendingRows ?? []).map(mapRow)
-  const history = (historyRows ?? []).map(mapRow)
+  const pending = (pendingRows ?? []).map(r => mapRow(r, true))
+  const history = (historyRows ?? []).map(r => mapRow(r, false))
 
   return <PromocoesClient user={user} profile={profile} pending={pending} history={history} loadError={!!loadError} />
 }
