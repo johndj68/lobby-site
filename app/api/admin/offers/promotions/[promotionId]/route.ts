@@ -29,15 +29,69 @@ export async function PATCH(
 
   const { data: promo } = await supabase
     .from('promotions')
-    .select('id, application_id, plan_id, ends_at, cancelled_at, paused_at, app_plans(app_draft_id)')
+    .select('id, application_id, plan_id, promo_price, starts_at, ends_at, is_approved, cancelled_at, paused_at, rejected_at, app_plans(app_draft_id, price)')
     .eq('id', promotionId)
     .single()
   if (!promo) return NextResponse.json({ error: 'Promoção não encontrada.' }, { status: 404 })
-  const appDraftId = Array.isArray(promo.app_plans) ? promo.app_plans[0]?.app_draft_id : (promo.app_plans as { app_draft_id: string } | null)?.app_draft_id ?? null
+  const planInfo = Array.isArray(promo.app_plans) ? promo.app_plans[0] : promo.app_plans
+  const appDraftId = planInfo?.app_draft_id ?? null
 
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Corpo da requisição inválido.' }, { status: 400 })
   const { action } = body
+
+  if (action === 'approve') {
+    if (promo.is_approved) return NextResponse.json({ error: 'Este pedido já foi aprovado.' }, { status: 409 })
+    if (promo.cancelled_at || promo.rejected_at) return NextResponse.json({ error: 'Este pedido já foi resolvido.' }, { status: 409 })
+
+    // O preço regular do plano pode ter mudado desde o pedido (ex: uma
+    // mudança de preço da Etapa 6 foi aprovada nesse meio-tempo) — nunca
+    // aprovar um "desconto" que virou preço igual ou maior que o atual.
+    if (planInfo?.price != null && promo.promo_price >= planInfo.price) {
+      return NextResponse.json({ error: 'O preço regular da oferta mudou desde o pedido — peça uma nova promoção com o preço atual.' }, { status: 400 })
+    }
+
+    const overlap = await checkPromotionOverlap(supabase, { applicationId: promo.application_id, planId: promo.plan_id, startsAt: promo.starts_at, endsAt: promo.ends_at, excludePromotionId: promotionId })
+    if (overlap.conflict) {
+      return NextResponse.json({ error: 'Já existe uma promoção vigente pra esta oferta nesse período — não dá pra aprovar agora.', conflictPromotionId: overlap.withPromotionId }, { status: 409 })
+    }
+
+    const { data: resolved, error: approveError } = await supabase
+      .from('promotions')
+      .update({ is_approved: true, is_active: true })
+      .eq('id', promotionId)
+      .eq('is_approved', false)
+      .select('id')
+      .single()
+    if (approveError || !resolved) {
+      return NextResponse.json({ error: 'Este pedido já foi resolvido.' }, { status: 409 })
+    }
+
+    await logAppAdminEvent(supabase, { appDraftId, applicationId: promo.application_id, planId: promo.plan_id, promotionId, actorId: user.id, action: 'create_promotion', reason: null, previousStatus: 'pendente', newStatus: `promoção ${promo.promo_price} aprovada` })
+    return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'reject') {
+    if (promo.is_approved) return NextResponse.json({ error: 'Este pedido já foi aprovado — não pode mais ser rejeitado.' }, { status: 409 })
+    if (promo.rejected_at) return NextResponse.json({ error: 'Este pedido já foi rejeitado.' }, { status: 409 })
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+    if (!reason) return NextResponse.json({ error: 'Informe o motivo da rejeição.' }, { status: 400 })
+
+    const { data: resolved, error: rejectError } = await supabase
+      .from('promotions')
+      .update({ rejected_at: new Date().toISOString(), rejected_by: user.id, rejection_reason: reason })
+      .eq('id', promotionId)
+      .eq('is_approved', false)
+      .is('rejected_at', null)
+      .select('id')
+      .single()
+    if (rejectError || !resolved) {
+      return NextResponse.json({ error: 'Este pedido já foi resolvido.' }, { status: 409 })
+    }
+
+    await logAppAdminEvent(supabase, { appDraftId, applicationId: promo.application_id, planId: promo.plan_id, promotionId, actorId: user.id, action: 'reject_promotion', reason, previousStatus: 'pendente', newStatus: 'rejeitada' })
+    return NextResponse.json({ ok: true })
+  }
 
   if (action === 'pause') {
     if (promo.cancelled_at) return NextResponse.json({ error: 'Promoção já cancelada.' }, { status: 409 })
