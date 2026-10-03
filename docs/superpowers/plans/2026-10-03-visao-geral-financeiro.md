@@ -610,16 +610,11 @@ npx vitest run lib/services/financeiro-periodo.test.ts
 
 Expected: PASS, 7 testes.
 
-- [ ] **Step 5: Adicionar a prop `bare` em `FinanceiroSellerGate.tsx`**
+- [ ] **Step 5: Fazer `FinanceiroSellerGate.tsx` escapar do card externo só na Visão geral**
 
-Antes (linhas 26-30 e 175-180):
-```typescript
-interface Props {
-  isSeller:         boolean
-  viewablePartners: ViewablePartner[]
-  children:         React.ReactNode
-}
-```
+`FinanceiroSellerGate` é um Client Component (já usa `usePathname()` internamente, linha 60) — ele mesmo decide quando pular o card externo, computando isso a partir do `pathname` que já lê, sem precisar de prop nova nem de nenhuma mudança no Server Component que o chama (`app/dashboard/financeiro/layout.tsx`, que não é tocado por esta task).
+
+Antes (linhas 175-180):
 ```typescript
       <div
         className="rounded-2xl border p-6"
@@ -634,18 +629,10 @@ interface Props {
 
 Depois:
 ```typescript
-interface Props {
-  isSeller:         boolean
-  viewablePartners: ViewablePartner[]
-  children:         React.ReactNode
-  /** Visão geral (Task 3) escapa do card externo compartilhado — ela
-   *  monta suas próprias seções direto no fundo da página. As outras 4
-   *  abas não passam esta prop e continuam exatamente como estão. */
-  bare?:            boolean
-}
-```
-```typescript
-      {bare ? (
+      {/* Visão geral (Task 3) monta suas próprias seções direto no fundo
+          da página — as outras 4 abas continuam exatamente como estão,
+          dentro do card externo. */}
+      {pathname === '/dashboard/financeiro' ? (
         children
       ) : (
         <div
@@ -660,17 +647,7 @@ interface Props {
 }
 ```
 
-E atualizar a assinatura da função (linha 59):
-
-Antes:
-```typescript
-export default function FinanceiroSellerGate({ isSeller, viewablePartners, children }: Props) {
-```
-
-Depois:
-```typescript
-export default function FinanceiroSellerGate({ isSeller, viewablePartners, children, bare }: Props) {
-```
+A interface `Props` e a assinatura de `FinanceiroSellerGate` não mudam — `pathname` já está em escopo (`const pathname = usePathname()`, linha 60, não tocada).
 
 - [ ] **Step 6: Criar `app/dashboard/financeiro/FiltrosPeriodo.tsx`**
 
@@ -1077,46 +1054,16 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
 }
 ```
 
-**Nota de implementação:** o `-m-6 p-6` no container raiz compensa o padding do card externo de `FinanceiroSellerGate.tsx` que esta página não usa mais (via `bare`, Task 2) — confirmar visualmente contra o espaçamento real das outras abas (que ficam dentro do card com `p-6`) antes de fechar a task; ajustar o valor se o padding real do gate mudar.
+**Nota de implementação:** o `-m-6 p-6` no container raiz compensa o padding do card externo de `FinanceiroSellerGate.tsx` que esta página não usa mais (ela mesma decide isso internamente via `pathname`, Task 2 Step 5 — nenhuma prop nova, nenhuma mudança em `layout.tsx`) — confirmar visualmente contra o espaçamento real das outras abas (que ficam dentro do card com `p-6`) antes de fechar a task; ajustar o valor se o padding real do gate mudar.
 
-- [ ] **Step 3: Atualizar o Server Component que usa `FinanceiroSellerGate` pra passar `bare` só na Visão geral**
-
-Ler `app/dashboard/financeiro/layout.tsx` (já existe, não listado nos arquivos desta task por já estar correto em quase tudo) e confirmar/ajustar a chamada de `<FinanceiroSellerGate>` pra passar `bare={pathname === '/dashboard/financeiro'}` — como o layout é Server Component sem acesso a `usePathname()`, a forma correta é o PRÓPRIO `FinanceiroSellerGate` (Client Component, já usa `usePathname()` internamente) decidir isso sozinho, não o layout. Ajustar `FinanceiroSellerGate.tsx` (Task 2) pra computar `bare` internamente via `pathname === '/dashboard/financeiro'` em vez de receber como prop externa — **substituir a prop `bare` do Step 5 da Task 2 por essa checagem interna**, mantendo tudo mais igual:
-
-Em `FinanceiroSellerGate.tsx`, remover a prop `bare` da interface e do parâmetro da função (reverter a assinatura pra forma original: `{ isSeller, viewablePartners, children }`), e no lugar de `{bare ? children : (<div className="rounded-2xl...">...)}`, usar:
-
-```typescript
-  const bare = pathname === '/dashboard/financeiro'
-
-  return (
-    <div>
-      {/* ... título, seletor, abas (iguais) ... */}
-
-      {bare ? (
-        children
-      ) : (
-        <div
-          className="rounded-2xl border p-6"
-          style={{ background: colors.card, borderColor: colors.border, boxShadow: shadows.card }}
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
-```
-
-Isso simplifica a Task 2 (não precisa mexer em `page.tsx` nenhuma pra passar a prop) — nenhum outro arquivo chama `<FinanceiroSellerGate>` passando props além de `isSeller`/`viewablePartners`, confirmar isso lendo `app/dashboard/financeiro/layout.tsx` antes de aplicar.
-
-- [ ] **Step 4: `npx tsc --noEmit`**
+- [ ] **Step 3: `npx tsc --noEmit`**
 
 Expected: limpo.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add app/dashboard/financeiro/page.tsx app/dashboard/financeiro/VisaoGeralClient.tsx app/dashboard/financeiro/FinanceiroSellerGate.tsx
+git add app/dashboard/financeiro/page.tsx app/dashboard/financeiro/VisaoGeralClient.tsx
 git commit -m "feat: Visão geral — cabeçalho, filtros, Resultados do período e Saldos atuais"
 ```
 
