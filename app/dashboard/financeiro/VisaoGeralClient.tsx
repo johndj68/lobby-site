@@ -169,16 +169,25 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => load()}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
-          style={{ borderColor: colors.border, color: colors.text, background: colors.card }}
-        >
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href={`/api/financeiro/export?preset=${preset}${preset === 'personalizado' ? `&from=${customFrom}&to=${customTo}` : ''}${applicationId ? `&application_id=${applicationId}` : ''}${partnerId ? `&parceiro=${partnerId}` : ''}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold"
+            style={{ borderColor: colors.border, color: colors.text, background: colors.card }}
+          >
+            Exportar relatório
+          </a>
+          <button
+            type="button"
+            onClick={() => load()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+            style={{ borderColor: colors.border, color: colors.text, background: colors.card }}
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       <FiltrosPeriodo
