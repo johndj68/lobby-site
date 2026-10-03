@@ -31,7 +31,12 @@ function buildAvisos(p: PendenciasRow, partnerId: string | null): Aviso[] {
       titulo: 'Configuração de recebimento incompleta',
       impacto: 'Sem uma chave PIX cadastrada, seus repasses não podem ser enviados quando ficarem disponíveis.',
       acao: 'Completar cadastro',
-      href: `/dashboard/financeiro/configuracoes${parceiroQuery}`,
+      // Configurações de recebimento nunca lê ?parceiro= por desenho —
+      // dado bancário é sempre o do próprio usuário logado, nunca
+      // "visto em nome de outro parceiro" (ver app/dashboard/financeiro/
+      // configuracoes/page.tsx). Levar esse param aqui enganaria um
+      // membro de equipe delegado a achar que veria a chave PIX do dono.
+      href: '/dashboard/financeiro/configuracoes',
     })
   }
 
