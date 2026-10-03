@@ -11,16 +11,27 @@ interface PromotionApp {
   promo_price: number
   original_price?: number
   discount_percentage?: number
-  application: Array<{
-    id: string
-    slug: string
-    name: string
-    category: string
-    logo_url?: string
-    preview_image_url?: string
-    price?: number
-    billing_period?: string
-  }>
+  application:
+    | {
+        id: string
+        slug: string
+        name: string
+        category: string
+        logo_url?: string
+        preview_image_url?: string
+        price?: number
+        billing_period?: string
+      }
+    | Array<{
+        id: string
+        slug: string
+        name: string
+        category: string
+        logo_url?: string
+        preview_image_url?: string
+        price?: number
+        billing_period?: string
+      }>
 }
 
 export default function PromotionsSection({
@@ -60,7 +71,7 @@ export default function PromotionsSection({
           {/* Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {promotions.slice(0, 4).map((promo) => {
-              const app = promo.application?.[0]
+              const app = Array.isArray(promo.application) ? promo.application[0] : promo.application
               if (!app) return null
               return (
                 <Link
