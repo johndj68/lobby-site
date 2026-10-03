@@ -37,7 +37,7 @@ export default async function OfertaDetailPage({ params, searchParams }: { param
     supabase.from('app_submissions').select('id, status, submitted_at, published_at').eq('app_draft_id', draft.id).order('submitted_at', { ascending: false }),
     supabase.from('app_activation_config').select('activation_method, activation_link, support_email, instructions').eq('app_draft_id', draft.id).maybeSingle(),
     supabase.from('app_activation_codes').select('id, status').eq('plan_id', offerId),
-    supabase.from('promotions').select('*').eq('plan_id', offerId).order('starts_at', { ascending: false }),
+    supabase.from('promotions').select('*').eq('plan_id', offerId).is('rejected_at', null).order('starts_at', { ascending: false }),
     supabase.from('app_admin_events').select('id, action, reason, previous_status, new_status, actor_id, created_at').eq('plan_id', offerId).order('created_at', { ascending: false }),
   ])
 

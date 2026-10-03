@@ -241,7 +241,7 @@ export async function fetchOfferRows(supabase: SupabaseClient): Promise<{ rows: 
     supabase.from('review_issues').select('submission_id, severity, resolved_at').eq('severity', 'blocker').is('resolved_at', null),
     supabase.from('app_activation_config').select('app_draft_id'),
     supabase.from('app_activation_codes').select('plan_id, status'),
-    supabase.from('promotions').select('id, plan_id, promo_price, original_price, discount_percentage, starts_at, ends_at, is_approved, is_active, cancelled_at, paused_at'),
+    supabase.from('promotions').select('id, plan_id, promo_price, original_price, discount_percentage, starts_at, ends_at, is_approved, is_active, cancelled_at, paused_at').is('rejected_at', null).eq('is_approved', true),
   ])
 
   type DraftRow = { id: string; name: string | null; logo_url: string | null; created_by: string; application_id: string | null; applications: { id: string; slug: string; is_published: boolean; suspended_at: string | null } | { id: string; slug: string; is_published: boolean; suspended_at: string | null }[] | null }
