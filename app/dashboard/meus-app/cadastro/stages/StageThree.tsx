@@ -36,6 +36,14 @@ export default function StageThree({ plans, onPlansUpdate, draftId, onSave }: St
     try {
       if (editing.id) {
         // Update existing
+        // Desde a Etapa 6 essa rota devolve { plan, pending_request } no
+        // PATCH (não mais o plano direto) — este call site não lê o corpo
+        // da resposta, então não é afetado. Nota de precisão apenas: esta
+        // página (app/dashboard/meus-app/cadastro/[id]/page.tsx) parece
+        // inalcançável hoje (destrutura `params` de forma síncrona onde o
+        // Next.js agora exige `await`), e não há link/import que leve a
+        // ela — não é um bug ao vivo, só uma suposição desatualizada do
+        // plano original que citava este arquivo como outro consumidor.
         const res = await fetch(`/api/apps/plans/${editing.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

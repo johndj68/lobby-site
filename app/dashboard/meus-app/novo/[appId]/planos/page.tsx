@@ -22,13 +22,13 @@ export default async function PlanosPage({ params }: { params: Promise<{ appId: 
   ])
 
   const planIds = (plans ?? []).map(p => p.id)
-  const { data: priceRequests } = planIds.length
+  const { data: priceRequests, error: priceRequestsError } = planIds.length
     ? await supabase
         .from('plan_price_change_requests')
         .select('id, app_plan_id, status, current_price, requested_price, current_billing_period, requested_billing_period, review_notes')
         .in('app_plan_id', planIds)
         .order('created_at', { ascending: false })
-    : { data: [] as never[] }
+    : { data: [] as never[], error: null }
 
   // Pedido mais recente de cada plano (já veio ordenado desc) — só
   // pendente/rejeitado viram badge; aprovado já está refletido no
@@ -57,6 +57,7 @@ export default async function PlanosPage({ params }: { params: Promise<{ appId: 
         features: p.features ?? [], users_limit: p.users_limit, support_level: p.support_level,
       }))}
       initialPendingByPlan={pendingByPlan}
+      pendingByPlanError={!!priceRequestsError}
       completion={{ 1: completion.step1, 2: completion.step2, 3: completion.step3 }}
     />
   )

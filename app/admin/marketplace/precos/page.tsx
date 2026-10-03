@@ -6,7 +6,7 @@ export default async function PrecosPage() {
   const supabase = await createServerSupabaseClient()
   const { user, profile } = await requireTechnicianSession(supabase)
 
-  const { data: rows } = await supabase
+  const { data: rows, error: loadError } = await supabase
     .from('plan_price_change_requests')
     .select(`
       id, status, current_price, requested_price, current_billing_period, requested_billing_period,
@@ -44,5 +44,5 @@ export default async function PrecosPage() {
   const pending = mapped.filter(r => r.status === 'pendente')
   const history = mapped.filter(r => r.status !== 'pendente')
 
-  return <PrecosClient user={user} profile={profile} pending={pending} history={history} />
+  return <PrecosClient user={user} profile={profile} pending={pending} history={history} loadError={!!loadError} />
 }

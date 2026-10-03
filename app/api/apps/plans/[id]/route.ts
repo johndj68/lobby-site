@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
+const BILLING_PERIODS = ['one-time', 'monthly', 'yearly', 'lifetime']
+// Deliberadamente mais restrito que o allowlist da rota irmã
+// (app/api/admin/offers/[planId]/route.ts): exclui currency (bloqueada
+// à parte abaixo) e price/billing_period (campos com gate de aprovação,
+// tratados em separado) — e exclui as colunas de ciclo de vida só pra
+// admin (status, paused_*, archived_*), que um dono de app nunca deve
+// conseguir escrever por aqui.
+const EDITABLE_FIELDS = [
+  'name', 'description', 'features', 'limits', 'users_limit', 'support_level',
+  'activation_method', 'activation_instructions',
+] as const
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,7 +28,7 @@ export async function PATCH(
   // exige aprovação do admin, nunca aplica direto).
   const { data: plan } = await supabase
     .from('app_plans')
-    .select('app_draft_id, price, billing_period')
+    .select('app_draft_id, price, billing_period, currency')
     .eq('id', id)
     .single()
 
@@ -33,12 +45,33 @@ export async function PATCH(
 
   const updates = await req.json()
 
+  // currency é texto livre em app_plans — mudar aqui driblaria o gate
+  // de aprovação de preço por completo (o que esta feature existe pra
+  // fechar). Sem UI hoje que chegue a isso, mas a API precisa bloquear
+  // de qualquer forma.
+  if (Object.prototype.hasOwnProperty.call(updates, 'currency') && updates.currency !== plan.currency) {
+    return NextResponse.json({ error: 'Mudança de moeda não é permitida por aqui.' }, { status: 400 })
+  }
+
+  if (updates.billing_period != null && !BILLING_PERIODS.includes(updates.billing_period)) {
+    return NextResponse.json({ error: 'Modalidade de cobrança inválida.' }, { status: 400 })
+  }
+  if (updates.price != null && (typeof updates.price !== 'number' || !Number.isFinite(updates.price) || updates.price < 0)) {
+    return NextResponse.json({ error: 'Preço inválido.' }, { status: 400 })
+  }
+
   const priceChanged = Object.prototype.hasOwnProperty.call(updates, 'price') && updates.price !== plan.price
   const billingChanged = Object.prototype.hasOwnProperty.call(updates, 'billing_period') && updates.billing_period !== plan.billing_period
   // price/billing_period nunca vão no UPDATE direto — ou não mudaram
   // (otherUpdates já reflete isso, sem efeito) ou mudaram e precisam
-  // virar pedido (abaixo), nunca os dois ao mesmo tempo.
-  const { price: _price, billing_period: _billingPeriod, ...otherUpdates } = updates
+  // virar pedido (abaixo), nunca os dois ao mesmo tempo. Allowlist
+  // (não denylist) pra nunca deixar passar colunas de ciclo de vida
+  // só pra admin — mesmo padrão da rota irmã
+  // app/api/admin/offers/[planId]/route.ts.
+  const otherUpdates: Record<string, unknown> = {}
+  for (const field of EDITABLE_FIELDS) {
+    if (field in updates) otherUpdates[field] = updates[field]
+  }
 
   if (priceChanged || billingChanged) {
     const { data: existingPending, error: existingPendingError } = await supabase
@@ -92,6 +125,12 @@ export async function PATCH(
       .single()
 
     if (requestError || !request) {
+      if (requestError?.code === '23505') {
+        return NextResponse.json(
+          { error: 'Já existe um pedido de mudança de preço aguardando aprovação pra este plano.' },
+          { status: 409 }
+        )
+      }
       console.error('[plans PATCH] failed to create price change request', requestError)
       return NextResponse.json(
         { error: 'Outras alterações foram salvas, mas não foi possível registrar o pedido de mudança de preço. Tente editar o preço novamente.' },

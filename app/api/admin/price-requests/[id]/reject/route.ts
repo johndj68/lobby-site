@@ -37,14 +37,17 @@ export async function POST(
     return NextResponse.json({ error: 'Este pedido já foi resolvido.' }, { status: 409 })
   }
 
-  const { error } = await admin
+  const { data: resolvedRequest, error } = await admin
     .from('plan_price_change_requests')
     .update({ status: 'rejeitado', reviewed_by: user.id, reviewed_at: new Date().toISOString(), review_notes: notes })
     .eq('id', id)
+    .eq('status', 'pendente')
+    .select('id')
+    .single()
 
-  if (error) {
+  if (error || !resolvedRequest) {
     console.error('[price-requests reject]', error)
-    return NextResponse.json({ error: 'Não foi possível rejeitar o pedido.' }, { status: 500 })
+    return NextResponse.json({ error: 'Este pedido já foi resolvido.' }, { status: 409 })
   }
 
   return NextResponse.json({ ok: true })

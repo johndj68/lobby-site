@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ChevronRight, Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react'
+import { ChevronRight, Plus, Pencil, Trash2, X, Loader2, AlertTriangle } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import EditorChrome from '@/components/vendor/editor/EditorChrome'
@@ -26,8 +26,9 @@ export interface PendingRequest {
 
 const BILLING_LABEL: Record<string, string> = { 'one-time': 'Pagamento único', monthly: 'Mensal', yearly: 'Anual', lifetime: 'Vitalício' }
 
-export default function PlanosClient({ appId, appName, initialPlans, initialPendingByPlan, completion }: {
+export default function PlanosClient({ appId, appName, initialPlans, initialPendingByPlan, pendingByPlanError, completion }: {
   appId: string; appName: string; initialPlans: Plan[]; initialPendingByPlan: Record<string, PendingRequest>
+  pendingByPlanError: boolean
   completion: { 1: boolean; 2: boolean; 3: boolean }
 }) {
   const [plans, setPlans] = useState<Plan[]>(initialPlans)
@@ -81,6 +82,13 @@ export default function PlanosClient({ appId, appName, initialPlans, initialPend
             <Plus size={14} aria-hidden="true" /> Adicionar plano
           </button>
         </div>
+
+        {pendingByPlanError && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm" style={{ borderColor: '#DC2626', background: 'rgba(220,38,38,0.08)', color: colors.text }}>
+            <AlertTriangle size={16} style={{ color: '#DC2626' }} aria-hidden="true" />
+            Não foi possível carregar o status dos pedidos de mudança de preço. Recarregue a página.
+          </div>
+        )}
 
         {plans.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed p-10 text-center" style={{ borderColor: colors.border, background: '#fff' }}>

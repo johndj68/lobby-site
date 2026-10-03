@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Check, X, Loader2 } from 'lucide-react'
+import { Check, X, Loader2, AlertTriangle } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 import AdminShell from '@/components/layout/AdminShell'
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
@@ -45,6 +45,7 @@ interface Props {
   profile: { full_name?: string; email?: string } | null
   pending: Row[]
   history: Row[]
+  loadError: boolean
 }
 
 function priceChangeLabel(row: Row): string {
@@ -61,7 +62,7 @@ function priceChangeLabel(row: Row): string {
   return `${fromPrice} (${fromBilling}) → ${toPrice} (${toBilling})`
 }
 
-export default function PrecosClient({ user, profile, pending: initialPending, history }: Props) {
+export default function PrecosClient({ user, profile, pending: initialPending, history, loadError }: Props) {
   const router = useRouter()
   const [pending, setPending] = useState(initialPending)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -134,6 +135,13 @@ export default function PrecosClient({ user, profile, pending: initialPending, h
             return <Link key={tab.href} href={tab.href} className="px-3 py-2.5 text-sm font-medium" style={{ color: active ? C.primary : C.textSecondary, borderBottom: active ? `2px solid ${C.primary}` : '2px solid transparent' }}>{tab.label}</Link>
           })}
         </nav>
+
+        {loadError && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm" style={{ borderColor: C.error, background: 'rgba(239,68,68,0.08)', color: C.text }}>
+            <AlertTriangle size={16} style={{ color: C.error }} aria-hidden="true" />
+            Não foi possível carregar os pedidos agora. Recarregue a página para tentar de novo.
+          </div>
+        )}
 
         <div className="space-y-6">
         <div className="rounded-2xl border p-5" style={{ borderColor: C.border, background: C.card }}>
