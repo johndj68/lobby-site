@@ -10,6 +10,8 @@ import { resolvePeriodoRange, resolveGranularidade, type PeriodoPreset } from '@
 import FiltrosPeriodo, { type AppOption } from './FiltrosPeriodo'
 import EvolucaoChart, { type SerieBucket } from './EvolucaoChart'
 import ProximasLiberacoes, { type LiberacaoRow } from './ProximasLiberacoes'
+import UltimasVendas, { type VendaRow } from './UltimasVendas'
+import DesempenhoPorApp, { type DesempenhoRow } from './DesempenhoPorApp'
 
 interface ResumoRow {
   vendas_confirmadas_valor: number
@@ -56,6 +58,10 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
   const [serieError, setSerieError] = useState(false)
   const [liberacoes, setLiberacoes] = useState<LiberacaoRow[]>([])
   const [liberacoesError, setLiberacoesError] = useState(false)
+  const [vendas, setVendas] = useState<VendaRow[]>([])
+  const [vendasError, setVendasError] = useState(false)
+  const [desempenho, setDesempenho] = useState<DesempenhoRow[]>([])
+  const [desempenhoError, setDesempenhoError] = useState(false)
 
   const range = useMemo(() => resolvePeriodoRange(preset, customFrom, customTo), [preset, customFrom, customTo])
   const granularidade = useMemo(() => resolveGranularidade(range.from, range.to), [range])
@@ -63,7 +69,7 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
   const load = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    const [resumoRes, overviewRes, serieRes, queueMainRes, queueReserveRes] = await Promise.all([
+    const [resumoRes, overviewRes, serieRes, queueMainRes, queueReserveRes, vendasRes, desempenhoRes] = await Promise.all([
       supabase.rpc('get_partner_financeiro_periodo_resumo', {
         p_from: range.from, p_to: range.to,
         p_application_id: applicationId || null, p_partner_id: partnerId,
@@ -75,12 +81,21 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
       }),
       supabase.rpc('get_partner_payout_queue_main', { p_partner_id: partnerId }),
       supabase.rpc('get_partner_payout_queue_reserve', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_financeiro_periodo_vendas', {
+        p_from: range.from, p_to: range.to, p_application_id: applicationId || null,
+        p_limit: 5, p_offset: 0, p_partner_id: partnerId,
+      }),
+      supabase.rpc('get_partner_financeiro_periodo_por_app', {
+        p_from: range.from, p_to: range.to, p_partner_id: partnerId,
+      }),
     ]) as unknown as [
       { data: ResumoRow[] | null; error: unknown },
       { data: OverviewRow[] | null; error: unknown },
       { data: SerieBucket[] | null; error: unknown },
       { data: { sale_id: string; application_name: string; plan_name: string; net_amount: number; release_date: string; days_remaining: number }[] | null; error: unknown },
       { data: { sale_id: string; application_name: string; plan_name: string; net_amount: number; release_date: string; days_remaining: number }[] | null; error: unknown },
+      { data: VendaRow[] | null; error: unknown },
+      { data: DesempenhoRow[] | null; error: unknown },
     ]
 
     setResumoError(!!resumoRes.error)
@@ -100,7 +115,14 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
       .map(r => ({ ...r, tipo: 'reserva' as const }))
     setLiberacoes([...main, ...reserve].sort((a, b) => a.days_remaining - b.days_remaining))
 
-    if (!resumoRes.error && !overviewRes.error && !serieRes.error && !queueMainRes.error && !queueReserveRes.error) setLastUpdated(new Date())
+    setVendasError(!!vendasRes.error)
+    setVendas(vendasRes.data ?? [])
+    setDesempenhoError(!!desempenhoRes.error)
+    setDesempenho(desempenhoRes.data ?? [])
+
+    if (!resumoRes.error && !overviewRes.error && !serieRes.error && !queueMainRes.error && !queueReserveRes.error && !vendasRes.error && !desempenhoRes.error) {
+      setLastUpdated(new Date())
+    }
     setLoading(false)
   }, [range, applicationId, partnerId, granularidade, apps])
 
@@ -212,6 +234,15 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId }: P
         </div>
         <ProximasLiberacoes rows={liberacoes} loading={loading} error={liberacoesError} onRetry={load} partnerId={partnerId} />
       </div>
+
+      <div className="mb-6">
+        <UltimasVendas rows={vendas} loading={loading} error={vendasError} onRetry={load} partnerId={partnerId} />
+      </div>
+
+      <DesempenhoPorApp
+        rows={desempenho} loading={loading} error={desempenhoError} onRetry={load}
+        hidden={apps.length <= 1 || !!applicationId}
+      />
     </div>
   )
 }
