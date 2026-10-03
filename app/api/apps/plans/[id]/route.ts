@@ -40,14 +40,18 @@ export async function PATCH(
   // virar pedido (abaixo), nunca os dois ao mesmo tempo.
   const { price: _price, billing_period: _billingPeriod, ...otherUpdates } = updates
 
-  let pendingRequest = null
   if (priceChanged || billingChanged) {
-    const { data: existingPending } = await supabase
+    const { data: existingPending, error: existingPendingError } = await supabase
       .from('plan_price_change_requests')
       .select('id')
       .eq('app_plan_id', id)
       .eq('status', 'pendente')
       .maybeSingle()
+
+    if (existingPendingError) {
+      console.error('[plans PATCH] failed to check existing pending request', existingPendingError)
+      return NextResponse.json({ error: 'Não foi possível verificar pedidos pendentes. Tente novamente.' }, { status: 500 })
+    }
 
     if (existingPending) {
       return NextResponse.json(
@@ -55,7 +59,25 @@ export async function PATCH(
         { status: 409 }
       )
     }
+  }
 
+  // Aplica os outros campos primeiro — se o INSERT do pedido de preço
+  // falhar depois, o usuário só vê um 500 e pode tentar de novo (sem
+  // ficar travado num 409 por um pedido pendente órfão).
+  const { data, error } = await supabase
+    .from('app_plans')
+    .update(otherUpdates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[plans PATCH]', error)
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 })
+  }
+
+  let pendingRequest = null
+  if (priceChanged || billingChanged) {
     const { data: request, error: requestError } = await supabase
       .from('plan_price_change_requests')
       .insert({
@@ -71,21 +93,12 @@ export async function PATCH(
 
     if (requestError || !request) {
       console.error('[plans PATCH] failed to create price change request', requestError)
-      return NextResponse.json({ error: 'Não foi possível registrar o pedido de mudança de preço.' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Outras alterações foram salvas, mas não foi possível registrar o pedido de mudança de preço. Tente editar o preço novamente.' },
+        { status: 500 }
+      )
     }
     pendingRequest = request
-  }
-
-  const { data, error } = await supabase
-    .from('app_plans')
-    .update(otherUpdates)
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) {
-    console.error('[plans PATCH]', error)
-    return NextResponse.json({ error: 'Update failed' }, { status: 500 })
   }
 
   return NextResponse.json({ plan: data, pending_request: pendingRequest })
