@@ -189,7 +189,7 @@ export default function OfertasPromocoesClient({ plans, promotions: initialPromo
                       <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ color: status.color, background: `${status.color}1A` }}>{label}</span>
                     </div>
                     <p className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                      {formatOfferPrice(p.promoPrice, p.currency, p.billingPeriod)}{p.discountPercentage != null && ` (-${p.discountPercentage}%)`} · {new Date(p.startsAt).toLocaleDateString('pt-BR')} → {new Date(p.endsAt).toLocaleDateString('pt-BR')}
+                      {p.originalPrice != null && `de ${formatOfferPrice(p.originalPrice, p.currency, p.billingPeriod)} por `}{formatOfferPrice(p.promoPrice, p.currency, p.billingPeriod)}{p.discountPercentage != null && ` (-${p.discountPercentage}%)`} · {new Date(p.startsAt).toLocaleDateString('pt-BR')} → {new Date(p.endsAt).toLocaleDateString('pt-BR')}
                     </p>
                     {p.rejectedAt && p.rejectionReason && (
                       <p className="mt-1 text-xs" style={{ color: '#EF4444' }}>Motivo da rejeição: {p.rejectionReason}</p>

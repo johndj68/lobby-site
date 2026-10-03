@@ -13,13 +13,13 @@ export default async function FinanceiroOfertasPage() {
   // Todos os planos de todos os apps deste dono — mesma checagem de
   // posse (app_drafts.created_by) já usada em toda rota de edição de
   // plano, sem precisar de RPC.
-  const { data: drafts } = await supabase.from('app_drafts').select('id, name').eq('created_by', user.id)
+  const { data: drafts, error: draftsError } = await supabase.from('app_drafts').select('id, name').eq('created_by', user.id)
   const draftIds = (drafts ?? []).map(d => d.id)
   const draftNameById = new Map((drafts ?? []).map(d => [d.id, d.name]))
 
-  const { data: plans } = draftIds.length
+  const { data: plans, error: plansError } = draftIds.length
     ? await supabase.from('app_plans').select('id, app_draft_id, name, price, currency, billing_period').in('app_draft_id', draftIds)
-    : { data: [] }
+    : { data: [], error: null }
 
   const planOptions: PlanOption[] = (plans ?? []).map(p => ({
     id: p.id,
@@ -68,7 +68,7 @@ export default async function FinanceiroOfertasPage() {
       <p className="mb-5 text-sm" style={{ color: colors.textSecondary }}>
         Peça um desconto por tempo limitado pra um dos seus planos — fica invisível pra compradores até o admin aprovar.
       </p>
-      <OfertasPromocoesClient plans={planOptions} promotions={promotionRows} loadError={!!loadError} />
+      <OfertasPromocoesClient plans={planOptions} promotions={promotionRows} loadError={!!loadError || !!draftsError || !!plansError} />
     </div>
   )
 }
