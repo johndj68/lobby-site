@@ -96,7 +96,7 @@ Uma linha:
 
 | coluna | tipo | definição |
 |---|---|---|
-| `vendas_confirmadas_valor` | numeric(12,2) | soma de `amount` de `app_purchases.status='paid'` + `subscription_invoices` pagas, `paid_at` no período |
+| `vendas_confirmadas_valor` | numeric(12,2) | soma de `amount` de `app_purchases.status in ('paid','refunded')` + `subscription_invoices` pagas, `paid_at` no período — uma venda reembolsada dentro do período ainda conta aqui pelo valor cheio (o reembolso é reportado à parte, pela data do reembolso); mesmo critério já usado em produção por `get_partner_financeiro_overview` |
 | `vendas_confirmadas_qtd` | integer | contagem das mesmas linhas |
 | `comissao_valor` | numeric(12,2) | soma de `commission_amount` das mesmas linhas |
 | `reembolsos_valor` | numeric(12,2) | soma de `refunded_amount` onde `refunded_at` caiu no período (mesmo critério de `get_partner_financeiro_overview`, decisão #3) |
@@ -176,6 +176,12 @@ paginado).
   `?parceiro=` já existente da Etapa 5) — preservados ao trocar de aba
   quando fizer sentido (Vendas já tem filtro de app próprio hoje; a
   Visão geral não força esse valor nela, só preserva `?parceiro=`).
+  **Nota pós-implementação (achado na revisão final):** período/app
+  acabaram ficando só em estado React local, não na querystring —
+  recarregar a página ou copiar o link perde o filtro ativo. Decisão
+  consciente de escopo pra fechar a Etapa 9 (não um bug esquecido) —
+  registrado aqui pra não ser redescoberto como defeito depois; revisar
+  se algum dia isso virar um pedido real do usuário.
 - Dois rótulos explícitos acima das respectivas seções: **"Resultados
   do período"** e **"Saldos atuais"**.
 
