@@ -81,6 +81,19 @@ export default function VisaoGeralClient({ partnerId, apps, emptyStateCta }: Pro
   const range = useMemo(() => resolvePeriodoRange(preset, customFrom, customTo), [preset, customFrom, customTo])
   const granularidade = useMemo(() => resolveGranularidade(range.from, range.to), [range])
 
+  // Datas de exibição pro rótulo do CSV, calculadas aqui (no mesmo
+  // timezone local que originou `range`) — reconverter range.from/to
+  // (instantes UTC) de volta pra data de calendário DENTRO da rota da
+  // API (timezone do servidor) desloca um dia pra qualquer fuso a
+  // leste de UTC. Resolvido no cliente, onde a data local de origem
+  // ainda é recuperável sem ambiguidade.
+  const displayDates = useMemo(() => {
+    const fmtLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const from = new Date(range.from)
+    const toInclusive = new Date(new Date(range.to).getTime() - 86400_000)
+    return { from: fmtLocal(from), to: fmtLocal(toInclusive) }
+  }, [range])
+
   const load = useCallback(async () => {
     // 'personalizado' é selecionado antes que De/Até estejam ambos
     // preenchidos (o dropdown já dispara load() de imediato) — nesse
@@ -221,7 +234,7 @@ export default function VisaoGeralClient({ partnerId, apps, emptyStateCta }: Pro
         <div className="flex items-center gap-2">
           {!corePermissionDenied && (
             <a
-              href={`/api/financeiro/export?preset=${preset}${preset === 'personalizado' ? `&from=${customFrom}&to=${customTo}` : ''}&from_iso=${encodeURIComponent(range.from)}&to_iso=${encodeURIComponent(range.to)}${applicationId ? `&application_id=${applicationId}` : ''}${partnerId ? `&parceiro=${partnerId}` : ''}`}
+              href={`/api/financeiro/export?preset=${preset}${preset === 'personalizado' ? `&from=${customFrom}&to=${customTo}` : ''}&from_iso=${encodeURIComponent(range.from)}&to_iso=${encodeURIComponent(range.to)}&display_from=${displayDates.from}&display_to=${displayDates.to}${applicationId ? `&application_id=${applicationId}` : ''}${partnerId ? `&parceiro=${partnerId}` : ''}`}
               target="_blank"
               className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold"
               style={{ borderColor: colors.border, color: colors.text, background: colors.card }}

@@ -62,9 +62,26 @@ export async function GET(req: NextRequest) {
   // to_iso evitam essa divergência; resolvePeriodoRange(preset, ...)
   // só continua existindo como fallback de quem digitar a URL de
   // export à mão sem esses dois params (achado #3).
-  const fromIso = sp.get('from_iso')
-  const toIso = sp.get('to_iso')
+  // Validados com Date.parse antes de confiar — um valor que o Postgres
+  // aceita como timestamptz (ex: "infinity") mas o JS não consegue
+  // converter de volta quebraria o cálculo do rótulo do período mais
+  // abaixo com um RangeError não tratado, em vez do erro limpo que
+  // esta rota sempre devolve.
+  const fromIsoRaw = sp.get('from_iso')
+  const toIsoRaw = sp.get('to_iso')
+  const fromIso = fromIsoRaw && Number.isFinite(Date.parse(fromIsoRaw)) ? fromIsoRaw : null
+  const toIso = toIsoRaw && Number.isFinite(Date.parse(toIsoRaw)) ? toIsoRaw : null
   const range = fromIso && toIso ? { from: fromIso, to: toIso } : resolvePeriodoRange(preset, customFrom, customTo)
+
+  // Datas de exibição calculadas no cliente (timezone local, sem
+  // ambiguidade) — preferidas pro rótulo "# Período:" em vez de
+  // re-fatiar range.from/to (instantes UTC), que desloca um dia pra
+  // qualquer fuso a leste de UTC quando range veio de from_iso/to_iso.
+  const displayFromRaw = sp.get('display_from')
+  const displayToRaw = sp.get('display_to')
+  const isYmd = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v)
+  const displayFrom = isYmd(displayFromRaw) ? displayFromRaw : null
+  const displayTo = isYmd(displayToRaw) ? displayToRaw : null
 
   const [resumoRes, overviewRes, appsRes] = await Promise.all([
     supabase.rpc('get_partner_financeiro_periodo_resumo', { p_from: range.from, p_to: range.to, p_application_id: applicationId, p_partner_id: partnerId }),
@@ -120,7 +137,9 @@ export async function GET(req: NextRequest) {
   lines.push('# Relatório Vendas e financeiro — LOBBY')
   lines.push(`# Parceiro: ${parceiroLabel}`)
   if (geradoPorLine) lines.push(geradoPorLine)
-  lines.push(`# Período: ${formatDateBR(range.from.slice(0, 10))} a ${formatDateBR(new Date(new Date(range.to).getTime() - 86400_000).toISOString().slice(0, 10))} (${PERIODO_LABEL[preset]})`)
+  const periodoFromLabel = displayFrom ?? range.from.slice(0, 10)
+  const periodoToLabel = displayTo ?? new Date(new Date(range.to).getTime() - 86400_000).toISOString().slice(0, 10)
+  lines.push(`# Período: ${formatDateBR(periodoFromLabel)} a ${formatDateBR(periodoToLabel)} (${PERIODO_LABEL[preset]})`)
   lines.push(`# Aplicativo: ${csvSafe(appName)}`)
   lines.push(`# Gerado em: ${formatDateBR(now.toISOString().slice(0, 10))} ${now.toTimeString().slice(0, 5)}`)
   lines.push('# Saldos atuais referem-se à data de geração, não ao período acima.')
