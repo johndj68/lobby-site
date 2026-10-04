@@ -38,5 +38,5 @@ export default async function FinanceiroVisaoGeralPage({ searchParams }: { searc
       ? { label: 'Continuar cadastro', href: `/dashboard/meus-app/novo/${latestDraft.id}/editar` }
       : { label: 'Ver meus aplicativos', href: '/dashboard/meus-app' }
 
-  return <VisaoGeralClient partnerId={partnerId} apps={soldApps ?? []} userId={user.id} emptyStateCta={emptyStateCta} />
+  return <VisaoGeralClient key={partnerId ?? 'self'} partnerId={partnerId} apps={soldApps ?? []} emptyStateCta={emptyStateCta} />
 }

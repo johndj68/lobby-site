@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
@@ -37,14 +37,21 @@ interface OverviewRow {
 
 const EMPTY_OVERVIEW: OverviewRow = { retido_amount: 0, elegivel_amount: 0, repassado_amount: 0, reserva_retida_amount: 0 }
 
+// Compartilhado entre o guard de "Próximas liberações" (financeiro_repasses)
+// e o guard de página inteira (financeiro_visao_geral, achado #11) — mesma
+// forma de erro lançada pelas RPCs security definer em "Sem permissão ...".
+const isPermissionDenied = (err: unknown): boolean =>
+  typeof err === 'object' && err !== null && 'message' in err &&
+  typeof (err as { message: unknown }).message === 'string' &&
+  (err as { message: string }).message.includes('Sem permissão')
+
 interface Props {
   partnerId: string | null
   apps:      AppOption[]
-  userId:    string
   emptyStateCta: { label: string; href: string }
 }
 
-export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emptyStateCta }: Props) {
+export default function VisaoGeralClient({ partnerId, apps, emptyStateCta }: Props) {
   const [preset, setPreset] = useState<PeriodoPreset>('este_mes')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -67,11 +74,23 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
   const [desempenhoError, setDesempenhoError] = useState(false)
   const [pendencias, setPendencias] = useState<PendenciasRow | null>(null)
   const [pendenciasError, setPendenciasError] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const [corePermissionDenied, setCorePermissionDenied] = useState(false)
+  const reqId = useRef(0)
 
   const range = useMemo(() => resolvePeriodoRange(preset, customFrom, customTo), [preset, customFrom, customTo])
   const granularidade = useMemo(() => resolveGranularidade(range.from, range.to), [range])
 
   const load = useCallback(async () => {
+    // 'personalizado' é selecionado antes que De/Até estejam ambos
+    // preenchidos (o dropdown já dispara load() de imediato) — nesse
+    // intervalo `range` só reflete o fallback de 'este_mes', então um
+    // fetch aqui seria descartado 1-2 chamadas depois mesmo. Acha #9.
+    if (preset === 'personalizado' && (!customFrom || !customTo)) {
+      setLoading(false)
+      return
+    }
+    const id = ++reqId.current
     setLoading(true)
     const supabase = createClient()
     const [resumoRes, overviewRes, serieRes, queueMainRes, queueReserveRes, vendasRes, desempenhoRes, pendenciasRes] = await Promise.all([
@@ -105,12 +124,26 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
       { data: PendenciasRow[] | null; error: unknown },
     ]
 
+    // Chamada mais recente venceu? Uma resposta antiga (de um load()
+    // superado por outro mais novo — ex.: os 2 fetches "preliminares"
+    // disparados enquanto o usuário ainda escolhe De/Até em
+    // 'personalizado') não deve sobrescrever estado já atualizado pela
+    // resposta mais nova. Acha #9.
+    if (id !== reqId.current) return
+
     setResumoError(!!resumoRes.error)
     setResumo(resumoRes.data?.[0] ?? EMPTY_RESUMO)
     setOverviewError(!!overviewRes.error)
     setOverview(overviewRes.data?.[0] ?? EMPTY_OVERVIEW)
     setSerieError(!!serieRes.error)
     setSerie(serieRes.data ?? [])
+
+    // resumo/overview são as 2 RPCs mais fundamentais da página — se
+    // ambas forem negadas por permissão, o viewer não tem
+    // financeiro_visao_geral pra este parceiro (chegou aqui só porque o
+    // seletor de parceiro lista qualquer capacidade financeiro_*, não
+    // especificamente esta). Acha #11.
+    setCorePermissionDenied(isPermissionDenied(resumoRes.error) && isPermissionDenied(overviewRes.error))
 
     setLiberacoesError(!!queueMainRes.error || !!queueReserveRes.error)
     // get_partner_payout_queue_main/_reserve (RPCs já existentes,
@@ -119,11 +152,8 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
     // membro de equipe com só financeiro_visao_geral tem essa chamada
     // negada de propósito; tratado como "sem permissão pra esta seção",
     // não como uma falha real (achado na verificação manual da Etapa 8).
-    const isPermissionDenied = (err: unknown): boolean =>
-      typeof err === 'object' && err !== null && 'message' in err &&
-      typeof (err as { message: unknown }).message === 'string' &&
-      (err as { message: string }).message.includes('Sem permissão')
-    setLiberacoesPermissionDenied(isPermissionDenied(queueMainRes.error) || isPermissionDenied(queueReserveRes.error))
+    const queuePermissionDenied = isPermissionDenied(queueMainRes.error) || isPermissionDenied(queueReserveRes.error)
+    setLiberacoesPermissionDenied(queuePermissionDenied)
     const nameFilter = applicationId ? apps.find(a => a.application_id === applicationId)?.application_name : null
     const main: LiberacaoRow[] = (queueMainRes.data ?? [])
       .filter(r => !nameFilter || r.application_name === nameFilter)
@@ -140,11 +170,18 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
     setPendenciasError(!!pendenciasRes.error)
     setPendencias(pendenciasRes.data?.[0] ?? null)
 
-    if (!resumoRes.error && !overviewRes.error && !serieRes.error && !queueMainRes.error && !queueReserveRes.error && !vendasRes.error && !desempenhoRes.error && !pendenciasRes.error) {
+    // Uma negação de permissão nas RPCs da fila (financeiro_repasses) já
+    // não é tratada como falha real pra "Próximas liberações" (ver
+    // liberacoesPermissionDenied acima) — o gate final precisa da mesma
+    // exceção, senão "Última atualização" nunca aparece pra um viewer só
+    // com financeiro_visao_geral. Acha #2.
+    const queueOk = queuePermissionDenied || (!queueMainRes.error && !queueReserveRes.error)
+    if (!resumoRes.error && !overviewRes.error && !serieRes.error && queueOk && !vendasRes.error && !desempenhoRes.error && !pendenciasRes.error) {
       setLastUpdated(new Date())
     }
     setLoading(false)
-  }, [range, applicationId, partnerId, granularidade, apps])
+    setHasLoaded(true)
+  }, [range, applicationId, partnerId, granularidade, apps, preset, customFrom, customTo])
 
   useEffect(() => { load() }, [load])
 
@@ -171,7 +208,7 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
   ]
 
   return (
-    <div style={{ background: colors.backgroundAlt }} className="-m-6 min-h-screen p-6">
+    <div style={{ background: colors.backgroundAlt }} className="-m-4 p-4 sm:-m-6 sm:p-6 lg:-m-8 lg:p-8">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold" style={{ color: colors.text }}>Visão geral</h2>
@@ -182,13 +219,16 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
           )}
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href={`/api/financeiro/export?preset=${preset}${preset === 'personalizado' ? `&from=${customFrom}&to=${customTo}` : ''}${applicationId ? `&application_id=${applicationId}` : ''}${partnerId ? `&parceiro=${partnerId}` : ''}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold"
-            style={{ borderColor: colors.border, color: colors.text, background: colors.card }}
-          >
-            Exportar relatório
-          </a>
+          {!corePermissionDenied && (
+            <a
+              href={`/api/financeiro/export?preset=${preset}${preset === 'personalizado' ? `&from=${customFrom}&to=${customTo}` : ''}&from_iso=${encodeURIComponent(range.from)}&to_iso=${encodeURIComponent(range.to)}${applicationId ? `&application_id=${applicationId}` : ''}${partnerId ? `&parceiro=${partnerId}` : ''}`}
+              target="_blank"
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold"
+              style={{ borderColor: colors.border, color: colors.text, background: colors.card }}
+            >
+              Exportar relatório
+            </a>
+          )}
           <button
             type="button"
             onClick={() => load()}
@@ -209,7 +249,13 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
         apps={apps} applicationId={applicationId} onAppChange={setApplicationId}
       />
 
-      <PendenciasAvisos data={pendencias} loading={loading} error={pendenciasError} onRetry={load} partnerId={partnerId} />
+      {corePermissionDenied ? (
+        <div className="rounded-xl border p-4 text-sm" style={{ borderColor: colors.border, background: colors.card, color: colors.text }}>
+          Você não tem a permissão &quot;Visão geral&quot; para ver o financeiro deste parceiro.
+        </div>
+      ) : (
+      <>
+      <PendenciasAvisos data={pendencias} loading={loading && !hasLoaded} error={pendenciasError} onRetry={load} partnerId={partnerId} />
 
       <p className="mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: colors.textMuted }}>Resultados do período</p>
       {!loading && !resumoError && resumo.vendas_confirmadas_qtd === 0 && (
@@ -283,19 +329,21 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <div className="rounded-xl border p-4" style={{ borderColor: colors.border, background: colors.card }}>
           <p className="mb-3 text-sm font-bold" style={{ color: colors.text }}>Evolução das vendas</p>
-          <EvolucaoChart data={serie} granularidade={granularidade} loading={loading} error={serieError} onRetry={load} />
+          <EvolucaoChart data={serie} granularidade={granularidade} loading={loading && !hasLoaded} error={serieError} onRetry={load} />
         </div>
-        <ProximasLiberacoes rows={liberacoes} loading={loading} error={liberacoesError} permissionDenied={liberacoesPermissionDenied} onRetry={load} partnerId={partnerId} />
+        <ProximasLiberacoes rows={liberacoes} loading={loading && !hasLoaded} error={liberacoesError} permissionDenied={liberacoesPermissionDenied} onRetry={load} partnerId={partnerId} />
       </div>
 
       <div className="mb-6">
-        <UltimasVendas rows={vendas} loading={loading} error={vendasError} onRetry={load} partnerId={partnerId} />
+        <UltimasVendas rows={vendas} loading={loading && !hasLoaded} error={vendasError} onRetry={load} partnerId={partnerId} />
       </div>
 
       <DesempenhoPorApp
-        rows={desempenho} loading={loading} error={desempenhoError} onRetry={load}
-        hidden={apps.length <= 1 || !!applicationId}
+        rows={desempenho} loading={loading && !hasLoaded} error={desempenhoError} onRetry={load}
+        hidden={!!applicationId || desempenho.length <= 1}
       />
+      </>
+      )}
     </div>
   )
 }
