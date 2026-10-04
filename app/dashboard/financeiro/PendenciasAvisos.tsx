@@ -27,17 +27,26 @@ function buildAvisos(p: PendenciasRow, partnerId: string | null): Aviso[] {
   const parceiroQuery = partnerId ? `?parceiro=${partnerId}` : ''
 
   if (p.recebimento_incompleto) {
-    avisos.push({
-      titulo: 'Configuração de recebimento incompleta',
-      impacto: 'Sem uma chave PIX cadastrada, seus repasses não podem ser enviados quando ficarem disponíveis.',
-      acao: 'Completar cadastro',
-      // Configurações de recebimento nunca lê ?parceiro= por desenho —
-      // dado bancário é sempre o do próprio usuário logado, nunca
-      // "visto em nome de outro parceiro" (ver app/dashboard/financeiro/
-      // configuracoes/page.tsx). Levar esse param aqui enganaria um
-      // membro de equipe delegado a achar que veria a chave PIX do dono.
-      href: '/dashboard/financeiro/configuracoes',
-    })
+    // Configurações de recebimento nunca lê ?parceiro= por desenho —
+    // dado bancário é sempre o do próprio usuário logado, nunca
+    // "visto em nome de outro parceiro" (ver app/dashboard/financeiro/
+    // configuracoes/page.tsx). Pra um viewer delegado (partnerId !=
+    // null), esse CTA levaria a ver a PRÓPRIA chave PIX do viewer, não
+    // a do dono (quem o aviso é sobre) — enganoso, então some o CTA e
+    // deixa claro de quem é a pendência (achado #12).
+    avisos.push(partnerId
+      ? {
+          titulo: 'Configuração de recebimento incompleta',
+          impacto: 'O dono deste financeiro ainda não cadastrou uma chave PIX.',
+          acao: '',
+          href: '',
+        }
+      : {
+          titulo: 'Configuração de recebimento incompleta',
+          impacto: 'Sem uma chave PIX cadastrada, seus repasses não podem ser enviados quando ficarem disponíveis.',
+          acao: 'Completar cadastro',
+          href: '/dashboard/financeiro/configuracoes',
+        })
   }
 
   if (p.repasse_revertido_recente) {
@@ -96,9 +105,11 @@ export default function PendenciasAvisos({ data, loading, error, onRetry, partne
           <div className="flex-1">
             <p className="text-sm font-semibold" style={{ color: colors.text }}>{a.titulo}</p>
             <p className="mt-0.5 text-xs" style={{ color: colors.textSecondary }}>{a.impacto}</p>
-            <Link href={a.href} className="mt-1 inline-block text-xs font-semibold" style={{ color: colors.primary }}>
-              {a.acao} →
-            </Link>
+            {a.acao && (
+              <Link href={a.href} className="mt-1 inline-block text-xs font-semibold" style={{ color: colors.primary }}>
+                {a.acao} →
+              </Link>
+            )}
           </div>
         </div>
       ))}
