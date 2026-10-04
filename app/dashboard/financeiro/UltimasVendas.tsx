@@ -53,7 +53,7 @@ export default function UltimasVendas({ rows, loading, error, onRetry, partnerId
         <p className="text-sm" style={{ color: colors.textSecondary }}>Você ainda não tem vendas neste período.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full min-w-[600px] text-left text-xs">
             <thead>
               <tr style={{ color: colors.textSecondary }}>
                 <th className="pb-2 pr-3 font-semibold">App / Plano</th>

@@ -43,7 +43,7 @@ export default function DesempenhoPorApp({ rows, loading, error, onRetry, hidden
         <p className="text-sm" style={{ color: colors.textSecondary }}>Nenhuma venda neste período.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full min-w-[500px] text-left text-xs">
             <thead>
               <tr style={{ color: colors.textSecondary }}>
                 <th className="pb-2 pr-3 font-semibold">Aplicativo</th>
