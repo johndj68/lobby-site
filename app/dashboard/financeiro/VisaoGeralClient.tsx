@@ -60,6 +60,7 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
   const [serieError, setSerieError] = useState(false)
   const [liberacoes, setLiberacoes] = useState<LiberacaoRow[]>([])
   const [liberacoesError, setLiberacoesError] = useState(false)
+  const [liberacoesPermissionDenied, setLiberacoesPermissionDenied] = useState(false)
   const [vendas, setVendas] = useState<VendaRow[]>([])
   const [vendasError, setVendasError] = useState(false)
   const [desempenho, setDesempenho] = useState<DesempenhoRow[]>([])
@@ -112,6 +113,17 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
     setSerie(serieRes.data ?? [])
 
     setLiberacoesError(!!queueMainRes.error || !!queueReserveRes.error)
+    // get_partner_payout_queue_main/_reserve (RPCs já existentes,
+    // reaproveitadas aqui) exigem financeiro_repasses — diferente de
+    // financeiro_visao_geral, que já libera o resto desta página. Um
+    // membro de equipe com só financeiro_visao_geral tem essa chamada
+    // negada de propósito; tratado como "sem permissão pra esta seção",
+    // não como uma falha real (achado na verificação manual da Etapa 8).
+    const isPermissionDenied = (err: unknown): boolean =>
+      typeof err === 'object' && err !== null && 'message' in err &&
+      typeof (err as { message: unknown }).message === 'string' &&
+      (err as { message: string }).message.includes('Sem permissão')
+    setLiberacoesPermissionDenied(isPermissionDenied(queueMainRes.error) || isPermissionDenied(queueReserveRes.error))
     const nameFilter = applicationId ? apps.find(a => a.application_id === applicationId)?.application_name : null
     const main: LiberacaoRow[] = (queueMainRes.data ?? [])
       .filter(r => !nameFilter || r.application_name === nameFilter)
@@ -273,7 +285,7 @@ export default function VisaoGeralClient({ partnerId, apps, userId: _userId, emp
           <p className="mb-3 text-sm font-bold" style={{ color: colors.text }}>Evolução das vendas</p>
           <EvolucaoChart data={serie} granularidade={granularidade} loading={loading} error={serieError} onRetry={load} />
         </div>
-        <ProximasLiberacoes rows={liberacoes} loading={loading} error={liberacoesError} onRetry={load} partnerId={partnerId} />
+        <ProximasLiberacoes rows={liberacoes} loading={loading} error={liberacoesError} permissionDenied={liberacoesPermissionDenied} onRetry={load} partnerId={partnerId} />
       </div>
 
       <div className="mb-6">

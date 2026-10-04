@@ -15,14 +15,22 @@ export interface LiberacaoRow {
 }
 
 interface Props {
-  rows:      LiberacaoRow[]
-  loading:   boolean
-  error:     boolean
-  onRetry:   () => void
-  partnerId: string | null
+  rows:             LiberacaoRow[]
+  loading:          boolean
+  error:            boolean
+  /** Etapa 8 manual verification: get_partner_payout_queue_main/_reserve
+   *  (RPCs já existentes, reaproveitadas aqui) exigem a capacidade
+   *  financeiro_repasses — diferente de financeiro_visao_geral, que já
+   *  libera o resto desta página. Um membro de equipe com só
+   *  financeiro_visao_geral vê essa seção especificamente barrada por
+   *  permissão (não uma falha real) — tratado à parte do erro genérico
+   *  pra não parecer uma instabilidade. */
+  permissionDenied: boolean
+  onRetry:          () => void
+  partnerId:        string | null
 }
 
-export default function ProximasLiberacoes({ rows, loading, error, onRetry, partnerId }: Props) {
+export default function ProximasLiberacoes({ rows, loading, error, permissionDenied, onRetry, partnerId }: Props) {
   const top = rows.slice(0, 5)
 
   return (
@@ -33,6 +41,10 @@ export default function ProximasLiberacoes({ rows, loading, error, onRetry, part
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-lg" style={{ background: colors.borderLight }} />)}
         </div>
+      ) : permissionDenied ? (
+        <p className="text-xs" style={{ color: colors.textSecondary }}>
+          Esta seção exige a permissão "Financeiro — Repasses e extrato", concedida separadamente pelo dono.
+        </p>
       ) : error ? (
         <div className="flex items-center gap-2 text-xs" style={{ color: colors.text }}>
           Não foi possível carregar.
