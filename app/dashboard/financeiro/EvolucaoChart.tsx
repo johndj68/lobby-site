@@ -62,8 +62,8 @@ export default function EvolucaoChart({ data, granularidade, loading, error, onR
               contentStyle={{ borderRadius: 8, borderColor: colors.border }}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Line type="monotone" dataKey="vendas_valor" name="Vendas confirmadas" stroke={colors.text} strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="participacao_valor" name="Sua participação" stroke={colors.primary} strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="vendas_valor" name="Vendas confirmadas" stroke={colors.text} strokeWidth={2} dot={data.length === 1} />
+            <Line type="monotone" dataKey="participacao_valor" name="Sua participação" stroke={colors.primary} strokeWidth={2} dot={data.length === 1} />
           </LineChart>
         </ResponsiveContainer>
       </div>
