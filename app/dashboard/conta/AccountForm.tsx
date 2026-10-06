@@ -1,7 +1,7 @@
 'use client'
 
 // Componente Client: exige interatividade (useState, eventos de formulário)
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -14,6 +14,15 @@ import { Label }    from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { createClient } from '@/lib/supabase'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
+
+interface PayoutSummary {
+  configured: boolean
+  payout_method: 'pix' | 'bank_transfer' | null
+  account_holder: string | null
+  masked_pix: string | null
+  bank_name: string | null
+  masked_bank_account: string | null
+}
 
 /* ── Dados estáticos ────────────────────────────────────────────── */
 
@@ -53,7 +62,6 @@ interface Props {
   profile: {
     full_name?: string; company_name?: string; interest_area?: string; email?: string; phone?: string
     notification_prefs?: Record<PrefKey, boolean> | null
-    payout_pix_key?: string | null; payout_account_holder?: string | null; payout_notes?: string | null
   } | null
   /** Só parceiros (dono de app_draft) veem a seção de dados de recebimento
    *  — repasse (peça 4) é pra eles, não pra cliente comum. */
@@ -75,15 +83,31 @@ export default function AccountForm({ user, profile, isPartner }: Props) {
     company_name:  profile?.company_name  || '',
     interest_area: profile?.interest_area || '',
     phone:         profile?.phone         || '',
-    payout_pix_key:        profile?.payout_pix_key        || '',
-    payout_account_holder: profile?.payout_account_holder || '',
-    payout_notes:          profile?.payout_notes          || '',
   })
 
   // Estados de UI do submit: loading evita duplo envio, success/error dão feedback
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error,   setError]   = useState('')
+
+  // Resumo de recebimento — só leitura aqui (edição real é em Configurações
+  // de recebimento, que reaproveita a mesma RPC/fonte de dados). Busca
+  // client-side porque profiles.payout_* não vem mais no select do
+  // Server Component (ver nota abaixo) e porque UPDATE direto nessas
+  // colunas foi revogado pra authenticated (20261006130000) — só a RPC
+  // consegue ler/escrever.
+  const [payout, setPayout] = useState<PayoutSummary | null>(null)
+  const [payoutLoading, setPayoutLoading] = useState(false)
+  useEffect(() => {
+    if (!isPartner) return
+    setPayoutLoading(true)
+    const supabase = createClient()
+    ;(async () => {
+      const { data } = await supabase.rpc('get_partner_payout_destination_detail', { p_partner_id: null }) as unknown as { data: PayoutSummary[] | null }
+      setPayout(data?.[0] ?? null)
+      setPayoutLoading(false)
+    })()
+  }, [isPartner])
 
   // Estado das preferências de notificação, mesclando defaults com valores salvos no banco
   const [prefs, setPrefs] = useState<Record<PrefKey, boolean>>({
@@ -115,9 +139,10 @@ export default function AccountForm({ user, profile, isPartner }: Props) {
           interest_area: form.interest_area,
           phone:         form.phone || null, // salva null quando vazio (campo opcional)
           notification_prefs: prefs,         // objeto JSON com as preferências
-          payout_pix_key:        form.payout_pix_key.trim() || null,
-          payout_account_holder: form.payout_account_holder.trim() || null,
-          payout_notes:          form.payout_notes.trim() || null,
+          // payout_* não é mais editado aqui — ver bloco "Dados de
+          // recebimento" abaixo, que só lê e linka pra Configurações de
+          // recebimento. UPDATE direto nessas colunas foi revogado
+          // (20261006130000); mandar esses campos aqui falharia mesmo.
         })
       if (updateError) throw updateError
       setSuccess(true)
@@ -354,40 +379,38 @@ export default function AccountForm({ user, profile, isPartner }: Props) {
                 </div>
               </div>
 
-              {/* Dados de recebimento — só parceiros (dono de app), repasse é manual
-                  (peça 4): líder lê isso aqui e faz o PIX/TED por fora. */}
+              {/* Dados de recebimento — só parceiros (dono de app). Edição de
+                  verdade é em Configurações de recebimento (reaproveita a
+                  mesma RPC/fonte) — aqui é só resumo + link, pra não manter
+                  duas UIs de escrita pro mesmo dado sensível. */}
               {isPartner && (
                 <div className="rounded-2xl border border-[#93C5FD]/40 bg-[#EFF6FF] p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <Banknote size={16} className="text-[#005BFF]" aria-hidden="true" />
                     <p className="text-sm font-bold text-[#0B1020]">Dados de recebimento</p>
                   </div>
-                  <p className="mb-4 text-xs text-[#1D4ED8]">
-                    Usado só pelo time da LOBBY pra fazer o repasse das suas vendas por PIX/TED — não processa pagamento automático.
-                  </p>
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="payout_pix_key" className="mb-1.5 block text-xs font-semibold text-[#0B1020]">Chave PIX</Label>
-                      <Input id="payout_pix_key" placeholder="CPF, e-mail, telefone ou chave aleatória"
-                        value={form.payout_pix_key}
-                        onChange={(e) => setForm({ ...form, payout_pix_key: e.target.value })}
-                        className="h-11 rounded-xl border-[#93C5FD]/50 bg-white text-sm text-[#0B1020] placeholder:text-[#5D6475]/60" />
+                  {payoutLoading ? (
+                    <div className="h-10 animate-pulse rounded-xl bg-white/60" />
+                  ) : payout?.configured ? (
+                    <div className="space-y-1 text-sm">
+                      <p className="text-[#0B1020]">
+                        <span className="text-[#5D6475]">Método:</span> {payout.payout_method === 'pix' ? 'Pix' : 'Transferência bancária'}
+                      </p>
+                      <p className="text-[#0B1020]">
+                        <span className="text-[#5D6475]">Titular:</span> {payout.account_holder || '—'}
+                      </p>
+                      <p className="text-[#0B1020]">
+                        <span className="text-[#5D6475]">{payout.payout_method === 'pix' ? 'Chave:' : 'Conta:'}</span>{' '}
+                        {payout.payout_method === 'pix' ? (payout.masked_pix || '—') : `${payout.bank_name || ''} ${payout.masked_bank_account || ''}`.trim() || '—'}
+                      </p>
                     </div>
-                    <div>
-                      <Label htmlFor="payout_account_holder" className="mb-1.5 block text-xs font-semibold text-[#0B1020]">Titular</Label>
-                      <Input id="payout_account_holder" placeholder="Nome do titular da chave/conta"
-                        value={form.payout_account_holder}
-                        onChange={(e) => setForm({ ...form, payout_account_holder: e.target.value })}
-                        className="h-11 rounded-xl border-[#93C5FD]/50 bg-white text-sm text-[#0B1020] placeholder:text-[#5D6475]/60" />
-                    </div>
-                    <div>
-                      <Label htmlFor="payout_notes" className="mb-1.5 block text-xs font-semibold text-[#0B1020]">Observações <span className="font-normal text-[#5D6475]">(opcional)</span></Label>
-                      <textarea id="payout_notes" rows={2} placeholder="Dados bancários pra TED, preferências, etc."
-                        value={form.payout_notes}
-                        onChange={(e) => setForm({ ...form, payout_notes: e.target.value })}
-                        className="w-full resize-none rounded-xl border border-[#93C5FD]/50 bg-white px-3 py-2 text-sm text-[#0B1020] placeholder:text-[#5D6475]/60 outline-none" />
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="text-xs text-[#1D4ED8]">Você ainda não cadastrou dados de recebimento.</p>
+                  )}
+                  <Link href="/dashboard/financeiro/configuracoes"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#005BFF] transition-all hover:gap-2">
+                    {payout?.configured ? 'Editar em Configurações de recebimento' : 'Cadastrar em Configurações de recebimento'} <ArrowRight size={11} aria-hidden="true" />
+                  </Link>
                 </div>
               )}
             </div>

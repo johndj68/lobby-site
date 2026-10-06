@@ -56,12 +56,15 @@ export default async function RepassesPage() {
     ...subInvoiceRows.map(r => r.partnerId),
     ...(payouts ?? []).map(p => p.partner_id as string),
   ])]
+  const PAYOUT_COLS = 'id, full_name, email, company_name, payout_method, payout_pix_key, payout_account_holder, payout_notes, payout_bank_name, payout_bank_agency, payout_bank_account, payout_bank_account_digit, payout_bank_account_type'
   const { data: partnerProfiles } = partnerIds.length
-    ? await supabase.from('profiles').select('id, full_name, email, company_name, payout_pix_key, payout_account_holder, payout_notes').in('id', partnerIds)
-    : { data: [] as { id: string; full_name: string | null; email: string | null; company_name: string | null; payout_pix_key: string | null; payout_account_holder: string | null; payout_notes: string | null }[] }
+    ? await supabase.from('profiles').select(PAYOUT_COLS).in('id', partnerIds)
+    : { data: [] as { id: string; full_name: string | null; email: string | null; company_name: string | null; payout_method: string | null; payout_pix_key: string | null; payout_account_holder: string | null; payout_notes: string | null; payout_bank_name: string | null; payout_bank_agency: string | null; payout_bank_account: string | null; payout_bank_account_digit: string | null; payout_bank_account_type: string | null }[] }
   const partnerNameById = new Map((partnerProfiles ?? []).map(p => [p.id, partnerDisplayName(p)]))
   const partnerPayoutInfoById = new Map((partnerProfiles ?? []).map(p => [p.id, {
-    pixKey: p.payout_pix_key, accountHolder: p.payout_account_holder, notes: p.payout_notes,
+    method: p.payout_method, pixKey: p.payout_pix_key, accountHolder: p.payout_account_holder, notes: p.payout_notes,
+    bankName: p.payout_bank_name, bankAgency: p.payout_bank_agency, bankAccount: p.payout_bank_account,
+    bankAccountDigit: p.payout_bank_account_digit, bankAccountType: p.payout_bank_account_type,
   }]))
 
   // Agrupa compras/faturas elegíveis/retidas por parceiro — mesma fila
@@ -72,7 +75,7 @@ export default async function RepassesPage() {
       groups.set(partnerId, {
         partnerId,
         partnerName: partnerNameById.get(partnerId) ?? 'Parceiro removido',
-        payoutInfo: partnerPayoutInfoById.get(partnerId) ?? { pixKey: null, accountHolder: null, notes: null },
+        payoutInfo: partnerPayoutInfoById.get(partnerId) ?? { method: null, pixKey: null, accountHolder: null, notes: null, bankName: null, bankAgency: null, bankAccount: null, bankAccountDigit: null, bankAccountType: null },
         retidoTotal: 0,
         elegivelTotal: 0,
         eligiblePurchases: [],

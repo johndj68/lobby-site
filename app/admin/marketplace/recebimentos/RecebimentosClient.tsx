@@ -9,7 +9,6 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 import AdminShell from '@/components/layout/AdminShell'
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
 import { MARKETPLACE_COLORS as C, formatDateTimeBR } from '@/lib/marketplace'
-import { formatOfferPrice } from '@/lib/services/offers'
 
 const NAV_TABS = [
   { label: 'Visão geral', href: '/admin/marketplace', enabled: true },
@@ -26,23 +25,30 @@ const NAV_TABS = [
   { label: 'Recebimentos', href: '/admin/marketplace/recebimentos', enabled: true },
 ]
 
+const PIX_TYPE_LABEL: Record<string, string> = { cpf: 'CPF', cnpj: 'CNPJ', email: 'E-mail', telefone: 'Telefone', aleatoria: 'Aleatória' }
+const PESSOA_LABEL: Record<string, string> = { pf: 'Pessoa física', pj: 'Pessoa jurídica' }
+const CONTA_TYPE_LABEL: Record<string, string> = { corrente: 'Conta corrente', poupanca: 'Conta poupança' }
+
 interface Row {
   id: string
-  status: 'pendente' | 'aprovado' | 'rejeitado'
-  appName: string
-  planName: string
-  currency: string
-  billingPeriod: string | null
-  originalPrice: number | null
-  promoPrice: number
-  discountPercentage: number | null
-  startsAt: string
-  endsAt: string
+  partnerId: string
+  partnerName: string
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  payoutMethod: 'pix' | 'bank_transfer'
+  accountHolder: string | null
+  personType: string | null
+  document: string | null
+  pixKeyType: string | null
+  pixKey: string | null
+  bankName: string | null
+  bankAgency: string | null
+  bankAccount: string | null
+  bankAccountDigit: string | null
+  bankAccountType: string | null
+  notes: string | null
+  reviewedAt: string | null
   rejectionReason: string | null
-  requesterName: string
   createdAt: string
-  unitLimit: number | null
-  eligibleForDailyDeals: boolean
 }
 
 interface Props {
@@ -53,16 +59,24 @@ interface Props {
   loadError: boolean
 }
 
-function priceLabel(row: Row): string {
-  const promo = formatOfferPrice(row.promoPrice, row.currency, row.billingPeriod)
-  const original = row.originalPrice != null ? formatOfferPrice(row.originalPrice, row.currency, row.billingPeriod) : '—'
-  const pct = row.discountPercentage != null ? ` (-${row.discountPercentage}%)` : ''
-  return `${original} → ${promo}${pct}`
+const STATUS_LABEL: Record<Row['status'], string> = {
+  pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado', cancelled: 'Cancelado pelo parceiro',
+}
+const STATUS_COLOR: Record<Row['status'], string> = {
+  pending: '#F59E0B', approved: '#10B981', rejected: '#EF4444', cancelled: '#64748B',
 }
 
-export default function PromocoesClient({ user, profile, pending: initialPending, history, loadError }: Props) {
+function destinationSummary(row: Row): string {
+  if (row.payoutMethod === 'pix') {
+    const type = row.pixKeyType ? PIX_TYPE_LABEL[row.pixKeyType] ?? row.pixKeyType : 'Pix'
+    return `Pix (${type}): ${row.pixKey ?? '—'}`
+  }
+  const digit = row.bankAccountDigit ? `-${row.bankAccountDigit}` : ''
+  return `TED: ${row.bankName ?? '—'} ag. ${row.bankAgency ?? '—'} cc ${row.bankAccount ?? '—'}${digit}`
+}
+
+export default function RecebimentosClient({ user, profile, pending, history, loadError }: Props) {
   const router = useRouter()
-  const [pending, setPending] = useState(initialPending)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [rejecting, setRejecting] = useState<Row | null>(null)
   const [rejectNotes, setRejectNotes] = useState('')
@@ -70,16 +84,15 @@ export default function PromocoesClient({ user, profile, pending: initialPending
   async function handleApprove(row: Row) {
     setBusyId(row.id)
     try {
-      const res = await fetch(`/api/admin/offers/promotions/${row.id}`, {
+      const res = await fetch(`/api/admin/payout-destinations/${row.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve' }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Falha ao aprovar.')
-      setPending(prev => prev.filter(r => r.id !== row.id))
-      toast.success(`Promoção de "${row.planName}" aprovada.`)
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Não foi possível aprovar.')
+      toast.success('Destino de recebimento aprovado e aplicado.')
       router.refresh()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Não foi possível aprovar.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Não foi possível aprovar.')
     } finally {
       setBusyId(null)
     }
@@ -87,24 +100,20 @@ export default function PromocoesClient({ user, profile, pending: initialPending
 
   async function handleReject() {
     if (!rejecting) return
-    if (!rejectNotes.trim()) {
-      toast.error('Informe o motivo da rejeição.')
-      return
-    }
+    const reason = rejectNotes.trim()
+    if (!reason) return
     setBusyId(rejecting.id)
     try {
-      const res = await fetch(`/api/admin/offers/promotions/${rejecting.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject', reason: rejectNotes.trim() }),
+      const res = await fetch(`/api/admin/payout-destinations/${rejecting.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject', reason }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Falha ao rejeitar.')
-      setPending(prev => prev.filter(r => r.id !== rejecting.id))
-      toast.success('Pedido rejeitado.')
-      setRejecting(null)
-      setRejectNotes('')
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Não foi possível rejeitar.')
+      toast.success('Solicitação rejeitada.')
+      setRejecting(null); setRejectNotes('')
       router.refresh()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Não foi possível rejeitar.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Não foi possível rejeitar.')
     } finally {
       setBusyId(null)
     }
@@ -114,17 +123,17 @@ export default function PromocoesClient({ user, profile, pending: initialPending
     <AdminShell user={user} profile={profile}>
       <div style={{ background: C.bg, minHeight: '100vh' }} className="px-4 py-6 sm:px-6 lg:px-8">
         <p className="mb-2 text-xs" style={{ color: C.textSecondary }}>
-          <Link href="/admin/marketplace" className="hover:underline">Marketplace</Link> / Promoções
+          <Link href="/admin/marketplace" className="hover:underline">Marketplace</Link> / Recebimentos
         </p>
 
         <div className="mb-5">
-          <h1 className="text-2xl font-bold sm:text-3xl" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Promoções</h1>
-          <p className="mt-1 text-sm" style={{ color: C.textSecondary }}>Pedidos de promoção de parceiros aguardando aprovação.</p>
+          <h1 className="text-2xl font-bold sm:text-3xl" style={{ color: C.text, fontFamily: 'Space Grotesk, sans-serif' }}>Recebimentos</h1>
+          <p className="mt-1 text-sm" style={{ color: C.textSecondary }}>Pedidos de alteração de destino de repasse (Pix/TED) aguardando aprovação.</p>
         </div>
 
         <nav aria-label="Seções do marketplace" className="mb-6 flex flex-wrap gap-1 border-b" style={{ borderColor: C.border }}>
           {NAV_TABS.map(tab => {
-            const active = tab.href === '/admin/marketplace/promocoes'
+            const active = tab.href === '/admin/marketplace/recebimentos'
             if (!tab.enabled) return <span key={tab.href} title="Esta área ainda não foi implementada." aria-disabled="true" className="cursor-not-allowed px-3 py-2.5 text-sm font-medium opacity-40" style={{ color: C.textSecondary }}>{tab.label}</span>
             return <Link key={tab.href} href={tab.href} className="px-3 py-2.5 text-sm font-medium" style={{ color: active ? C.primary : C.textSecondary, borderBottom: active ? `2px solid ${C.primary}` : '2px solid transparent' }}>{tab.label}</Link>
           })}
@@ -147,11 +156,16 @@ export default function PromocoesClient({ user, profile, pending: initialPending
                 {pending.map(row => (
                   <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3" style={{ borderColor: C.border }}>
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: C.text }}>{row.appName} — {row.planName}</p>
+                      <p className="text-sm font-semibold" style={{ color: C.text }}>{row.partnerName}</p>
                       <p className="text-xs" style={{ color: C.textSecondary }}>
-                        {priceLabel(row)} · {formatDateTimeBR(row.startsAt)} → {formatDateTimeBR(row.endsAt)} · pedido por {row.requesterName} em {formatDateTimeBR(row.createdAt)}
-                        {row.unitLimit != null && <> · limite: {row.unitLimit} un</>}
-                        {row.eligibleForDailyDeals && <> · elegível p/ promoções do dia</>}
+                        {row.accountHolder} ({row.personType ? PESSOA_LABEL[row.personType] ?? row.personType : '—'}) · doc. {row.document ?? '—'}
+                      </p>
+                      <p className="text-xs" style={{ color: C.textSecondary }}>
+                        {destinationSummary(row)}
+                        {row.payoutMethod === 'bank_transfer' && row.bankAccountType && <> · {CONTA_TYPE_LABEL[row.bankAccountType] ?? row.bankAccountType}</>}
+                      </p>
+                      <p className="text-xs" style={{ color: C.textSecondary }}>
+                        pedido em {formatDateTimeBR(row.createdAt)}{row.notes && <> · obs.: {row.notes}</>}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -181,8 +195,8 @@ export default function PromocoesClient({ user, profile, pending: initialPending
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr style={{ color: C.textSecondary }}>
-                      <th className="pb-2 pr-3 font-semibold">App / Plano</th>
-                      <th className="pb-2 pr-3 font-semibold">Promoção</th>
+                      <th className="pb-2 pr-3 font-semibold">Parceiro</th>
+                      <th className="pb-2 pr-3 font-semibold">Destino proposto</th>
                       <th className="pb-2 pr-3 font-semibold">Status</th>
                       <th className="pb-2 font-semibold">Data</th>
                     </tr>
@@ -190,17 +204,17 @@ export default function PromocoesClient({ user, profile, pending: initialPending
                   <tbody>
                     {history.map(row => (
                       <tr key={row.id} className="border-t" style={{ borderColor: C.border }}>
-                        <td className="py-2 pr-3" style={{ color: C.text }}>{row.appName} — {row.planName}</td>
-                        <td className="py-2 pr-3" style={{ color: C.textSecondary }}>{priceLabel(row)}</td>
+                        <td className="py-2 pr-3" style={{ color: C.text }}>{row.partnerName}</td>
+                        <td className="py-2 pr-3" style={{ color: C.textSecondary }}>{destinationSummary(row)}</td>
                         <td className="py-2 pr-3">
-                          <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ color: row.status === 'aprovado' ? '#10B981' : '#EF4444', background: row.status === 'aprovado' ? '#10B9811A' : '#EF44441A' }}>
-                            {row.status === 'aprovado' ? 'Aprovado' : 'Rejeitado'}
+                          <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ color: STATUS_COLOR[row.status], background: `${STATUS_COLOR[row.status]}1A` }}>
+                            {STATUS_LABEL[row.status]}
                           </span>
-                          {row.status === 'rejeitado' && row.rejectionReason && (
+                          {row.status === 'rejected' && row.rejectionReason && (
                             <p className="mt-1 text-xs" style={{ color: C.textSecondary }}>{row.rejectionReason}</p>
                           )}
                         </td>
-                        <td className="py-2" style={{ color: C.textSecondary }}>{formatDateTimeBR(row.createdAt)}</td>
+                        <td className="py-2" style={{ color: C.textSecondary }}>{formatDateTimeBR(row.reviewedAt ?? row.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -214,9 +228,9 @@ export default function PromocoesClient({ user, profile, pending: initialPending
       <ConfirmDialog
         open={!!rejecting}
         onOpenChange={next => { if (!next) { setRejecting(null); setRejectNotes('') } }}
-        title="Rejeitar pedido de promoção?"
+        title="Rejeitar alteração de destino?"
         description={rejecting ? <>
-          {rejecting.appName} — {rejecting.planName}: {priceLabel(rejecting)}
+          {rejecting.partnerName}: {destinationSummary(rejecting)}
           <textarea
             value={rejectNotes}
             onChange={e => setRejectNotes(e.target.value)}
@@ -229,7 +243,6 @@ export default function PromocoesClient({ user, profile, pending: initialPending
         confirmLabel="Rejeitar"
         confirmingLabel="Rejeitando…"
         icon={X}
-        variant="destructive"
         busy={busyId === rejecting?.id}
         onConfirm={handleReject}
       />

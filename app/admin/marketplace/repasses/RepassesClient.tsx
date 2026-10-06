@@ -27,9 +27,15 @@ export interface EligiblePurchaseRow {
 }
 
 export interface PartnerPayoutInfo {
-  pixKey:        string | null
-  accountHolder: string | null
-  notes:         string | null
+  method:           string | null
+  pixKey:           string | null
+  accountHolder:    string | null
+  notes:            string | null
+  bankName:         string | null
+  bankAgency:       string | null
+  bankAccount:      string | null
+  bankAccountDigit: string | null
+  bankAccountType:  string | null
 }
 
 export interface PartnerGroup {
@@ -67,6 +73,7 @@ const NAV_TABS = [
   { label: 'Repasses', href: '/admin/marketplace/repasses', enabled: true },
   { label: 'Preços', href: '/admin/marketplace/precos', enabled: true },
   { label: 'Promoções', href: '/admin/marketplace/promocoes', enabled: true },
+  { label: 'Recebimentos', href: '/admin/marketplace/recebimentos', enabled: true },
 ]
 
 export default function RepassesClient({ user, profile, partnerGroups, history }: Props) {
@@ -245,17 +252,27 @@ export default function RepassesClient({ user, profile, partnerGroups, history }
               <button type="button" onClick={closePayout} disabled={saving} style={{ color: C.textSecondary }}><X size={18} aria-hidden="true" /></button>
             </div>
 
-            {/* Dados de recebimento que o próprio parceiro cadastrou em /dashboard/conta
-                — repasse é manual, líder lê aqui e faz o PIX/TED por fora. */}
+            {/* Dados de recebimento que o próprio parceiro cadastrou em
+                Configurações de recebimento — repasse é manual, líder lê
+                aqui (texto puro, sem máscara — precisa do valor real pra
+                executar o PIX/TED) e faz a transferência por fora. */}
             <div className="mb-4 rounded-xl border p-3 text-xs" style={{ borderColor: C.border, background: 'rgba(255,255,255,0.03)' }}>
-              {payingPartner.payoutInfo.pixKey || payingPartner.payoutInfo.accountHolder || payingPartner.payoutInfo.notes ? (
+              {payingPartner.payoutInfo.pixKey || payingPartner.payoutInfo.bankAccount || payingPartner.payoutInfo.accountHolder || payingPartner.payoutInfo.notes ? (
                 <>
-                  {payingPartner.payoutInfo.pixKey && <p style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Chave PIX:</span> <strong>{payingPartner.payoutInfo.pixKey}</strong></p>}
-                  {payingPartner.payoutInfo.accountHolder && <p className="mt-1" style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Titular:</span> {payingPartner.payoutInfo.accountHolder}</p>}
+                  {payingPartner.payoutInfo.accountHolder && <p style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Titular:</span> {payingPartner.payoutInfo.accountHolder}</p>}
+                  {payingPartner.payoutInfo.method === 'bank_transfer' ? (
+                    <>
+                      {payingPartner.payoutInfo.bankName && <p className="mt-1" style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Banco:</span> <strong>{payingPartner.payoutInfo.bankName}</strong></p>}
+                      {payingPartner.payoutInfo.bankAgency && <p className="mt-1" style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Agência:</span> <strong>{payingPartner.payoutInfo.bankAgency}</strong></p>}
+                      {payingPartner.payoutInfo.bankAccount && <p className="mt-1" style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Conta:</span> <strong>{payingPartner.payoutInfo.bankAccount}{payingPartner.payoutInfo.bankAccountDigit ? `-${payingPartner.payoutInfo.bankAccountDigit}` : ''}</strong> {payingPartner.payoutInfo.bankAccountType === 'poupanca' ? '(poupança)' : '(corrente)'}</p>}
+                    </>
+                  ) : (
+                    payingPartner.payoutInfo.pixKey && <p className="mt-1" style={{ color: C.text }}><span style={{ color: C.textSecondary }}>Chave PIX:</span> <strong>{payingPartner.payoutInfo.pixKey}</strong></p>
+                  )}
                   {payingPartner.payoutInfo.notes && <p className="mt-1" style={{ color: C.textSecondary }}>{payingPartner.payoutInfo.notes}</p>}
                 </>
               ) : (
-                <p style={{ color: C.warning }}>Parceiro ainda não cadastrou dados de recebimento em /dashboard/conta.</p>
+                <p style={{ color: C.warning }}>Parceiro ainda não cadastrou dados de recebimento.</p>
               )}
             </div>
 
