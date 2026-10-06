@@ -11,17 +11,11 @@ interface SoldApp {
   application_name: string
 }
 
-interface SearchParams {
-  parceiro?: string
-  venda?:    string
-}
-
-export default async function FinanceiroVendasPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+export default async function FinanceiroVendasPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const supabase = await createServerSupabaseClient()
-  await requireClientSession(supabase)
+  const { user } = await requireClientSession(supabase)
   const sp = await searchParams
   const partnerId = sp.parceiro || null
-  const focusSaleId = sp.venda ?? null
 
   const { data, error } = await supabase.rpc('get_partner_sold_apps', { p_partner_id: partnerId }) as unknown as { data: SoldApp[] | null; error: unknown }
 
@@ -34,5 +28,21 @@ export default async function FinanceiroVendasPage({ searchParams }: { searchPar
     )
   }
 
-  return <VendasClient soldApps={data ?? []} partnerId={partnerId} focusSaleId={focusSaleId} />
+  // CTA do estado vazio "nunca houve venda" — mesma lógica de
+  // app/dashboard/financeiro/page.tsx (Visão geral), reaproveitada aqui
+  // em vez de duplicada com critério diferente.
+  const { data: drafts } = await supabase
+    .from('app_drafts')
+    .select('id, status')
+    .eq('created_by', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const latestDraft = drafts?.[0] ?? null
+  const emptyStateCta = !latestDraft
+    ? { label: 'Cadastrar aplicativo', href: '/dashboard/meus-app/novo' }
+    : latestDraft.status !== 'published'
+      ? { label: 'Continuar cadastro', href: `/dashboard/meus-app/novo/${latestDraft.id}/editar` }
+      : { label: 'Ver meus aplicativos', href: '/dashboard/meus-app' }
+
+  return <VendasClient key={partnerId ?? 'self'} soldApps={data ?? []} partnerId={partnerId} emptyStateCta={emptyStateCta} />
 }
