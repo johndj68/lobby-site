@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { calculateReserveAmountCents, REFUND_WINDOW_DAYS, PAYOUT_RETENTION_DAYS, DISPUTE_RESERVE_WINDOW_DAYS } from '@/lib/services/payouts'
+import { resolveActivePromotion } from '@/lib/services/promotions-checkout'
 
 interface CheckoutBody {
   plan_id: string
@@ -87,10 +88,14 @@ export async function POST(
     return NextResponse.json({ error: 'Aplicativo indisponível para compra.' }, { status: 404 })
   }
 
+  // Promoção ativa (aprovada, vigente, não cancelada/pausada) pra este
+  // plano — resolvida aqui, nunca confiando em preço vindo do client.
+  const promotion = await resolveActivePromotion(admin, plan.id, Number(plan.price))
+
   // Tudo em centavos (inteiro) daqui pra frente — evita drift de ponto
   // flutuante e garante que commission + partner sempre somam o total
   // exato (bate com o CHECK do banco em app_purchases).
-  const amountCents = Math.round(Number(plan.price) * 100)
+  const amountCents = Math.round(Number(promotion ? promotion.promo_price : plan.price) * 100)
   const partnerId = application.is_lobby_made ? null : draft.created_by
 
   let commissionPercent = 0
@@ -133,6 +138,7 @@ export async function POST(
       retention_days:       PAYOUT_RETENTION_DAYS,
       reserve_window_days:   DISPUTE_RESERVE_WINDOW_DAYS,
       status:              'pending',
+      promotion_id:        promotion?.id ?? null,
     })
     .select('id')
     .single()

@@ -81,7 +81,7 @@ export function computeOfferAvailability(input: AvailabilityInput): Availability
   return { key: 'disponivel', label: 'Disponível', color: MARKETPLACE_COLORS.success, reasons: [] }
 }
 
-export type PromotionStatusKey = 'rascunho' | 'programada' | 'ativa' | 'pausada' | 'encerrada' | 'cancelada'
+export type PromotionStatusKey = 'rascunho' | 'programada' | 'ativa' | 'pausada' | 'encerrada' | 'cancelada' | 'substituida'
 
 export interface PromotionStatus {
   key: PromotionStatusKey
@@ -96,12 +96,20 @@ export interface PromotionStatusInput {
   ends_at: string
   cancelled_at: string | null
   paused_at: string | null
+  /** Quando a versão seguinte (previous_version_id apontando pra esta
+   *  linha) foi aprovada — ver 20261006120000. Opcional: todo chamador
+   *  anterior a essa migration continua funcionando sem passar este campo. */
+  superseded_at?: string | null
 }
 
 /** Vigência calculada pelo horário do servidor — início inclusivo, término
- *  exclusivo. Cancelamento/pausa têm prioridade sobre a janela de datas. */
+ *  exclusivo. Cancelamento/substituição/pausa têm prioridade sobre a
+ *  janela de datas — substituída nunca é confundida com cancelada (motivo
+ *  diferente: a primeira foi uma escolha de melhorar a oferta, não de
+ *  desistir dela) nem com encerrada (não terminou pelo prazo). */
 export function getPromotionStatus(p: PromotionStatusInput, now: Date = new Date()): PromotionStatus {
   if (p.cancelled_at) return { key: 'cancelada', label: 'Cancelada', color: MARKETPLACE_COLORS.textSecondary }
+  if (p.superseded_at) return { key: 'substituida', label: 'Substituída', color: MARKETPLACE_COLORS.primary }
   if (p.paused_at) return { key: 'pausada', label: 'Pausada', color: MARKETPLACE_COLORS.warning }
   if (!p.is_approved) return { key: 'rascunho', label: 'Rascunho', color: MARKETPLACE_COLORS.textSecondary }
 
@@ -120,7 +128,7 @@ export function getPromotionStatus(p: PromotionStatusInput, now: Date = new Date
  *  exclusivo usada em getPromotionStatus. */
 export async function checkPromotionOverlap(
   supabase: SupabaseClient,
-  params: { applicationId: string; planId: string | null; startsAt: string; endsAt: string; excludePromotionId?: string },
+  params: { applicationId: string; planId: string | null; startsAt: string; endsAt: string; excludePromotionId?: string | string[] },
 ): Promise<{ conflict: true; withPromotionId: string } | { conflict: false }> {
   let query = supabase
     .from('promotions')
@@ -128,11 +136,21 @@ export async function checkPromotionOverlap(
     .eq('application_id', params.applicationId)
     .is('cancelled_at', null)
     .is('rejected_at', null)
+    .is('superseded_at', null)
     .lt('starts_at', params.endsAt)
     .gt('ends_at', params.startsAt)
 
   query = params.planId ? query.eq('plan_id', params.planId) : query.is('plan_id', null)
-  if (params.excludePromotionId) query = query.neq('id', params.excludePromotionId)
+  // Edição de uma promoção aprovada (versionamento, 20261006120000) precisa
+  // excluir TANTO a própria linha nova quanto a versão anterior que ela
+  // está propondo substituir — a antiga continua "ativa" de propósito até
+  // a nova ser aprovada, então sem isso o overlap check bloquearia a
+  // própria edição.
+  if (params.excludePromotionId) {
+    const ids = Array.isArray(params.excludePromotionId) ? params.excludePromotionId : [params.excludePromotionId]
+    if (ids.length === 1) query = query.neq('id', ids[0])
+    else query = query.not('id', 'in', `(${ids.join(',')})`)
+  }
 
   const { data } = await query.limit(1)
   if (data && data.length > 0) return { conflict: true, withPromotionId: data[0].id }

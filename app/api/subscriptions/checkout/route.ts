@@ -3,6 +3,8 @@ import { stripe, getOrCreateStripeCustomer } from '@/lib/stripe'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { resolveActivePromotion, resolveOrCreateStripeCoupon } from '@/lib/services/promotions-checkout'
+import { roundCents } from '@/lib/services/offers'
 
 interface CheckoutBody {
   product_type: 'app_plan' | 'mensalidade'
@@ -43,6 +45,7 @@ export async function POST(req: NextRequest) {
   let clientProjectId: string | null = null
   let partnerId: string | null = null
   let commissionPercent = 0
+  let promotion: Awaited<ReturnType<typeof resolveActivePromotion>> = null
 
   if (body.product_type === 'app_plan') {
     if (!body.app_plan_id) return NextResponse.json({ error: 'app_plan_id é obrigatório.' }, { status: 400 })
@@ -78,6 +81,11 @@ export async function POST(req: NextRequest) {
     interval = plan.billing_period === 'monthly' ? 'month' : 'year'
     appPlanId = plan.id
     partnerId = application.is_lobby_made ? null : draft.created_by
+    // Desconto de assinatura é aplicado via Stripe Coupon, não no
+    // unit_amount — a fatura cheia continua sendo o preço regular do
+    // plano; a Stripe desconta as faturas certas (seção 9, ver
+    // lib/services/promotions-checkout.ts).
+    promotion = await resolveActivePromotion(admin, plan.id, amount)
 
     if (partnerId) {
       const { data: percentRaw, error: commErr } = await admin.rpc('get_partner_commission_percent', {
@@ -128,16 +136,31 @@ export async function POST(req: NextRequest) {
 
   const stripeCustomerId = await getOrCreateStripeCustomer(admin, user.id, user.email!, user.user_metadata?.full_name)
 
+  // Coupon só é criado/reusado se de fato há promoção ativa pra esse
+  // plano — nunca pro produto 'mensalidade' (promotion fica null nesse
+  // branch, ver acima).
+  let couponId: string | null = null
+  if (promotion) {
+    couponId = await resolveOrCreateStripeCoupon(admin, promotion, interval === 'year' ? 'yearly' : 'monthly', 'brl', amount)
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
   const metadata = {
-    kind:                'subscription',
-    product_type:        body.product_type,
-    user_id:             user.id,
-    app_plan_id:         appPlanId ?? '',
-    client_project_id:   clientProjectId ?? '',
-    partner_id:          partnerId ?? '',
-    commission_percent:  String(commissionPercent),
-    plan_name:           planName,
+    kind:                   'subscription',
+    product_type:           body.product_type,
+    user_id:                user.id,
+    app_plan_id:             appPlanId ?? '',
+    client_project_id:       clientProjectId ?? '',
+    partner_id:               partnerId ?? '',
+    commission_percent:       String(commissionPercent),
+    plan_name:                 planName,
+    promotion_id:               promotion?.id ?? '',
+    promo_discount_type:         promotion?.discount_duration_type ?? '',
+    promo_discount_cycles:        promotion?.discount_cycles != null ? String(promotion.discount_cycles) : '',
+    // Valor de fato descontado por fatura (preço ATUAL do plano − promo_price,
+    // mesma base usada pelo coupon em si — não o original_price congelado
+    // do pedido, que pode ter ficado desatualizado por drift de preço).
+    promo_amount_off:              promotion ? String(roundCents(amount - promotion.promo_price)) : '',
   }
 
   const session = await stripe.checkout.sessions.create({
@@ -147,6 +170,9 @@ export async function POST(req: NextRequest) {
     line_items: [{
       price_data: {
         currency:     'brl',
+        // Sempre o preço CHEIO — o desconto vem do coupon abaixo, nunca
+        // reduzindo o unit_amount (senão a fatura voltaria ao preço cheio
+        // só quando eu trocasse de price, não quando o coupon expirasse).
         unit_amount:  Math.round(amount * 100),
         product_data: { name: planName },
         recurring:    { interval },
@@ -157,6 +183,7 @@ export async function POST(req: NextRequest) {
     cancel_url:     `${siteUrl}/dashboard/assinaturas?checkout=canceled`,
     metadata,
     subscription_data: { metadata },
+    ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
   })
 
   return NextResponse.json({ url: session.url })

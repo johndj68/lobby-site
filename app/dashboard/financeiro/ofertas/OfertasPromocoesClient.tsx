@@ -1,211 +1,256 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, Loader2 } from 'lucide-react'
-import { colors, shadows } from '@/lib/design-tokens'
-import { getPromotionStatus, formatOfferPrice, computePromoPriceFromPercent, computeDiscountPercent } from '@/lib/services/offers'
+import { RefreshCw, Plus } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
+import { colors } from '@/lib/design-tokens'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import IndicadoresOfertas, { type IndicadorCounts } from './IndicadoresOfertas'
+import PromocoesTable from './PromocoesTable'
+import PromocaoFormSheet, { type PrefillValues } from './PromocaoFormSheet'
+import PromocaoDetailSheet from './PromocaoDetailSheet'
+import { resolveRowStatus, indicatorBucket } from './promotion-status'
+import type { PlanOption, PromotionRow } from './types'
 
-export interface PlanOption {
-  id: string
-  appName: string
-  planName: string
-  price: number | null
-  currency: string
-  billingPeriod: string | null
+interface PlanRpcRow {
+  id: string; app_draft_id: string; application_id: string | null; category_id: string | null
+  app_name: string; plan_name: string; price: number | null; currency: string | null
+  billing_period: PlanOption['billingPeriod']; plan_status: string
+}
+interface PromotionRpcRow {
+  id: string; plan_id: string; name: string | null; promo_price: number; original_price: number | null
+  discount_percentage: number | null; discount_duration_type: PromotionRow['discountDurationType']
+  discount_cycles: number | null; starts_at: string; ends_at: string; is_approved: boolean
+  is_active: boolean; cancelled_at: string | null; paused_at: string | null
+  rejected_at: string | null; rejection_reason: string | null
+  previous_version_id: string | null; superseded_at: string | null
+  plan_current_price: number | null; plan_status: string
+  created_at: string; updated_at: string
 }
 
-export interface PromotionRow {
-  id: string
-  planId: string
-  appName: string
-  planName: string
-  currency: string
-  billingPeriod: string | null
-  promoPrice: number
-  originalPrice: number | null
-  discountPercentage: number | null
-  startsAt: string
-  endsAt: string
-  isApproved: boolean
-  isActive: boolean
-  cancelledAt: string | null
-  pausedAt: string | null
-  rejectedAt: string | null
-  rejectionReason: string | null
-}
+interface Props { partnerId: string | null }
 
-const STATUS_LABEL_OVERRIDE: Record<string, string> = { rascunho: 'Aguardando aprovação' }
+export default function OfertasPromocoesClient({ partnerId }: Props) {
+  const [plans, setPlans] = useState<PlanOption[]>([])
+  const [promotions, setPromotions] = useState<PromotionRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const [error, setError] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-interface Props {
-  plans: PlanOption[]
-  promotions: PromotionRow[]
-  loadError: boolean
-  /** Etapa 8: dono "visto como" via o seletor de equipe da Etapa 5 —
-   *  null quando é o próprio usuário logado. Repassado pra rota de POST
-   *  pra que ela saiba em nome de quem o pedido está sendo feito. */
-  partnerId: string | null
-}
+  const [activeBucket, setActiveBucket] = useState<keyof IndicadorCounts | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [prefill, setPrefill] = useState<PrefillValues | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<PromotionRow | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
-export default function OfertasPromocoesClient({ plans, promotions: initialPromotions, loadError, partnerId }: Props) {
-  const [promotions, setPromotions] = useState(initialPromotions)
-  const [showForm, setShowForm] = useState(false)
-  const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id ?? '')
-  const [discountPercent, setDiscountPercent] = useState('')
-  const [promoPrice, setPromoPrice] = useState('')
-  const [startsAt, setStartsAt] = useState('')
-  const [endsAt, setEndsAt] = useState('')
-  const [unitLimit, setUnitLimit] = useState('')
-  const [eligibleForDailyDeals, setEligibleForDailyDeals] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
+  const load = useCallback(async () => {
+    setLoading(true)
+    const supabase = createClient()
+    const [plansRes, promosRes] = await Promise.all([
+      supabase.rpc('get_partner_ofertas_plans', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_ofertas_promotions', { p_partner_id: partnerId }),
+    ]) as unknown as [{ data: PlanRpcRow[] | null; error: unknown }, { data: PromotionRpcRow[] | null; error: unknown }]
 
-  const selectedPlan = plans.find(p => p.id === selectedPlanId)
+    if (plansRes.error || promosRes.error) {
+      setError(true); setLoading(false); setHasLoaded(true)
+      return
+    }
+    setError(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!selectedPlanId) { setError('Selecione um plano.'); return }
-    if (!startsAt || !endsAt) { setError('Informe início e término.'); return }
-    if (!discountPercent && !promoPrice) { setError('Informe um desconto percentual ou um preço promocional.'); return }
-    setSaving(true)
-    setError('')
+    const planOptions: PlanOption[] = (plansRes.data ?? []).map(p => ({
+      id: p.id, appDraftId: p.app_draft_id, applicationId: p.application_id, categoryId: p.category_id,
+      appName: p.app_name ?? 'Aplicativo sem nome', planName: p.plan_name, price: p.price,
+      currency: p.currency ?? 'BRL', billingPeriod: p.billing_period, planStatus: p.plan_status,
+    }))
+    const planById = new Map(planOptions.map(p => [p.id, p]))
+
+    const rows: PromotionRow[] = (promosRes.data ?? []).map(p => {
+      const plan = planById.get(p.plan_id)
+      return {
+        id: p.id, planId: p.plan_id, name: p.name,
+        appName: plan?.appName ?? '—', planName: plan?.planName ?? '—',
+        currency: plan?.currency ?? 'BRL', billingPeriod: plan?.billingPeriod ?? null,
+        promoPrice: p.promo_price, originalPrice: p.original_price, discountPercentage: p.discount_percentage,
+        discountDurationType: p.discount_duration_type, discountCycles: p.discount_cycles,
+        startsAt: p.starts_at, endsAt: p.ends_at, isApproved: p.is_approved, isActive: p.is_active,
+        cancelledAt: p.cancelled_at, pausedAt: p.paused_at, rejectedAt: p.rejected_at, rejectionReason: p.rejection_reason,
+        previousVersionId: p.previous_version_id, supersededAt: p.superseded_at,
+        planCurrentPrice: p.plan_current_price, planStatus: p.plan_status,
+        createdAt: p.created_at, updatedAt: p.updated_at,
+      }
+    })
+
+    setPlans(planOptions)
+    setPromotions(rows)
+    setLastUpdated(new Date())
+    setLoading(false)
+    setHasLoaded(true)
+  }, [partnerId])
+
+  useEffect(() => { load() }, [load])
+
+  const counts: IndicadorCounts = useMemo(() => {
+    const c: IndicadorCounts = { em_analise: 0, agendadas: 0, ativas: 0, encerradas: 0 }
+    for (const row of promotions) {
+      const bucket = indicatorBucket(resolveRowStatus(row).key)
+      if (bucket) c[bucket]++
+    }
+    return c
+  }, [promotions])
+
+  const openCreate = () => { setPrefill(null); setFormOpen(true) }
+  const openDuplicate = useCallback((row: PromotionRow) => {
+    setPrefill({
+      planId: row.planId,
+      name: row.name ? `${row.name} (cópia)` : undefined,
+      discountPercent: row.discountPercentage ?? undefined,
+      promoPrice: row.discountPercentage == null ? row.promoPrice : undefined,
+      discountDurationType: row.discountDurationType ?? undefined,
+      discountCycles: row.discountCycles ?? undefined,
+      rejectionContext: row.rejectedAt ? (row.rejectionReason ?? undefined) : undefined,
+    })
+    setFormOpen(true)
+  }, [])
+  const openDuplicateById = useCallback((id: string) => {
+    const row = promotions.find(r => r.id === id)
+    if (row) { setDetailId(null); openDuplicate(row) }
+  }, [promotions, openDuplicate])
+
+  // Editar uma promoção APROVADA/vigente — nunca faz UPDATE nela, abre o
+  // formulário em modo "nova versão" (previous_version_id na submissão).
+  // A antiga continua valendo até a nova ser aprovada.
+  const openEdit = useCallback((row: PromotionRow) => {
+    setPrefill({
+      planId: row.planId,
+      name: row.name ?? undefined,
+      discountPercent: row.discountPercentage ?? undefined,
+      promoPrice: row.discountPercentage == null ? row.promoPrice : undefined,
+      discountDurationType: row.discountDurationType ?? undefined,
+      discountCycles: row.discountCycles ?? undefined,
+      editsPromotionId: row.id,
+    })
+    setFormOpen(true)
+  }, [])
+  const openEditById = useCallback((id: string) => {
+    const row = promotions.find(r => r.id === id)
+    if (row) { setDetailId(null); openEdit(row) }
+  }, [promotions, openEdit])
+
+  const requestCancel = useCallback((row: PromotionRow) => setCancelTarget(row), [])
+  const requestCancelById = useCallback((id: string) => {
+    const row = promotions.find(r => r.id === id)
+    if (row) { setDetailId(null); setCancelTarget(row) }
+  }, [promotions])
+
+  async function confirmCancel() {
+    if (!cancelTarget) return
+    setCancelling(true)
     try {
-      const res = await fetch(`/api/apps/plans/${selectedPlanId}/promotions`, {
-        method: 'POST',
+      const res = await fetch(`/api/apps/plans/${cancelTarget.planId}/promotions/${cancelTarget.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          discountPercent: discountPercent ? Number(discountPercent) : undefined,
-          promoPrice: promoPrice ? Number(promoPrice) : undefined,
-          startsAt: new Date(startsAt).toISOString(),
-          endsAt: new Date(endsAt).toISOString(),
-          unitLimit: unitLimit ? Number(unitLimit) : undefined,
-          eligibleForDailyDeals,
-          partnerId: partnerId ?? undefined,
-        }),
+        body: JSON.stringify({ action: 'cancel', partnerId: partnerId ?? undefined }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'Não foi possível enviar o pedido.')
-      toast.success('Pedido de promoção enviado pra aprovação.')
-      setShowForm(false)
-      setDiscountPercent(''); setPromoPrice(''); setStartsAt(''); setEndsAt(''); setUnitLimit(''); setEligibleForDailyDeals(false)
-      setPromotions(prev => [{
-        id: data.id, planId: selectedPlanId,
-        appName: selectedPlan?.appName ?? '—', planName: selectedPlan?.planName ?? '—',
-        currency: selectedPlan?.currency ?? 'BRL', billingPeriod: selectedPlan?.billingPeriod ?? null,
-        promoPrice: discountPercent && selectedPlan?.price != null
-          ? computePromoPriceFromPercent(selectedPlan.price, Number(discountPercent))
-          : Number(promoPrice),
-        originalPrice: selectedPlan?.price ?? null,
-        discountPercentage: discountPercent
-          ? Number(discountPercent)
-          : computeDiscountPercent(Number(promoPrice), selectedPlan?.price ?? null, null),
-        startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(),
-        isApproved: false, isActive: false, cancelledAt: null, pausedAt: null, rejectedAt: null, rejectionReason: null,
-      }, ...prev])
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'Não foi possível cancelar.')
+      toast.success('Promoção cancelada.')
+      setCancelTarget(null)
+      await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível enviar o pedido.')
+      toast.error(e instanceof Error ? e.message : 'Não foi possível cancelar.')
     } finally {
-      setSaving(false)
+      setCancelling(false)
     }
   }
 
+  const toggleBucket = (b: keyof IndicadorCounts) => setActiveBucket(prev => prev === b ? null : b)
+
   return (
     <div>
-      {loadError && (
-        <p className="mb-4 text-sm" style={{ color: '#EF4444' }}>Não foi possível carregar suas promoções agora. Recarregue a página.</p>
-      )}
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: colors.text }}>Ofertas e promoções</h2>
+          <p className="mt-0.5 text-sm" style={{ color: colors.textSecondary }}>
+            Gerencie descontos dos seus aplicativos e acompanhe a análise de cada solicitação.
+          </p>
+          {lastUpdated && (
+            <p className="mt-1 text-xs" style={{ color: colors.textMuted }}>
+              Última atualização: {lastUpdated.toLocaleDateString('pt-BR')} {lastUpdated.toTimeString().slice(0, 5)}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => load()} disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+            style={{ borderColor: colors.border, color: colors.text, background: colors.card }}>
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} aria-hidden="true" />Atualizar
+          </button>
+          <button type="button" onClick={openCreate}
+            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: colors.primary }}>
+            <Plus size={14} aria-hidden="true" />Criar promoção
+          </button>
+        </div>
+      </div>
 
-      {plans.length === 0 ? (
-        <p className="text-sm" style={{ color: colors.textSecondary }}>Cadastre um plano com preço definido antes de pedir uma promoção.</p>
-      ) : (
-        <>
-          {!showForm ? (
-            <button type="button" onClick={() => setShowForm(true)}
-              className="mb-5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: colors.primary }}>
-              <Plus size={14} aria-hidden="true" /> Pedir promoção
+      <div className="mb-5 flex items-start gap-2 rounded-xl border p-3 text-xs" style={{ borderColor: colors.border, background: colors.backgroundAlt, color: colors.textSecondary }}>
+        As promoções precisam de aprovação da LOBBY antes de aparecer para os compradores. Criar ou salvar um pedido não muda o preço público.
+      </div>
+
+      <IndicadoresOfertas counts={counts} activeBucket={activeBucket} onToggle={toggleBucket} />
+
+      <PromocoesTable
+        rows={promotions}
+        plans={plans}
+        loading={loading && !hasLoaded}
+        error={error}
+        activeBucket={activeBucket}
+        onRetry={load}
+        onViewDetail={setDetailId}
+        onDuplicate={openDuplicate}
+        onEdit={openEdit}
+        onCancel={requestCancel}
+        onCreateFirst={openCreate}
+      />
+
+      <PromocaoFormSheet
+        open={formOpen}
+        plans={plans}
+        partnerId={partnerId}
+        prefill={prefill}
+        onClose={() => setFormOpen(false)}
+        onCreated={() => { setFormOpen(false); load() }}
+      />
+
+      <PromocaoDetailSheet
+        promotionId={detailId}
+        partnerId={partnerId}
+        onClose={() => setDetailId(null)}
+        onDuplicate={openDuplicateById}
+        onEdit={openEditById}
+        onCancel={requestCancelById}
+      />
+
+      <Dialog open={!!cancelTarget} onOpenChange={o => { if (!o && !cancelling) setCancelTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar {cancelTarget && !cancelTarget.isApproved ? 'pedido' : 'promoção agendada'}?</DialogTitle>
+            <DialogDescription>
+              {cancelTarget && !cancelTarget.isApproved
+                ? 'O pedido deixa de aguardar análise. Isso não pode ser desfeito — se mudar de ideia, será preciso criar um novo pedido.'
+                : 'A promoção não vai mais começar na data prevista. O histórico desta solicitação continua acessível.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button type="button" onClick={() => setCancelTarget(null)} disabled={cancelling} className="rounded-lg border px-4 py-2 text-sm font-semibold disabled:opacity-60" style={{ borderColor: colors.border, color: colors.text }}>Voltar</button>
+            <button type="button" onClick={confirmCancel} disabled={cancelling} className="rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60" style={{ background: '#EF4444' }}>
+              {cancelling ? 'Cancelando…' : 'Confirmar cancelamento'}
             </button>
-          ) : (
-            <form onSubmit={handleSubmit} className="mb-5 space-y-3 rounded-2xl border p-5" style={{ borderColor: colors.border, background: colors.backgroundAlt }}>
-              <div>
-                <label className="mb-1 block text-xs font-semibold" style={{ color: colors.text }}>Plano</label>
-                <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: colors.border, color: colors.text }}>
-                  {plans.map(p => (
-                    <option key={p.id} value={p.id}>{p.appName} — {p.planName} ({p.price != null ? formatOfferPrice(p.price, p.currency, p.billingPeriod) : 'sem preço'})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold" style={{ color: colors.text }}>Desconto percentual</label>
-                  <input type="number" min={1} max={99} value={discountPercent} onChange={e => { setDiscountPercent(e.target.value); setPromoPrice('') }} placeholder="Ex: 30" className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: colors.border, color: colors.text }} />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold" style={{ color: colors.text }}>Ou preço promocional</label>
-                  <input type="number" min={0} step="0.01" value={promoPrice} onChange={e => { setPromoPrice(e.target.value); setDiscountPercent('') }} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: colors.border, color: colors.text }} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold" style={{ color: colors.text }}>Início</label>
-                  <input type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: colors.border, color: colors.text }} />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold" style={{ color: colors.text }}>Término</label>
-                  <input type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: colors.border, color: colors.text }} />
-                </div>
-              </div>
-              <p className="text-[11px]" style={{ color: colors.textMuted }}>Fuso: America/Sao_Paulo · início inclusivo, término exclusivo.</p>
-              <div>
-                <label className="mb-1 block text-xs font-semibold" style={{ color: colors.text }}>Limite de unidades (opcional)</label>
-                <input type="number" min={1} value={unitLimit} onChange={e => setUnitLimit(e.target.value)} placeholder="Sem limite" className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: colors.border, color: colors.text }} />
-              </div>
-              <label className="flex items-start gap-2 text-xs" style={{ color: colors.text }}>
-                <input type="checkbox" checked={eligibleForDailyDeals} onChange={e => setEligibleForDailyDeals(e.target.checked)} className="mt-0.5" />
-                <span>Elegível para promoções do dia<br /><span style={{ color: colors.textSecondary }}>Não garante exibição — depende de disponibilidade na curadoria.</span></span>
-              </label>
-              {error && <p className="text-sm font-medium" style={{ color: '#DC2626' }}>{error}</p>}
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} disabled={saving} className="flex-1 rounded-xl border py-2.5 text-sm font-semibold disabled:opacity-60" style={{ borderColor: colors.border, color: colors.text }}>Cancelar</button>
-                <button type="submit" disabled={saving} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white disabled:opacity-60" style={{ background: colors.primary }}>
-                  {saving && <Loader2 size={14} className="animate-spin" aria-hidden="true" />} {saving ? 'Enviando…' : 'Enviar pedido'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {promotions.length === 0 ? (
-            <p className="text-sm" style={{ color: colors.textSecondary }}>Nenhuma promoção pedida ainda.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {promotions.map(p => {
-                // getPromotionStatus() não conhece rejected_at (coluna nova
-                // desta etapa, função compartilhada nunca alterada) — um
-                // pedido rejeitado tem is_approved=false e cairia no mesmo
-                // 'rascunho'/"Aguardando aprovação" de um pedido pendente
-                // de verdade. Resolvido aqui, antes de chamar a função.
-                const status = p.rejectedAt
-                  ? { key: 'rejeitado' as const, label: 'Rejeitado', color: '#EF4444' }
-                  : getPromotionStatus({ is_approved: p.isApproved, is_active: p.isActive, starts_at: p.startsAt, ends_at: p.endsAt, cancelled_at: p.cancelledAt, paused_at: p.pausedAt })
-                const label = STATUS_LABEL_OVERRIDE[status.key as keyof typeof STATUS_LABEL_OVERRIDE] ?? status.label
-                return (
-                  <div key={p.id} className="rounded-2xl border p-4" style={{ borderColor: colors.border, background: colors.card, boxShadow: shadows.card }}>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-semibold" style={{ color: colors.text }}>{p.appName} — {p.planName}</p>
-                      <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ color: status.color, background: `${status.color}1A` }}>{label}</span>
-                    </div>
-                    <p className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                      {p.originalPrice != null && `de ${formatOfferPrice(p.originalPrice, p.currency, p.billingPeriod)} por `}{formatOfferPrice(p.promoPrice, p.currency, p.billingPeriod)}{p.discountPercentage != null && ` (-${p.discountPercentage}%)`} · {new Date(p.startsAt).toLocaleDateString('pt-BR')} → {new Date(p.endsAt).toLocaleDateString('pt-BR')}
-                    </p>
-                    {p.rejectedAt && p.rejectionReason && (
-                      <p className="mt-1 text-xs" style={{ color: '#EF4444' }}>Motivo da rejeição: {p.rejectionReason}</p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

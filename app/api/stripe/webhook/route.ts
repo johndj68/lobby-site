@@ -604,6 +604,14 @@ async function handleSubscriptionCheckoutCompleted(session: Stripe.Checkout.Sess
 
   const partnerId = md.partner_id || null
   const commissionPercent = partnerId ? Number(md.commission_percent || '0') : 0
+  // Benefício de promoção, se houver (seção 9) — snapshot gravado aqui,
+  // na criação, e nunca mais tocado depois (nem se a promoção for
+  // cancelada/editada no admin ou no parceiro — o coupon já está anexado
+  // à Subscription na Stripe, estas colunas são só espelho local).
+  const promotionId = md.promotion_id || null
+  const promoDiscountType = md.promo_discount_type || null
+  const promoDiscountCycles = md.promo_discount_cycles ? Number(md.promo_discount_cycles) : null
+  const promoAmountOff = md.promo_amount_off ? Number(md.promo_amount_off) : null
 
   await admin.from('subscriptions').insert({
     stripe_subscription_id: stripeSubscriptionId,
@@ -621,6 +629,10 @@ async function handleSubscriptionCheckoutCompleted(session: Stripe.Checkout.Sess
     current_period_start:     new Date(item.current_period_start * 1000).toISOString(),
     current_period_end:       new Date(item.current_period_end * 1000).toISOString(),
     cancel_at_period_end:     sub.cancel_at_period_end,
+    promotion_id:              promotionId,
+    promo_discount_type:        promoDiscountType,
+    promo_discount_cycles:       promoDiscountCycles,
+    promo_amount_off:             promoAmountOff,
   })
 
   console.info('[stripe/webhook] Subscription created:', stripeSubscriptionId)

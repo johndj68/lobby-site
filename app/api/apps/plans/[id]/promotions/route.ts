@@ -64,7 +64,7 @@ export async function POST(
 
   const { data: plan } = await db
     .from('app_plans')
-    .select('id, app_draft_id, price, currency, status, app_drafts(created_by, application_id)')
+    .select('id, app_draft_id, price, currency, status, billing_period, app_drafts(created_by, application_id)')
     .eq('id', planId)
     .single()
   if (!plan) return NextResponse.json({ error: 'Oferta não encontrada.' }, { status: 404 })
@@ -84,8 +84,31 @@ export async function POST(
     return NextResponse.json({ error: 'Defina o preço regular da oferta antes de pedir uma promoção.' }, { status: 400 })
   }
 
-  const { discountPercent, promoPrice: promoPriceInput, startsAt, endsAt, timezone, unitLimit, eligibleForDailyDeals } = body
+  const { name, discountPercent, promoPrice: promoPriceInput, startsAt, endsAt, timezone, unitLimit, eligibleForDailyDeals, discountDurationType, discountCycles, editsPromotionId } = body
 
+  // Versionamento (20261006120000): editar uma promoção JÁ APROVADA nunca
+  // faz UPDATE nela — cria uma nova linha presa via previous_version_id.
+  // A antiga continua valendo até a nova ser aprovada (trigger de
+  // supersessão cuida disso na aprovação, não aqui).
+  let editTarget: { id: string; plan_id: string } | null = null
+  if (typeof editsPromotionId === 'string' && editsPromotionId) {
+    const { data: target } = await db
+      .from('promotions')
+      .select('id, plan_id, is_approved, cancelled_at, superseded_at, previous_version_id')
+      .eq('id', editsPromotionId)
+      .eq('plan_id', planId)
+      .single()
+    if (!target) return NextResponse.json({ error: 'Promoção original não encontrada.' }, { status: 404 })
+    if (!target.is_approved || target.cancelled_at || target.superseded_at) {
+      return NextResponse.json({ error: 'Só é possível propor uma nova versão de uma promoção aprovada e ainda vigente.' }, { status: 409 })
+    }
+    editTarget = target
+  }
+
+  const promoName = typeof name === 'string' ? name.trim().slice(0, 120) : ''
+  if (!promoName) {
+    return NextResponse.json({ error: 'Dê um nome pra esta promoção.' }, { status: 400 })
+  }
   if (!startsAt || !endsAt || isNaN(Date.parse(startsAt)) || isNaN(Date.parse(endsAt))) {
     return NextResponse.json({ error: 'Informe início e término válidos.' }, { status: 400 })
   }
@@ -108,6 +131,23 @@ export async function POST(
     return NextResponse.json({ error: 'O preço promocional precisa ser menor que o preço regular atual.' }, { status: 400 })
   }
 
+  // Duração do benefício (seção 9) — só faz sentido pra plano recorrente;
+  // pagamento único/vitalício é sempre uma venda só, sem "ciclos".
+  const isRecurring = plan.billing_period === 'monthly' || plan.billing_period === 'yearly'
+  let resolvedDurationType: 'primeira_cobranca' | 'ciclos_fixos' | null = null
+  let resolvedCycles: number | null = null
+  if (isRecurring) {
+    if (discountDurationType === 'ciclos_fixos') {
+      if (typeof discountCycles !== 'number' || !Number.isInteger(discountCycles) || discountCycles < 1) {
+        return NextResponse.json({ error: 'Informe um número inteiro de ciclos (1, 2, 3…).' }, { status: 400 })
+      }
+      resolvedDurationType = 'ciclos_fixos'
+      resolvedCycles = discountCycles
+    } else {
+      resolvedDurationType = 'primeira_cobranca'
+    }
+  }
+
   // No máximo 1 pedido pendente por plano por vez — checkPromotionOverlap
   // cobre sobreposição de DATAS, não "já existe QUALQUER pendente" (ex:
   // um pedido pendente com datas futuras bem distantes de um novo pedido
@@ -128,7 +168,7 @@ export async function POST(
     return NextResponse.json({ error: 'Já existe um pedido de promoção aguardando aprovação pra este plano.' }, { status: 409 })
   }
 
-  const overlap = await checkPromotionOverlap(db, { applicationId, planId, startsAt, endsAt })
+  const overlap = await checkPromotionOverlap(db, { applicationId, planId, startsAt, endsAt, excludePromotionId: editTarget?.id })
   if (overlap.conflict) {
     return NextResponse.json({ error: 'Já existe uma promoção vigente ou pendente pra esta oferta nesse período.', conflictPromotionId: overlap.withPromotionId }, { status: 409 })
   }
@@ -144,6 +184,7 @@ export async function POST(
       // ação. A associação "de qual dono é este pedido" já vem de
       // plan_id/application_id, sem precisar sobrepor created_by.
       created_by: user.id,
+      name: promoName,
       promo_price: promoPrice,
       original_price: plan.price,
       discount_percentage: discountPercentage,
@@ -152,6 +193,9 @@ export async function POST(
       timezone: typeof timezone === 'string' && timezone ? timezone : 'America/Sao_Paulo',
       unit_limit: typeof unitLimit === 'number' && unitLimit > 0 ? Math.round(unitLimit) : null,
       eligible_for_daily_deals: !!eligibleForDailyDeals,
+      discount_duration_type: resolvedDurationType,
+      discount_cycles: resolvedCycles,
+      previous_version_id: editTarget?.id ?? null,
       is_approved: false,
       is_active: false,
     })
