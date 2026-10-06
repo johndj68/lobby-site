@@ -1,211 +1,215 @@
 'use client'
 
-import { Fragment, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Clock } from 'lucide-react'
-import { colors, shadows } from '@/lib/design-tokens'
-import { formatCurrencyBRL, formatDateBR } from '@/lib/finance'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { RefreshCw, Download } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
+import { colors } from '@/lib/design-tokens'
+import { formatDateBR } from '@/lib/finance'
+import SaldosAtuais, { type OverviewRow, type PendenciasRow } from './SaldosAtuais'
+import ProximasLiberacoesTab, { type QueueRow } from './ProximasLiberacoesTab'
+import HistoricoRepassesTab, { type HistoryRow } from './HistoricoRepassesTab'
+import ExtratoTab, { EXTRATO_DEFAULTS, type ExtratoFilters } from './ExtratoTab'
+import EntendaSeusValores from './EntendaSeusValores'
+import ContaRecebimentoCard, { type DestinationRow } from './ContaRecebimentoCard'
 
-interface QueueRow {
-  sale_id:          string
-  sale_kind?:       'app_purchase' | 'subscription_invoice'
-  application_name: string
-  plan_name:        string
-  net_amount:       number
-  paid_at:          string
-  release_date:     string
-  days_remaining:   number
-  status:           'retido' | 'elegivel'
-}
+type QueueApiRow = Omit<QueueRow, 'tipo'>
 
-interface HistoryRow {
-  payout_id:        string
-  reference:        string
-  notes:            string | null
-  payout_status:    'confirmado' | 'revertido'
-  total_amount:     number
-  created_at:        string
-  reverted_at:       string | null
-  revert_reason:     string | null
-  item_id:           string | null
-  item_kind:         'app_purchase_main' | 'app_purchase_reserve' | 'subscription_invoice' | null
-  item_amount:        number | null
-  application_name:   string | null
-  plan_name:          string | null
-  sale_paid_at:       string | null
-}
+const isPermissionDenied = (err: unknown): boolean =>
+  typeof err === 'object' && err !== null && 'message' in err &&
+  typeof (err as { message: unknown }).message === 'string' &&
+  (err as { message: string }).message.includes('Sem permissão')
 
-interface GroupedPayout {
-  payout_id:     string
-  reference:     string
-  notes:         string | null
-  payout_status: 'confirmado' | 'revertido'
-  total_amount:  number
-  created_at:    string
-  reverted_at:   string | null
-  revert_reason: string | null
-  items: {
-    item_id: string
-    item_kind: 'app_purchase_main' | 'app_purchase_reserve' | 'subscription_invoice'
-    item_amount: number
-    application_name: string
-    plan_name: string
-    sale_paid_at: string
-  }[]
-}
+const TABS = [
+  { key: 'liberacoes', label: 'Próximas liberações' },
+  { key: 'historico', label: 'Histórico de repasses' },
+  { key: 'extrato', label: 'Extrato de movimentações' },
+] as const
+type TabKey = typeof TABS[number]['key']
 
-function groupHistory(rows: HistoryRow[]): GroupedPayout[] {
-  const map = new Map<string, GroupedPayout>()
-  for (const r of rows) {
-    if (!map.has(r.payout_id)) {
-      map.set(r.payout_id, {
-        payout_id: r.payout_id, reference: r.reference, notes: r.notes,
-        payout_status: r.payout_status, total_amount: r.total_amount,
-        created_at: r.created_at, reverted_at: r.reverted_at, revert_reason: r.revert_reason,
-        items: [],
-      })
-    }
-    if (r.item_id) {
-      map.get(r.payout_id)!.items.push({
-        item_id: r.item_id,
-        item_kind: r.item_kind!,
-        item_amount: r.item_amount!,
-        application_name: r.application_name!,
-        plan_name: r.plan_name!,
-        sale_paid_at: r.sale_paid_at!,
-      })
-    }
-  }
-  return Array.from(map.values())
-}
+interface Props { partnerId: string | null }
 
-const ITEM_KIND_LABEL: Record<string, string> = {
-  app_purchase_main: 'Compra única',
-  app_purchase_reserve: 'Reserva de disputa',
-  subscription_invoice: 'Assinatura',
-}
+export default function RepassesClient({ partnerId }: Props) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const parceiroQuery = partnerId ? `&parceiro=${partnerId}` : ''
 
-function QueueSection({ title, emptyLabel, rows, error }: { title: string; emptyLabel: string; rows: QueueRow[]; error: boolean }) {
+  const aba = (searchParams.get('aba') as TabKey) || 'liberacoes'
+  const setAba = (k: TabKey) => router.push(`${pathname}?aba=${k}${parceiroQuery}`, { scroll: false })
+
+  const [extratoFilters, setExtratoFiltersState] = useState<ExtratoFilters>(EXTRATO_DEFAULTS)
+  const setExtratoFilters = (patch: Partial<ExtratoFilters>) => setExtratoFiltersState(prev => ({ ...prev, ...patch }))
+
+  const [overview, setOverview] = useState<OverviewRow | null>(null)
+  const [overviewError, setOverviewError] = useState(false)
+  const [pendencias, setPendencias] = useState<PendenciasRow | null>(null)
+  const [queueMain, setQueueMain] = useState<QueueApiRow[]>([])
+  const [queueReserve, setQueueReserve] = useState<QueueApiRow[]>([])
+  const [queueError, setQueueError] = useState(false)
+  const [queuePermissionDenied, setQueuePermissionDenied] = useState(false)
+  const [history, setHistory] = useState<HistoryRow[]>([])
+  const [historyError, setHistoryError] = useState(false)
+  const [historyPermissionDenied, setHistoryPermissionDenied] = useState(false)
+  const [destination, setDestination] = useState<DestinationRow | null>(null)
+  const [destinationPermissionDenied, setDestinationPermissionDenied] = useState(false)
+  const [apps, setApps] = useState<{ application_id: string; application_name: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const reqId = useRef(0)
+
+  const load = useCallback(async () => {
+    const id = ++reqId.current
+    setLoading(true)
+    const supabase = createClient()
+    const [overviewRes, pendenciasRes, mainRes, reserveRes, historyRes, destRes, appsRes] = await Promise.all([
+      supabase.rpc('get_partner_financeiro_overview', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_financeiro_pendencias', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_payout_queue_main', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_payout_queue_reserve', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_payout_history', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_payout_destination', { p_partner_id: partnerId }),
+      supabase.rpc('get_partner_sold_apps', { p_partner_id: partnerId }),
+    ]) as unknown as [
+      { data: (OverviewRow & { repassado_amount: number })[] | null; error: unknown },
+      { data: PendenciasRow[] | null; error: unknown },
+      { data: QueueApiRow[] | null; error: unknown },
+      { data: QueueApiRow[] | null; error: unknown },
+      { data: HistoryRow[] | null; error: unknown },
+      { data: DestinationRow[] | null; error: unknown },
+      { data: { application_id: string; application_name: string }[] | null; error: unknown },
+    ]
+    if (id !== reqId.current) return
+
+    setOverviewError(!!overviewRes.error)
+    setOverview(overviewRes.data?.[0] ?? null)
+    setPendencias(pendenciasRes.error ? null : (pendenciasRes.data?.[0] ?? null))
+
+    const queuePermDenied = isPermissionDenied(mainRes.error) || isPermissionDenied(reserveRes.error)
+    setQueuePermissionDenied(queuePermDenied)
+    setQueueError((!!mainRes.error && !isPermissionDenied(mainRes.error)) || (!!reserveRes.error && !isPermissionDenied(reserveRes.error)))
+    setQueueMain(mainRes.data ?? [])
+    setQueueReserve(reserveRes.data ?? [])
+
+    setHistoryPermissionDenied(isPermissionDenied(historyRes.error))
+    setHistoryError(!!historyRes.error && !isPermissionDenied(historyRes.error))
+    setHistory(historyRes.error ? [] : (historyRes.data ?? []))
+
+    setDestinationPermissionDenied(isPermissionDenied(destRes.error))
+    setDestination(destRes.error ? null : (destRes.data?.[0] ?? null))
+    setApps(appsRes.data ?? [])
+
+    if (!overviewRes.error && !pendenciasRes.error) setLastUpdated(new Date())
+    setLoading(false)
+    setHasLoaded(true)
+  }, [partnerId])
+
+  useEffect(() => { load() }, [load])
+
+  const liberacoes: QueueRow[] = useMemo(() => [
+    ...queueMain.map(r => ({ ...r, tipo: 'retencao' as const })),
+    ...queueReserve.map(r => ({ ...r, tipo: 'reserva' as const })),
+  ], [queueMain, queueReserve])
+
+  const exportHref = useMemo(() => {
+    const params = new URLSearchParams()
+    if (extratoFilters.app) params.set('application_id', extratoFilters.app)
+    if (extratoFilters.tipo) params.set('tipo', extratoFilters.tipo)
+    // Mesma string crua (sem passar por `new Date(...).toISOString()`, que
+    // interpretaria no fuso do NAVEGADOR e divergiria do que a tabela
+    // manda) que ExtratoTab.tsx já envia pra RPC — exportação e tela
+    // precisam enxergar exatamente o mesmo recorte pro mesmo filtro.
+    if (extratoFilters.de) params.set('from_iso', `${extratoFilters.de}T00:00:00`)
+    if (extratoFilters.ate) params.set('to_iso', `${extratoFilters.ate}T23:59:59`)
+    if (partnerId) params.set('parceiro', partnerId)
+    return `/api/financeiro/repasses/export?${params.toString()}`
+  }, [extratoFilters, partnerId])
+
   return (
-    <div className="mb-6 rounded-2xl border p-5" style={{ background: colors.card, borderColor: colors.border, boxShadow: shadows.card }}>
-      <h3 className="mb-3 text-base font-bold" style={{ color: colors.text }}>{title}</h3>
-      {error ? (
-        <p className="text-sm" style={{ color: '#EF4444' }}>Não foi possível carregar esta lista. Tente novamente em instantes.</p>
-      ) : rows.length === 0 ? (
-        <p className="text-sm" style={{ color: colors.textSecondary }}>{emptyLabel}</p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {rows.map(row => {
-            const elegivel = row.status === 'elegivel'
-            return (
-              <div key={row.sale_id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3" style={{ borderColor: colors.border }}>
-                <div>
-                  <p className="text-sm font-semibold" style={{ color: colors.text }}>{row.application_name} — {row.plan_name}</p>
-                  <p className="text-xs" style={{ color: colors.textSecondary }}>Vendido em {formatDateBR(row.paid_at.slice(0, 10))}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold" style={{ color: colors.text }}>{formatCurrencyBRL(row.net_amount)}</p>
-                  <p className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: elegivel ? colors.primary : '#F59E0B' }}>
-                    <Clock size={11} aria-hidden="true" />
-                    {elegivel ? 'Elegível agora' : `Libera em ${row.days_remaining} dia${row.days_remaining === 1 ? '' : 's'} (${formatDateBR(row.release_date.slice(0, 10))})`}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
+    <div>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: colors.text }}>Repasses e extrato</h2>
+          <p className="mt-0.5 text-sm" style={{ color: colors.textSecondary }}>
+            Acompanhe seus valores disponíveis, próximas liberações e histórico de repasses.
+          </p>
+          {lastUpdated && (
+            <p className="mt-1 text-xs" style={{ color: colors.textMuted }}>
+              Última atualização: {formatDateBR(lastUpdated.toISOString().slice(0, 10))} {lastUpdated.toTimeString().slice(0, 5)}
+            </p>
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <a href={exportHref} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold"
+            style={{ borderColor: colors.border, color: colors.text, background: colors.card }}>
+            <Download size={13} aria-hidden="true" />Exportar extrato
+          </a>
+          <button type="button" onClick={() => load()} disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+            style={{ borderColor: colors.border, color: colors.text, background: colors.card }}>
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} aria-hidden="true" />Atualizar
+          </button>
+        </div>
+      </div>
+
+      <SaldosAtuais
+        overview={overview} pendencias={pendencias}
+        loading={loading && !hasLoaded} error={overviewError}
+        onGoLiberacoes={() => setAba('liberacoes')}
+        onRetry={load}
+      />
+
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b" style={{ borderColor: colors.border }}>
+        {TABS.map(t => (
+          <button key={t.key} type="button" onClick={() => setAba(t.key)}
+            className="shrink-0 px-3 py-2.5 text-sm font-semibold"
+            style={aba === t.key ? { color: colors.primary, borderBottom: `2px solid ${colors.primary}` } : { color: colors.textSecondary }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_280px]">
+        <div>
+          {aba === 'liberacoes' && (
+            queuePermissionDenied ? (
+              <PermissionDenied label="Repasses e extrato" />
+            ) : (
+              <ProximasLiberacoesTab rows={liberacoes} loading={loading && !hasLoaded} error={queueError} partnerId={partnerId} onRetry={load} />
+            )
+          )}
+          {aba === 'historico' && (
+            historyPermissionDenied ? (
+              <PermissionDenied label="Repasses e extrato" />
+            ) : (
+              <HistoricoRepassesTab rows={history} loading={loading && !hasLoaded} error={historyError} partnerId={partnerId} onRetry={load} />
+            )
+          )}
+          {aba === 'extrato' && (
+            <ExtratoTab partnerId={partnerId} apps={apps} filters={extratoFilters} onFiltersChange={setExtratoFilters} />
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <ContaRecebimentoCard data={destination} loading={loading && !hasLoaded} partnerId={partnerId} permissionDenied={destinationPermissionDenied} />
+          <EntendaSeusValores />
+          <div className="rounded-xl border p-4" style={{ borderColor: colors.border, background: colors.backgroundAlt }}>
+            <p className="text-sm font-semibold" style={{ color: colors.text }}>Precisa de ajuda?</p>
+            <p className="mt-1 text-xs" style={{ color: colors.textSecondary }}>Consulte o suporte sobre seus repasses.</p>
+            <a href={`/dashboard/suporte${partnerId ? `?parceiro=${partnerId}` : ''}`} className="mt-1 inline-block text-xs font-semibold" style={{ color: colors.primary }}>Contatar suporte →</a>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
-interface Props {
-  mainQueue:    QueueRow[]
-  mainError:    boolean
-  reserveQueue: QueueRow[]
-  reserveError: boolean
-  history:      HistoryRow[]
-  historyError: boolean
-}
-
-export default function RepassesClient({ mainQueue, mainError, reserveQueue, reserveError, history, historyError }: Props) {
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const grouped = useMemo(() => groupHistory(history), [history])
-
+function PermissionDenied({ label }: { label: string }) {
   return (
-    <div>
-      <h2 className="mb-4 text-lg font-bold" style={{ color: colors.text }}>Repasses e extrato</h2>
-
-      <QueueSection title="Repasse principal" emptyLabel="Nenhuma venda retida ou elegível no momento." rows={mainQueue} error={mainError} />
-      <QueueSection title="Reserva de disputa" emptyLabel="Nenhuma reserva de disputa em aberto." rows={reserveQueue} error={reserveError} />
-
-      <div className="rounded-2xl border p-5" style={{ background: colors.card, borderColor: colors.border, boxShadow: shadows.card }}>
-        <h3 className="mb-3 text-base font-bold" style={{ color: colors.text }}>Histórico de repasses</h3>
-        {historyError ? (
-          <p className="text-sm" style={{ color: '#EF4444' }}>Não foi possível carregar o histórico. Tente novamente em instantes.</p>
-        ) : grouped.length === 0 ? (
-          <p className="text-sm" style={{ color: colors.textSecondary }}>Nenhum repasse recebido ainda.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr style={{ color: colors.textSecondary }}>
-                  <th className="pb-2 pr-3 font-semibold">Data</th>
-                  <th className="pb-2 pr-3 font-semibold">Referência</th>
-                  <th className="pb-2 pr-3 font-semibold">Valor</th>
-                  <th className="pb-2 font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grouped.map(payout => {
-                  const expanded = expandedId === payout.payout_id
-                  const reverted = payout.payout_status === 'revertido'
-                  return (
-                    <Fragment key={payout.payout_id}>
-                      <tr onClick={() => setExpandedId(expanded ? null : payout.payout_id)} className="cursor-pointer border-t" style={{ borderColor: colors.border }}>
-                        <td className="py-2 pr-3" style={{ color: colors.text }}>
-                          <span className="inline-flex items-center gap-1">
-                            {expanded ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
-                            {formatDateBR(payout.created_at.slice(0, 10))}
-                          </span>
-                        </td>
-                        <td className="py-2 pr-3" style={{ color: colors.textSecondary }}>{payout.reference}</td>
-                        <td className="py-2 pr-3 font-semibold" style={{ color: colors.text }}>{formatCurrencyBRL(payout.total_amount)}</td>
-                        <td className="py-2">
-                          <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ color: reverted ? '#EF4444' : '#10B981', background: reverted ? '#EF44441A' : '#10B9811A' }}>
-                            {reverted ? 'Revertido' : 'Confirmado'}
-                          </span>
-                        </td>
-                      </tr>
-                      {expanded && (
-                        <tr className="border-t" style={{ borderColor: colors.border }}>
-                          <td colSpan={4} className="py-3" style={{ background: colors.backgroundAlt }}>
-                            <div className="px-3">
-                              {reverted && (
-                                <p className="mb-2 text-xs" style={{ color: '#EF4444' }}>Motivo da reversão: {payout.revert_reason ?? '—'}</p>
-                              )}
-                              {payout.notes && (
-                                <p className="mb-2 text-xs" style={{ color: colors.textSecondary }}>Observações: {payout.notes}</p>
-                              )}
-                              <div className="flex flex-col gap-1">
-                                {payout.items.map(item => (
-                                  <div key={item.item_id} className="flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: colors.textSecondary }}>
-                                    <span>{item.application_name} — {item.plan_name} ({ITEM_KIND_LABEL[item.item_kind]}, vendido em {formatDateBR(item.sale_paid_at.slice(0, 10))})</span>
-                                    <strong style={{ color: colors.text }}>{formatCurrencyBRL(item.item_amount)}</strong>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+    <div className="rounded-xl border p-4 text-sm" style={{ borderColor: colors.border, background: colors.card, color: colors.text }}>
+      Você não tem a permissão &quot;{label}&quot; para ver esta seção deste parceiro.
     </div>
   )
 }

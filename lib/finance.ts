@@ -10,6 +10,22 @@ export function formatDateBR(d?: string | null): string {
   return new Date(`${d}T00:00:00`).toLocaleDateString('pt-BR')
 }
 
+/**
+ * Texto de contagem regressiva pra uma data de liberação — nunca negativo,
+ * nunca "menos de X dias" quando falta menos de 1 dia (vira "Menos de 24
+ * horas", regra explícita do pedido de Repasses e extrato). `releaseIso`
+ * é a data/hora exata (ISO) vinda do backend — nunca recalculada aqui além
+ * de "quanto falta até ela".
+ */
+export function formatCountdown(releaseIso: string): string {
+  const diffMs = new Date(releaseIso).getTime() - Date.now()
+  if (diffMs <= 0) return 'Elegível agora'
+  const hours = diffMs / 3_600_000
+  if (hours < 24) return 'Menos de 24 horas'
+  const days = Math.ceil(hours / 24)
+  return `Faltam ${days} dia${days === 1 ? '' : 's'}`
+}
+
 export const FINANCE_TYPE_LABEL: Record<FinanceType, string> = {
   ebook:          'E-book',
   projeto:        'Projeto',
