@@ -18,7 +18,7 @@ const PERMISSIONS = [
   { id: 'financeiro_vendas', label: 'Financeiro — Vendas', description: 'Ver o histórico de vendas do dono em todos os apps dele.' },
   { id: 'financeiro_repasses', label: 'Financeiro — Repasses e extrato', description: 'Ver a fila de repasse e o extrato do dono em todos os apps dele.' },
   { id: 'financeiro_ofertas', label: 'Financeiro — Ofertas e promoções', description: 'Ver e pedir promoções em nome do dono, em todos os apps dele.' },
-  { id: 'financeiro_configuracoes', label: 'Financeiro — Configurações de recebimento', description: 'Ver e editar dados de recebimento (ainda não disponível).' },
+  { id: 'financeiro_configuracoes', label: 'Financeiro — Configurações de recebimento', description: 'Ver e editar dados de recebimento do dono em todos os apps dele.' },
 ]
 
 export default function TeamClient({ draft }: TeamClientProps) {
