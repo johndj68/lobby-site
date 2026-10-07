@@ -5,9 +5,12 @@ import { Landmark, AlertTriangle } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
 
 export interface DestinationRow {
-  configured:     boolean
-  masked_pix:     string | null
-  account_holder: string | null
+  configured:          boolean
+  payout_method:       'pix' | 'bank_transfer' | null
+  masked_pix:          string | null
+  bank_name:           string | null
+  masked_bank_account: string | null
+  account_holder:      string | null
 }
 
 interface Props {
@@ -43,13 +46,19 @@ export default function ContaRecebimentoCard({ data, loading, partnerId, permiss
         <div className="flex items-start gap-2 rounded-lg border p-2.5 text-xs" style={{ borderColor: '#F59E0B', background: '#F59E0B0D' }}>
           <AlertTriangle size={14} style={{ color: '#F59E0B' }} className="mt-0.5 shrink-0" aria-hidden="true" />
           <span style={{ color: colors.text }}>
-            {canManage ? 'Sem chave PIX cadastrada — seus repasses não podem ser enviados quando ficarem disponíveis.' : 'O dono deste financeiro ainda não cadastrou uma chave PIX.'}
+            {canManage ? 'Sem destino de recebimento cadastrado — seus repasses não podem ser enviados quando ficarem disponíveis.' : 'O dono deste financeiro ainda não cadastrou um destino de recebimento.'}
           </span>
         </div>
       ) : (
         <div>
-          <p className="text-xs font-semibold" style={{ color: colors.textSecondary }}>Chave PIX</p>
-          <p className="text-sm" style={{ color: colors.text }}>{data.masked_pix}</p>
+          <p className="text-xs font-semibold" style={{ color: colors.textSecondary }}>
+            {data.payout_method === 'bank_transfer' ? 'Transferência bancária' : 'Chave PIX'}
+          </p>
+          <p className="text-sm" style={{ color: colors.text }}>
+            {data.payout_method === 'bank_transfer'
+              ? `${data.bank_name ?? '—'} · ${data.masked_bank_account ?? '—'}`
+              : data.masked_pix}
+          </p>
           {data.account_holder && (
             <>
               <p className="mt-2 text-xs font-semibold" style={{ color: colors.textSecondary }}>Titular</p>

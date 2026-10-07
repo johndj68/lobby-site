@@ -37,13 +37,13 @@ function buildAvisos(p: PendenciasRow, partnerId: string | null): Aviso[] {
     avisos.push(partnerId
       ? {
           titulo: 'Configuração de recebimento incompleta',
-          impacto: 'O dono deste financeiro ainda não cadastrou uma chave PIX.',
+          impacto: 'O dono deste financeiro ainda não cadastrou um destino de recebimento (Pix ou transferência bancária).',
           acao: '',
           href: '',
         }
       : {
           titulo: 'Configuração de recebimento incompleta',
-          impacto: 'Sem uma chave PIX cadastrada, seus repasses não podem ser enviados quando ficarem disponíveis.',
+          impacto: 'Sem um destino de recebimento cadastrado (Pix ou transferência bancária), seus repasses não podem ser enviados quando ficarem disponíveis.',
           acao: 'Completar cadastro',
           href: '/dashboard/financeiro/configuracoes',
         })
