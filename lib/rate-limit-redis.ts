@@ -95,3 +95,29 @@ export async function recordAuthFailure(key: string): Promise<void> {
 export async function clearAuthFailures(key: string): Promise<void> {
   await redis.del(key)
 }
+
+// ── Low-level counter primitives ───────────────────────────────────────────
+// Usados pelo desafio adaptativo (lib/anti-bot/policy.ts) para separar "ler o
+// contador atual" de "incrementar": a decisão de exigir desafio precisa ler sem
+// incrementar (um login correto de primeira não deve contar como sinal de abuso),
+// e o incremento só deve ocorrer na falha. checkRateLimit acima não serve aqui
+// porque sempre incrementa como parte do check.
+
+/** Lê o valor atual do contador sem incrementar. 0 se a chave não existe/expirou. */
+export async function peekCounter(key: string): Promise<number> {
+  const count = await redis.get<number>(key)
+  return count ?? 0
+}
+
+/** Incrementa o contador, definindo expiração (windowMs) apenas na primeira escrita. */
+export async function incrementCounter(key: string, windowMs: number): Promise<number> {
+  const count = await redis.incr(key)
+  if (count === 1) await redis.expire(key, Math.ceil(windowMs / 1000))
+  return count
+}
+
+/** Remove o contador — chamado apenas em autenticação bem-sucedida de fato, nunca
+ *  só por ter resolvido o desafio (ver lib/anti-bot/policy.ts). */
+export async function resetCounter(key: string): Promise<void> {
+  await redis.del(key)
+}

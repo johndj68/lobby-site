@@ -8,9 +8,14 @@ const IS_PROD = process.env.NODE_ENV === 'production'
 // script-src uses 'unsafe-inline' because Next.js injects inline scripts for hydration.
 // In dev mode, also include 'unsafe-eval' for React error stack traces.
 // To remove 'unsafe-inline', implement nonce-based CSP via proxy.ts instead.
+// Cloudflare Turnstile (anti-bot) precisa de script-src + frame-src para
+// https://challenges.cloudflare.com — conforme
+// https://developers.cloudflare.com/turnstile/reference/content-security-policy/.
+// Não usamos o modo "pre-clearance" da Enterprise, então connect-src não precisa
+// de nenhuma entrada nova para isso.
 const scriptSrc = IS_PROD
-  ? `'self' 'unsafe-inline' https://js.stripe.com`
-  : `'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com`
+  ? `'self' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com`
+  : `'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://challenges.cloudflare.com`
 
 const csp = [
   `default-src 'self'`,
@@ -19,7 +24,7 @@ const csp = [
   `img-src 'self' data: blob: https://${SUPABASE_HOST}`,
   `font-src 'self' data:`,
   `connect-src 'self' https://${SUPABASE_HOST} wss://${SUPABASE_HOST} https://api.stripe.com https://hooks.stripe.com`,
-  `frame-src https://js.stripe.com https://hooks.stripe.com`,
+  `frame-src https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com`,
   `frame-ancestors 'self'`,
   `object-src 'none'`,
   `base-uri 'self'`,
