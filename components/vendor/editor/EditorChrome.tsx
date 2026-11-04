@@ -41,7 +41,7 @@ export default function EditorChrome({ appId, appName, breadcrumbLabel, currentS
       <div className="flex items-center justify-between px-4 py-2.5 sm:px-8">
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="shrink-0">
-            <Image src="/logowhite.svg" alt="LOBBY" width={280} height={72} className="h-16 w-auto object-contain" priority />
+            <Image src="/LOBBY-horizontal-transparente.svg" alt="LOBBY" width={280} height={72} className="h-16 w-auto object-contain" priority />
           </Link>
           <span className="hidden rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide sm:inline" style={{ background: colors.backgroundAlt, color: colors.textSecondary }}>
             Parceiros
@@ -86,12 +86,12 @@ export default function EditorChrome({ appId, appName, breadcrumbLabel, currentS
                 {onStepIntercept && !isCurrent ? (
                   <button type="button" onClick={() => onStepIntercept(s.href)}
                     aria-current={isCurrent ? 'step' : undefined}
-                    className="rounded-full transition-colors hover:bg-[#F7F8FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005BFF]">
+                    className="rounded-full transition-colors hover:bg-[#F7F8FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B1020]">
                     {content}
                   </button>
                 ) : (
                   <Link href={s.href} aria-current={isCurrent ? 'step' : undefined}
-                    className="rounded-full transition-colors hover:bg-[#F7F8FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005BFF]">
+                    className="rounded-full transition-colors hover:bg-[#F7F8FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B1020]">
                     {content}
                   </Link>
                 )}

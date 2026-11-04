@@ -58,7 +58,7 @@ export default function ProximasLiberacoes({ rows, loading, error, permissionDen
             <div key={`${r.sale_id}-${r.tipo}`} className="rounded-lg border p-2.5" style={{ borderColor: colors.borderLight }}>
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold" style={{ color: colors.text }}>{r.application_name} — {r.plan_name}</p>
-                <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ color: r.tipo === 'reserva' ? '#6D28D9' : '#F59E0B', background: r.tipo === 'reserva' ? '#6D28D91A' : '#F59E0B1A' }}>
+                <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ color: r.tipo === 'reserva' ? '#0D565E' : '#F59E0B', background: r.tipo === 'reserva' ? '#0D565E1A' : '#F59E0B1A' }}>
                   {r.tipo === 'reserva' ? 'Reserva' : 'Retenção'}
                 </span>
               </div>

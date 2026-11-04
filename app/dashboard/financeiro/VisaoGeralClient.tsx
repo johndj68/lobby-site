@@ -206,7 +206,7 @@ export default function VisaoGeralClient({ partnerId, apps, emptyStateCta }: Pro
     },
     {
       label: 'Comissão da plataforma', value: resumo.comissao_valor,
-      sub: 'Comissão LOBBY sobre as vendas acima.', explicacao: '', color: '#6D28D9',
+      sub: 'Comissão LOBBY sobre as vendas acima.', explicacao: '', color: '#0D565E',
     },
     {
       label: 'Reembolsos', value: resumo.reembolsos_valor,
@@ -333,7 +333,7 @@ export default function VisaoGeralClient({ partnerId, apps, emptyStateCta }: Pro
           </div>
           <div className="rounded-xl border p-4" style={{ borderColor: colors.border, background: colors.card }}>
             <p className="text-xs font-semibold" style={{ color: colors.textSecondary }}>Reserva de segurança</p>
-            <p className="mt-1 text-xl font-bold tabular-nums" style={{ color: '#6D28D9' }}>{formatCurrencyBRL(overview.reserva_retida_amount)}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums" style={{ color: '#0D565E' }}>{formatCurrencyBRL(overview.reserva_retida_amount)}</p>
             <p className="mt-0.5 text-[11px]" style={{ color: colors.textMuted }}>Liberada em até 120 dias sem disputa.</p>
           </div>
         </div>

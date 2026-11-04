@@ -28,11 +28,11 @@ interface Props {
 }
 
 const TIPO_LABEL: Record<QueueRow['tipo'], string> = { retencao: 'Retenção', reserva: 'Reserva' }
-const TIPO_COLOR: Record<QueueRow['tipo'], string> = { retencao: '#F59E0B', reserva: '#6D28D9' }
+const TIPO_COLOR: Record<QueueRow['tipo'], string> = { retencao: '#F59E0B', reserva: '#0D565E' }
 
 function situacao(r: QueueRow): { label: string; color: string } {
   if (r.status === 'elegivel') return { label: 'Elegível', color: colors.primary }
-  return r.tipo === 'reserva' ? { label: 'Em reserva', color: '#6D28D9' } : { label: 'Em retenção', color: '#F59E0B' }
+  return r.tipo === 'reserva' ? { label: 'Em reserva', color: '#0D565E' } : { label: 'Em retenção', color: '#F59E0B' }
 }
 
 export default function ProximasLiberacoesTab({ rows, loading, error, partnerId, onRetry }: Props) {

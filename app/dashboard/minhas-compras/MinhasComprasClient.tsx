@@ -85,7 +85,7 @@ export default function MinhasComprasClient({ purchases }: Props) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <h1 className="flex items-center gap-2 text-2xl font-bold text-[#0B1020]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-        <ShoppingBag size={22} className="text-[#005BFF]" aria-hidden="true" />
+        <ShoppingBag size={22} className="text-[#0B1020]" aria-hidden="true" />
         Minhas compras
       </h1>
 

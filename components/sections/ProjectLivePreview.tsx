@@ -68,11 +68,11 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
         </p>
         <div className="flex items-center gap-1 rounded-lg border border-[#E3E7F0] bg-white p-0.5">
           <button type="button" onClick={() => setDevice('desktop')} aria-label="Ver como desktop"
-            className={`rounded-md p-1 transition-colors ${device === 'desktop' ? 'bg-[#005BFF]/10 text-[#005BFF]' : 'text-[#94A3B8] hover:text-[#5D6475]'}`}>
+            className={`rounded-md p-1 transition-colors ${device === 'desktop' ? 'bg-[#0B1020]/10 text-[#0B1020]' : 'text-[#94A3B8] hover:text-[#5D6475]'}`}>
             <Monitor size={12} aria-hidden="true" />
           </button>
           <button type="button" onClick={() => setDevice('mobile')} aria-label="Ver como mobile"
-            className={`rounded-md p-1 transition-colors ${device === 'mobile' ? 'bg-[#005BFF]/10 text-[#005BFF]' : 'text-[#94A3B8] hover:text-[#5D6475]'}`}>
+            className={`rounded-md p-1 transition-colors ${device === 'mobile' ? 'bg-[#0B1020]/10 text-[#0B1020]' : 'text-[#94A3B8] hover:text-[#5D6475]'}`}>
             <Smartphone size={12} aria-hidden="true" />
           </button>
         </div>
@@ -98,7 +98,7 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
           <p className="text-xs font-semibold text-[#5D6475]">Progresso do projeto</p>
           <p className="text-xl font-bold text-[#0B1020]">{progress}%</p>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#F1F3F9]">
-            <div className="h-full rounded-full bg-gradient-to-r from-[#005BFF] to-[#7B2CFF]" style={{ width: `${progress}%` }} />
+            <div className="h-full rounded-full bg-gradient-to-r from-[#0B1020] to-[#168F9C]" style={{ width: `${progress}%` }} />
           </div>
         </div>
 
@@ -119,15 +119,15 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
 
         {/* Resumo */}
         {value.projectSummary && (
-          <div className="flex items-start gap-2 rounded-2xl border border-[#005BFF]/15 bg-[#005BFF]/[0.04] p-3">
-            <MessageCircle size={14} className="mt-0.5 shrink-0 text-[#005BFF]" aria-hidden="true" />
+          <div className="flex items-start gap-2 rounded-2xl border border-[#0B1020]/15 bg-[#0B1020]/[0.04] p-3">
+            <MessageCircle size={14} className="mt-0.5 shrink-0 text-[#0B1020]" aria-hidden="true" />
             <p className="text-xs leading-relaxed text-[#3A4256]">{value.projectSummary}</p>
           </div>
         )}
 
         {/* Etapa atual */}
         {currentPhase && (
-          <div className="rounded-2xl border border-[#005BFF]/15 bg-white p-3">
+          <div className="rounded-2xl border border-[#0B1020]/15 bg-white p-3">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Etapa atual</p>
             <p className="text-sm font-bold text-[#0B1020]">{currentPhase.title}</p>
             {currentPhase.description && <p className="mt-0.5 text-xs text-[#5D6475]">{currentPhase.description}</p>}
@@ -136,8 +136,8 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
 
         {/* Próxima etapa */}
         {(nextPhase || value.nextMilestone) && (
-          <div className="flex items-start gap-2 rounded-2xl border border-[#7B2CFF]/15 bg-[#7B2CFF]/[0.04] p-3">
-            <Flag size={14} className="mt-0.5 shrink-0 text-[#7B2CFF]" aria-hidden="true" />
+          <div className="flex items-start gap-2 rounded-2xl border border-[#168F9C]/15 bg-[#168F9C]/[0.04] p-3">
+            <Flag size={14} className="mt-0.5 shrink-0 text-[#168F9C]" aria-hidden="true" />
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">Próxima etapa</p>
               <p className="text-xs font-bold text-[#0B1020]">{value.nextMilestone || nextPhase?.title}</p>
@@ -152,7 +152,7 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
         {/* Timeline simples */}
         <div className="rounded-2xl border border-[#E3E7F0] bg-white p-4">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-[#0B1020]">
-            <Layers size={12} className="text-[#7B2CFF]" aria-hidden="true" />
+            <Layers size={12} className="text-[#168F9C]" aria-hidden="true" />
             Linha do tempo
           </p>
           <ul className="space-y-1.5">
@@ -180,7 +180,7 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
               </p>
               {onViewFullPreview && (
                 <button type="button" onClick={onViewFullPreview}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#005BFF] hover:underline">
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0B1020] hover:underline">
                   Ver todos os materiais<ArrowRight size={11} aria-hidden="true" />
                 </button>
               )}
@@ -203,7 +203,7 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
         {/* Materiais */}
         {materialsCount > 0 && (
           <div className="flex items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white p-3">
-            <Paperclip size={13} className="shrink-0 text-[#005BFF]" aria-hidden="true" />
+            <Paperclip size={13} className="shrink-0 text-[#0B1020]" aria-hidden="true" />
             <p className="text-xs text-[#3A4256]">Materiais desta etapa: <span className="font-bold">{materialsCount} arquivo{materialsCount > 1 ? 's' : ''}</span></p>
           </div>
         )}
@@ -229,7 +229,7 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
             {value.securityVisibleToClient !== false && (value.securitySummary || securityItems.length > 0) && (
               <div className="rounded-2xl border border-[#E3E7F0] bg-white p-4">
                 <p className="mb-1 flex items-center gap-1.5 text-xs font-bold text-[#0B1020]">
-                  <ShieldCheck size={13} className="text-[#005BFF]" aria-hidden="true" />
+                  <ShieldCheck size={13} className="text-[#0B1020]" aria-hidden="true" />
                   Segurança do projeto
                 </p>
                 {value.securitySummary && <p className="text-[11px] text-[#5D6475]">{value.securitySummary}</p>}
@@ -250,12 +250,12 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
               <div className="rounded-2xl border border-[#E3E7F0] bg-white p-4">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <p className="flex items-center gap-1.5 text-xs font-bold text-[#0B1020]">
-                    <LayoutGrid size={13} className="text-[#7B2CFF]" aria-hidden="true" />
+                    <LayoutGrid size={13} className="text-[#168F9C]" aria-hidden="true" />
                     Módulos do projeto
                   </p>
                   {onViewSecurityExtras && (
                     <button type="button" onClick={onViewSecurityExtras}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#005BFF] hover:underline">
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0B1020] hover:underline">
                       Ver todos<ArrowRight size={11} aria-hidden="true" />
                     </button>
                   )}
@@ -289,7 +289,7 @@ export default function ProjectLivePreview({ title, status, progress, deadline, 
             {history.length > 0 && (
               <div className="rounded-2xl border border-[#E3E7F0] bg-white p-4">
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-[#0B1020]">
-                  <HistoryIcon size={13} className="text-[#005BFF]" aria-hidden="true" />
+                  <HistoryIcon size={13} className="text-[#0B1020]" aria-hidden="true" />
                   Histórico de atualizações
                 </p>
                 <ul className="space-y-2">

@@ -90,7 +90,7 @@ export default function UpdatePasswordForm() {
   if (session === 'checking') {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-        <Loader2 size={28} className="animate-spin text-[#005BFF]" />
+        <Loader2 size={28} className="animate-spin text-[#0B1020]" />
         <p className="text-sm text-[#5D6475]">Verificando link de recuperação...</p>
       </div>
     )
@@ -119,7 +119,7 @@ export default function UpdatePasswordForm() {
         </div>
         <Link
           href="/recuperar-senha"
-          className="group inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5"
+          className="group inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5"
         >
           Solicitar novo link
           <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
@@ -133,8 +133,8 @@ export default function UpdatePasswordForm() {
     return (
       <div className="flex flex-col items-center gap-5 py-8 text-center">
         <div
-          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-[0_12px_40px_rgba(0,91,255,0.28)]"
-          style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-[0_12px_40px_rgba(11,16,32,0.28)]"
+          style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
         >
           <CheckCircle size={28} />
         </div>
@@ -149,7 +149,7 @@ export default function UpdatePasswordForm() {
             Redirecionando para o dashboard...
           </p>
         </div>
-        <Loader2 size={18} className="animate-spin text-[#005BFF]" />
+        <Loader2 size={18} className="animate-spin text-[#0B1020]" />
       </div>
     )
   }
@@ -176,7 +176,7 @@ export default function UpdatePasswordForm() {
             placeholder="Mínimo de 8 caracteres"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="h-12 rounded-2xl border-[#E3E7F0] pl-10 pr-11 text-sm transition-all duration-300 focus-visible:border-[#005BFF]/40 focus-visible:ring-4 focus-visible:ring-[#005BFF]/10"
+            className="h-12 rounded-2xl border-[#E3E7F0] pl-10 pr-11 text-sm transition-all duration-300 focus-visible:border-[#0B1020]/40 focus-visible:ring-4 focus-visible:ring-[#0B1020]/10"
             required
           />
           <button
@@ -211,7 +211,7 @@ export default function UpdatePasswordForm() {
             placeholder="Repita a nova senha"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="h-12 rounded-2xl border-[#E3E7F0] pl-10 text-sm transition-all duration-300 focus-visible:border-[#005BFF]/40 focus-visible:ring-4 focus-visible:ring-[#005BFF]/10"
+            className="h-12 rounded-2xl border-[#E3E7F0] pl-10 text-sm transition-all duration-300 focus-visible:border-[#0B1020]/40 focus-visible:ring-4 focus-visible:ring-[#0B1020]/10"
             required
           />
         </div>
@@ -253,7 +253,7 @@ export default function UpdatePasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="group mt-2 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+        className="group mt-2 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
       >
         {loading ? (
           <>
@@ -274,7 +274,7 @@ export default function UpdatePasswordForm() {
 
       {/* Segurança */}
       <p className="flex items-center justify-center gap-2 text-xs text-[#5D6475]">
-        <ShieldCheck size={14} style={{ color: '#005BFF' }} aria-hidden="true" />
+        <ShieldCheck size={14} style={{ color: '#0B1020' }} aria-hidden="true" />
         Sua nova senha é criptografada e protegida.
       </p>
 
@@ -282,7 +282,7 @@ export default function UpdatePasswordForm() {
       <p className="text-center text-sm text-[#5D6475]">
         <Link
           href="/login"
-          className="font-semibold text-[#005BFF] transition-colors hover:text-[#7B2CFF]"
+          className="font-semibold text-[#0B1020] transition-colors hover:text-[#168F9C]"
         >
           Voltar ao login
         </Link>

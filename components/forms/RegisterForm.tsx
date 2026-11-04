@@ -289,8 +289,8 @@ export default function RegisterForm() {
               // Destaca visualmente a opção selecionada com borda e fundo azul
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                 form.interestArea === opt
-                  ? 'border-[#005BFF] bg-[#005BFF]/5 text-[#005BFF]'
-                  : 'border-[#E3E7F0] text-[#5D6475] hover:border-[#005BFF]/40'
+                  ? 'border-[#0B1020] bg-[#0B1020]/5 text-[#0B1020]'
+                  : 'border-[#E3E7F0] text-[#5D6475] hover:border-[#0B1020]/40'
               }`}
             >
               {opt}
@@ -305,13 +305,13 @@ export default function RegisterForm() {
           id="terms"
           checked={accepted}
           onCheckedChange={v => setAccepted(!!v)}
-          className="mt-0.5 border-[#E3E7F0] data-[state=checked]:bg-[#005BFF] data-[state=checked]:border-[#005BFF]"
+          className="mt-0.5 border-[#E3E7F0] data-[state=checked]:bg-[#0B1020] data-[state=checked]:border-[#0B1020]"
         />
         <label htmlFor="terms" className="text-xs text-[#5D6475] leading-relaxed cursor-pointer">
           Li e aceito a{' '}
-          <Link href="/sobre#privacidade" className="text-[#005BFF] hover:underline">Política de Privacidade</Link>
+          <Link href="/sobre#privacidade" className="text-[#0B1020] hover:underline">Política de Privacidade</Link>
           {' '}e os{' '}
-          <Link href="/sobre#termos" className="text-[#005BFF] hover:underline">Termos de Uso</Link>.
+          <Link href="/sobre#termos" className="text-[#0B1020] hover:underline">Termos de Uso</Link>.
         </label>
       </div>
 
@@ -349,7 +349,7 @@ export default function RegisterForm() {
       {/* Link para login — exibido para quem já possui conta */}
       <p className="text-sm text-center text-[#5D6475]">
         Já tem conta?{' '}
-        <Link href="/login" className="font-semibold text-[#005BFF] hover:underline">Entrar</Link>
+        <Link href="/login" className="font-semibold text-[#0B1020] hover:underline">Entrar</Link>
       </p>
     </form>
   )

@@ -147,12 +147,12 @@ export default function Header() {
 
           {/* Logo: link para a home */}
           <Link href="/" className="group flex items-center gap-2">
-            <div className="h-30 w-30 flex items-center justify-center overflow-hidden rounded-lg">
+            <div className="h-40 w-40 flex items-center justify-center overflow-hidden rounded-lg">
               <Image
-                src="/logowhite.svg"
+                src="/LOBBY-horizontal-transparente.svg"
                 alt="Logo Lobby"
-                width={112}
-                height={112}
+                width={152}
+                height={152}
                 className="h-full w-full object-contain"
                 priority
               />
@@ -170,7 +170,7 @@ export default function Header() {
                   href={item.href}
                   className={cn(
                     'relative rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                    isActive ? 'text-[#005BFF]' : 'text-[#5D6475] hover:text-[#0B1020]'
+                    isActive ? 'text-[#0B1020]' : 'text-[#5D6475] hover:text-[#0B1020]'
                   )}
                 >
                   {item.label}
@@ -194,7 +194,7 @@ export default function Header() {
               type="button"
               onClick={openSearch}
               aria-label="Buscar"
-              className="flex items-center gap-1.5 rounded-lg border border-[#E3E7F0] px-3 py-2 text-sm font-medium text-[#5D6475] transition-colors hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+              className="flex items-center gap-1.5 rounded-lg border border-[#E3E7F0] px-3 py-2 text-sm font-medium text-[#5D6475] transition-colors hover:border-[#0B1020]/30 hover:text-[#0B1020]"
             >
               <Search size={15} aria-hidden="true" />
               <span className="hidden lg:block">Buscar</span>
@@ -207,7 +207,7 @@ export default function Header() {
                 <>
                   <Link
                     href={dashboardHref}
-                    className="flex items-center gap-2 rounded-lg border border-[#E3E7F0] px-4 py-2 text-sm font-medium text-[#5D6475] transition-colors hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+                    className="flex items-center gap-2 rounded-lg border border-[#E3E7F0] px-4 py-2 text-sm font-medium text-[#5D6475] transition-colors hover:border-[#0B1020]/30 hover:text-[#0B1020]"
                   >
                     <LayoutDashboard size={15} aria-hidden="true" />
                     Dashboard
@@ -238,7 +238,7 @@ export default function Header() {
                 <>
                   <Link
                     href="/login"
-                    className="rounded-lg border border-[#E3E7F0] px-4 py-2 text-sm font-medium text-[#5D6475] transition-colors hover:border-[#005BFF]/30 hover:text-[#0B1020]"
+                    className="rounded-lg border border-[#E3E7F0] px-4 py-2 text-sm font-medium text-[#5D6475] transition-colors hover:border-[#0B1020]/30 hover:text-[#0B1020]"
                   >
                     Entrar
                   </Link>
@@ -256,7 +256,7 @@ export default function Header() {
           {/* Mobile: ícone de busca + botão hambúrguer (ocultos em md+) */}
           <div className="flex items-center gap-1 md:hidden">
             <button type="button" onClick={openSearch} aria-label="Buscar"
-              className="rounded-lg p-2 text-[#5D6475] transition-colors hover:bg-[#F7F8FC] hover:text-[#005BFF]">
+              className="rounded-lg p-2 text-[#5D6475] transition-colors hover:bg-[#F7F8FC] hover:text-[#0B1020]">
               <Search size={18} aria-hidden="true" />
             </button>
             <button
@@ -300,7 +300,7 @@ export default function Header() {
               <Container>
                 {/* Formulário de busca: submit redireciona para /busca?q= */}
                 <form onSubmit={handleSearch} className="flex items-center gap-3">
-                  <Search size={20} className="shrink-0 text-[#005BFF]" aria-hidden="true" />
+                  <Search size={20} className="shrink-0 text-[#0B1020]" aria-hidden="true" />
                   <input
                     ref={searchInputRef}
                     id="global-search"
@@ -315,7 +315,7 @@ export default function Header() {
                   {/* Botão "Buscar" só aparece quando há texto digitado */}
                   {searchTerm && (
                     <button type="submit"
-                      className="rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5">
+                      className="rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:-translate-y-0.5">
                       Buscar
                     </button>
                   )}
@@ -332,7 +332,7 @@ export default function Header() {
                   {['Software', 'Automação', 'Dados', 'Cibersegurança', 'Dashboard'].map(s => (
                     <button key={s} type="button"
                       onClick={() => { setSearchTerm(s); searchInputRef.current?.focus() }}
-                      className="rounded-full border border-[#E3E7F0] bg-[#F7F8FC] px-3 py-1 text-xs font-medium text-[#5D6475] transition-colors hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+                      className="rounded-full border border-[#E3E7F0] bg-[#F7F8FC] px-3 py-1 text-xs font-medium text-[#5D6475] transition-colors hover:border-[#0B1020]/30 hover:text-[#0B1020]"
                     >
                       {s}
                     </button>
@@ -366,7 +366,7 @@ export default function Header() {
                       className={cn(
                         'rounded-lg px-4 py-3 text-sm font-medium transition-colors',
                         isActive
-                          ? 'bg-[#005BFF]/5 text-[#005BFF]'
+                          ? 'bg-[#0B1020]/5 text-[#0B1020]'
                           : 'text-[#5D6475] hover:bg-[#F7F8FC] hover:text-[#0B1020]'
                       )}
                     >
@@ -398,7 +398,7 @@ export default function Header() {
                         {/* Link para o dashboard — /admin se técnico, /dashboard se cliente */}
                         <Link
                           href={dashboardHref}
-                          className="flex items-center gap-2 rounded-lg border border-[#E3E7F0] px-4 py-3 text-sm font-medium text-[#0B1020] transition-colors hover:border-[#005BFF]/30"
+                          className="flex items-center gap-2 rounded-lg border border-[#E3E7F0] px-4 py-3 text-sm font-medium text-[#0B1020] transition-colors hover:border-[#0B1020]/30"
                         >
                           <LayoutDashboard size={15} aria-hidden="true" />
                           Meu dashboard
@@ -419,7 +419,7 @@ export default function Header() {
                       <>
                         <Link
                           href="/login"
-                          className="rounded-lg border border-[#E3E7F0] px-4 py-3 text-center text-sm font-medium text-[#5D6475] transition-colors hover:border-[#005BFF]/30"
+                          className="rounded-lg border border-[#E3E7F0] px-4 py-3 text-center text-sm font-medium text-[#5D6475] transition-colors hover:border-[#0B1020]/30"
                         >
                           Entrar
                         </Link>

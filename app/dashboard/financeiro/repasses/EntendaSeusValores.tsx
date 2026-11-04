@@ -6,7 +6,7 @@ import { colors } from '@/lib/design-tokens'
 
 const ITEMS = [
   { icon: Clock, color: '#F59E0B', title: 'Retenção', text: 'Parcela da venda que aguarda o prazo inicial antes de poder entrar num repasse.' },
-  { icon: ShieldCheck, color: '#6D28D9', title: 'Reserva de segurança', text: 'Parcela separada preventivamente da sua participação, liberada depois de um prazo maior sem disputa na venda.' },
+  { icon: ShieldCheck, color: '#0D565E', title: 'Reserva de segurança', text: 'Parcela separada preventivamente da sua participação, liberada depois de um prazo maior sem disputa na venda.' },
   { icon: Wallet, color: colors.primary, title: 'Disponível', text: 'Valor já elegível, pronto para ser incluído num repasse.' },
   { icon: RefreshCw, color: '#10B981', title: 'Repasse', text: 'Transferência feita pelo time LOBBY cobrindo uma ou mais vendas elegíveis — registrada aqui assim que confirmada.' },
 ]

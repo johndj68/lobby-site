@@ -47,7 +47,7 @@ export default function MarketplacePage() {
     <Container className="py-16">
       <div className="mb-10">
         <h1 className="flex items-center gap-3 text-3xl font-bold text-[#0B1020] sm:text-4xl" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-          <Store size={30} className="text-[#005BFF]" aria-hidden="true" />
+          <Store size={30} className="text-[#0B1020]" aria-hidden="true" />
           Marketplace
         </h1>
         <p className="mt-2 text-sm text-[#5D6475]">Aplicativos prontos pra usar, da LOBBY e de parceiros.</p>
@@ -55,7 +55,7 @@ export default function MarketplacePage() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-[#005BFF]" aria-hidden="true" />
+          <Loader2 size={24} className="animate-spin text-[#0B1020]" aria-hidden="true" />
         </div>
       ) : apps.length === 0 ? (
         <div className="rounded-2xl border border-[#E3E7F0] bg-[#F7F8FC] p-12 text-center">
@@ -71,7 +71,7 @@ export default function MarketplacePage() {
                   {app.logo_url ? (
                     <Image src={app.logo_url} alt="" width={44} height={44} className="rounded-xl object-cover" />
                   ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F7F8FC] text-lg font-bold text-[#005BFF]">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F7F8FC] text-lg font-bold text-[#0B1020]">
                       {app.name.charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -81,7 +81,7 @@ export default function MarketplacePage() {
                   </div>
                 </div>
                 <p className="mb-4 line-clamp-2 flex-1 text-xs text-[#5D6475]">{app.short_description || app.category}</p>
-                <p className="text-sm font-bold text-[#005BFF]">
+                <p className="text-sm font-bold text-[#0B1020]">
                   {app.starting_price != null ? `A partir de ${formatCurrencyBRL(app.starting_price)}` : 'Ver preços'}
                 </p>
               </Link>

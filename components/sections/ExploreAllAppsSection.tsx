@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, ArrowRight, ChevronDown, Loader } from 'lucide-react'
 import Container from '@/components/layout/Container'
-import { colors } from '@/lib/design-tokens'
+import { colors, gradients } from '@/lib/design-tokens'
 
 interface AppCard {
   id: string
@@ -102,7 +102,7 @@ export default function ExploreAllAppsSection({
                     }}
                     className="px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-colors text-sm"
                     style={{
-                      backgroundColor: active ? colors.primary : colors.background,
+                      background: active ? gradients.primaryBold : colors.background,
                       color: active ? 'white' : colors.text,
                       borderColor: active ? colors.primary : colors.border,
                       border: active ? 'none' : `1px solid ${colors.border}`,
@@ -272,7 +272,7 @@ export default function ExploreAllAppsSection({
                     {/* CTA */}
                     <button
                       className="w-full mt-4 px-4 py-2 rounded-full font-semibold text-white text-sm transition-all hover:shadow-md"
-                      style={{ backgroundColor: colors.primary }}
+                      style={{ background: gradients.primaryBold }}
                     >
                       Conhecer app
                     </button>

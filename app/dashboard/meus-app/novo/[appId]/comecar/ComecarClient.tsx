@@ -168,7 +168,7 @@ export default function ComecarClient({ draft, isPublished, organizationName, co
                   const Icon = s.icon
                   return (
                     <li key={s.id}>
-                      <Link href={href} className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-[#F7F8FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005BFF]">
+                      <Link href={href} className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-[#F7F8FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B1020]">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: colors.backgroundAlt }}>
                           <Icon size={15} style={{ color: colors.textSecondary }} aria-hidden="true" />
                         </span>

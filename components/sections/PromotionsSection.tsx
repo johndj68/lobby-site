@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, ArrowRight } from 'lucide-react'
 import Container from '@/components/layout/Container'
-import { colors } from '@/lib/design-tokens'
+import { colors, gradients } from '@/lib/design-tokens'
 
 interface PromotionApp {
   id: string
@@ -163,7 +163,7 @@ export default function PromotionsSection({
                   {/* CTA */}
                   <button
                     className="w-full mt-4 px-4 py-2 rounded-full font-semibold text-white text-sm transition-all hover:shadow-md"
-                    style={{ backgroundColor: colors.primary }}
+                    style={{ background: gradients.primaryBold }}
                   >
                     Ver oferta
                   </button>

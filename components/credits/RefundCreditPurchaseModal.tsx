@@ -92,7 +92,7 @@ export default function RefundCreditPurchaseModal({ purchase, walletBalance, onC
             </label>
             <input id="refund-amount" type="text" inputMode="decimal" placeholder="0,00" value={amount}
               onChange={e => setAmount(e.target.value.replace(/[^0-9,.]/g, ''))} disabled={saving}
-              className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50" />
+              className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50" />
           </div>
 
           <div>
@@ -101,7 +101,7 @@ export default function RefundCreditPurchaseModal({ purchase, walletBalance, onC
             </label>
             <input id="refund-credits" type="text" inputMode="numeric" placeholder="0" value={credits}
               onChange={e => setCredits(e.target.value.replace(/[^0-9]/g, ''))} disabled={saving}
-              className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50" />
+              className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50" />
             <p className="mt-1 text-[11px] text-white/35">
               Se o cliente já gastou os créditos, não dá pra recuperar automaticamente — deixe em branco ou informe só o que ainda está disponível.
             </p>
@@ -113,7 +113,7 @@ export default function RefundCreditPurchaseModal({ purchase, walletBalance, onC
             </label>
             <textarea id="refund-reason" rows={3} placeholder="Ex: Cliente desistiu da compra, ainda não usou os créditos."
               value={reason} onChange={e => setReason(e.target.value)} disabled={saving}
-              className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50" />
+              className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50" />
           </div>
 
           {error && <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400">{error}</p>}

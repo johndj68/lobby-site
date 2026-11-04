@@ -3,7 +3,7 @@
 /**
  * HeroBackground — 9 camadas decorativas para o Hero da LOBBY.
  *
- * Paleta: Blue #005BFF · Purple #7B2CFF · Cyan #00A3FF
+ * Paleta: Blue #0B1020 · Purple #168F9C · Cyan #1C2440
  *
  * Guia de ajuste rápido:
  *
@@ -28,10 +28,10 @@ export default function HeroBackground() {
         className="absolute inset-0"
         style={{
           background: [
-            'radial-gradient(circle at 14% 22%, rgba(0,91,255,0.08)   0%, transparent 32%)',
-            'radial-gradient(circle at 86% 34%, rgba(123,44,255,0.18) 0%, transparent 40%)',
-            'radial-gradient(circle at 72% 90%, rgba(0,163,255,0.12)  0%, transparent 42%)',
-            'radial-gradient(circle at 97% 58%, rgba(0,91,255,0.08)   0%, transparent 28%)',
+            'radial-gradient(circle at 14% 22%, rgba(11,16,32,0.08)   0%, transparent 32%)',
+            'radial-gradient(circle at 86% 34%, rgba(22,143,156,0.18) 0%, transparent 40%)',
+            'radial-gradient(circle at 72% 90%, rgba(28,36,64,0.12)  0%, transparent 42%)',
+            'radial-gradient(circle at 97% 58%, rgba(11,16,32,0.08)   0%, transparent 28%)',
           ].join(', '),
         }}
       />
@@ -43,7 +43,7 @@ export default function HeroBackground() {
         className="absolute inset-0 opacity-[0.38]"
         style={{
           backgroundImage:
-            'radial-gradient(circle at 1px 1px, rgba(0,91,255,0.20) 1px, transparent 0)',
+            'radial-gradient(circle at 1px 1px, rgba(11,16,32,0.20) 1px, transparent 0)',
           backgroundSize: '28px 28px',
         }}
       />
@@ -63,21 +63,21 @@ export default function HeroBackground() {
            bg-[COLOR]/[OPACITY] blur-[Xpx] para ajustar.                */}
 
       {/* Roxo — canto superior-direito (âncora visual principal) */}
-      <div className="absolute -right-44 top-14 h-[640px] w-[640px] rounded-full bg-[#7B2CFF]/[0.18] blur-3xl" />
+      <div className="absolute -right-44 top-14 h-[640px] w-[640px] rounded-full bg-[#168F9C]/[0.18] blur-3xl" />
       {/* Azul — canto inferior-direito */}
-      <div className="absolute right-16 -bottom-40 h-[560px] w-[560px] rounded-full bg-[#005BFF]/[0.14] blur-3xl" />
+      <div className="absolute right-16 -bottom-40 h-[560px] w-[560px] rounded-full bg-[#0B1020]/[0.14] blur-3xl" />
       {/* Ciano — canto inferior-esquerdo */}
-      <div className="absolute -left-48 bottom-8 h-[460px] w-[460px] rounded-full bg-[#00A3FF]/[0.09] blur-3xl" />
+      <div className="absolute -left-48 bottom-8 h-[460px] w-[460px] rounded-full bg-[#1C2440]/[0.09] blur-3xl" />
 
       {/* ── 5. ANÉIS ORBITAIS — desktop only ────────────────────────────
            Círculos centrados no lado direito, atrás da ilustração.
            right-[X%] move os anéis  |  h/w-[Xpx] controla o tamanho.  */}
-      <div className="absolute right-[6%] top-1/2 hidden h-[600px] w-[600px] -translate-y-1/2 rounded-full border border-[#005BFF]/[0.10] lg:block" />
-      <div className="absolute right-[9%] top-1/2 hidden h-[488px] w-[488px] -translate-y-1/2 rounded-full border border-dashed border-[#005BFF]/[0.22] lg:block" />
+      <div className="absolute right-[6%] top-1/2 hidden h-[600px] w-[600px] -translate-y-1/2 rounded-full border border-[#0B1020]/[0.10] lg:block" />
+      <div className="absolute right-[9%] top-1/2 hidden h-[488px] w-[488px] -translate-y-1/2 rounded-full border border-dashed border-[#0B1020]/[0.22] lg:block" />
 
       {/* Glow interno — pulsa suavemente */}
       <div
-        className="absolute right-[13%] hidden h-[352px] w-[352px] rounded-full bg-[#7B2CFF]/[0.10] blur-2xl animate-pulse motion-reduce:animate-none lg:block"
+        className="absolute right-[13%] hidden h-[352px] w-[352px] rounded-full bg-[#168F9C]/[0.10] blur-2xl animate-pulse motion-reduce:animate-none lg:block"
         style={{
           top: 'calc(50% - 176px)',
           animationDuration: '9s',
@@ -96,9 +96,9 @@ export default function HeroBackground() {
       >
         <defs>
           <linearGradient id="hbg-wave" x1="0" y1="0" x2="980" y2="620" gradientUnits="userSpaceOnUse">
-            <stop offset="0%"   stopColor="#00A3FF" stopOpacity="0.04" />
-            <stop offset="42%"  stopColor="#005BFF" stopOpacity="0.24" />
-            <stop offset="100%" stopColor="#7B2CFF" stopOpacity="0.30" />
+            <stop offset="0%"   stopColor="#1C2440" stopOpacity="0.04" />
+            <stop offset="42%"  stopColor="#0B1020" stopOpacity="0.24" />
+            <stop offset="100%" stopColor="#168F9C" stopOpacity="0.30" />
           </linearGradient>
         </defs>
 
@@ -143,9 +143,9 @@ export default function HeroBackground() {
       >
         <defs>
           <linearGradient id="hbg-line" x1="0" y1="0" x2="880" y2="760" gradientUnits="userSpaceOnUse">
-            <stop offset="0%"   stopColor="#005BFF" stopOpacity="0"    />
-            <stop offset="50%"  stopColor="#00A3FF" stopOpacity="0.34" />
-            <stop offset="100%" stopColor="#7B2CFF" stopOpacity="0"    />
+            <stop offset="0%"   stopColor="#0B1020" stopOpacity="0"    />
+            <stop offset="50%"  stopColor="#1C2440" stopOpacity="0.34" />
+            <stop offset="100%" stopColor="#168F9C" stopOpacity="0"    />
           </linearGradient>
         </defs>
 
@@ -162,37 +162,37 @@ export default function HeroBackground() {
              animationDuration: velocidade do pulso
              animationDelay: defasagem entre os pontos                   */}
         <circle
-          cx="778" cy="428" r="4.5" fill="#00A3FF"
+          cx="778" cy="428" r="4.5" fill="#1C2440"
           className="opacity-65 animate-pulse motion-reduce:animate-none"
           style={{ animationDuration: '3.5s', animationDelay: '0s' }}
         />
         <circle
-          cx="858" cy="320" r="3.5" fill="#7B2CFF"
+          cx="858" cy="320" r="3.5" fill="#168F9C"
           className="opacity-60 animate-pulse motion-reduce:animate-none"
           style={{ animationDuration: '4s', animationDelay: '1.2s' }}
         />
         <circle
-          cx="758" cy="655" r="4.5" fill="#005BFF"
+          cx="758" cy="655" r="4.5" fill="#0B1020"
           className="opacity-55 animate-pulse motion-reduce:animate-none"
           style={{ animationDuration: '3.8s', animationDelay: '2.4s' }}
         />
         <circle
-          cx="880" cy="524" r="3" fill="#00A3FF"
+          cx="880" cy="524" r="3" fill="#1C2440"
           className="opacity-50 animate-pulse motion-reduce:animate-none"
           style={{ animationDuration: '4.2s', animationDelay: '0.8s' }}
         />
 
         {/* Pontos de origem (extremidades esquerdas) — estáticos e menores */}
-        <circle cx="110" cy="85"  r="2" fill="#005BFF" opacity="0.30" />
-        <circle cx="215" cy="26"  r="2" fill="#7B2CFF" opacity="0.25" />
-        <circle cx="48"  cy="318" r="2" fill="#005BFF" opacity="0.22" />
+        <circle cx="110" cy="85"  r="2" fill="#0B1020" opacity="0.30" />
+        <circle cx="215" cy="26"  r="2" fill="#168F9C" opacity="0.25" />
+        <circle cx="48"  cy="318" r="2" fill="#0B1020" opacity="0.22" />
       </svg>
 
       {/* ── 8. FEIXE DE LUZ INFERIOR ────────────────────────────────────
            Faixa horizontal rotacionada cobrindo a base do Hero.
            Ajuste from/via/to opacity para intensidade do glow.          */}
       <div
-        className="absolute -bottom-32 left-1/2 h-48 w-[120%] -translate-x-1/2 -rotate-[3deg] bg-gradient-to-r from-[#005BFF]/[0.09] via-[#7B2CFF]/[0.15] to-[#00A3FF]/[0.09] blur-2xl"
+        className="absolute -bottom-32 left-1/2 h-48 w-[120%] -translate-x-1/2 -rotate-[3deg] bg-gradient-to-r from-[#0B1020]/[0.09] via-[#168F9C]/[0.15] to-[#1C2440]/[0.09] blur-2xl"
       />
 
       {/* ── 9. LINHA SEPARADORA INFERIOR ────────────────────────────────
@@ -202,7 +202,7 @@ export default function HeroBackground() {
         className="absolute bottom-0 left-0 right-0 h-px opacity-[0.28]"
         style={{
           background:
-            'linear-gradient(to right, transparent 5%, #005BFF 35%, #7B2CFF 65%, transparent 95%)',
+            'linear-gradient(to right, transparent 5%, #0B1020 35%, #168F9C 65%, transparent 95%)',
         }}
       />
     </div>

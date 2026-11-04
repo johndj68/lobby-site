@@ -61,7 +61,7 @@ export default function ResourceCard({ resource, onDownload, onBuyClick, isLogge
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.45, delay: index * 0.09 }}
-      className="group flex flex-col overflow-hidden bg-white/90 transition-all duration-300 hover:-translate-y-1 hover:border-[#005BFF]/25 hover:shadow-[0_20px_60px_rgba(0,91,255,0.12)] sm:flex-row"
+      className="group flex flex-col overflow-hidden bg-white/90 transition-all duration-300 hover:-translate-y-1 hover:border-[#0B1020]/25 hover:shadow-[0_20px_60px_rgba(11,16,32,0.12)] sm:flex-row"
       style={{
         borderRadius: borderRadius['3xl'],
         border: `1px solid ${colors.border}`,

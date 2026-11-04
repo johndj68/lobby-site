@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Pause, Play, ImageOff, RotateCcw } from 'lucide-react'
 import Container from '@/components/layout/Container'
-import { colors } from '@/lib/design-tokens'
+import { colors, gradients } from '@/lib/design-tokens'
 
 /** next/image só aceita hosts declarados em next.config.ts (hoje só o
  *  storage do Supabase) e LANÇA um erro (derruba a página inteira, não só a
@@ -231,7 +231,7 @@ export default function SponsoredCarouselSection({
             </div>
             <h3 className="text-xl font-bold mb-2" style={{ color: colors.text }}>Seu app pode estar aqui</h3>
             <p className="mb-4" style={{ color: colors.textSecondary }}>Divulgue seu aplicativo no carrossel principal da home da LOBBY.</p>
-            <Link href="/dashboard/destaques" className="inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold text-white" style={{ backgroundColor: colors.primary }}>
+            <Link href="/dashboard/destaques" className="inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold text-white" style={{ background: gradients.primaryBold }}>
               Saiba mais
             </Link>
           </div>
@@ -313,7 +313,7 @@ export default function SponsoredCarouselSection({
                   sendClickBeacon(current.id, current.creative_id, viewId, !isPreview)
                 }}
                 className="inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold text-white transition-all hover:shadow-lg"
-                style={{ backgroundColor: colors.primary }}
+                style={{ background: gradients.primaryBold }}
               >
                 {current.cta_label || 'Conhecer aplicativo'}
               </Link>

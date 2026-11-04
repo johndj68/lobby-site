@@ -83,7 +83,7 @@ export default function BuyCreditsModal({ pkg, onClose }: Props) {
             Cancelar
           </button>
           <button type="button" onClick={handleContinue} disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60">
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60">
             {loading
               ? <><Loader2 size={15} className="animate-spin" aria-hidden="true" />Redirecionando…</>
               : <><ShoppingCart size={15} aria-hidden="true" />Ir para pagamento</>

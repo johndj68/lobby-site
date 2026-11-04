@@ -18,7 +18,7 @@ interface Props {
 
 const ITEMS: { key: keyof IndicadorCounts; label: string; icon: typeof Clock; color: string }[] = [
   { key: 'em_analise', label: 'Em análise', icon: Clock, color: colors.primary },
-  { key: 'agendadas', label: 'Agendadas', icon: CalendarClock, color: '#6D28D9' },
+  { key: 'agendadas', label: 'Agendadas', icon: CalendarClock, color: '#0D565E' },
   { key: 'ativas', label: 'Ativas', icon: Zap, color: '#10B981' },
   { key: 'encerradas', label: 'Encerradas', icon: CheckCircle2, color: colors.textSecondary },
 ]

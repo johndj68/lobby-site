@@ -17,8 +17,8 @@ interface Props {
 const STEPS = [
   {
     icon: User,
-    color: '#005BFF',
-    bg:   'rgba(0,91,255,0.10)',
+    color: '#0B1020',
+    bg:   'rgba(11,16,32,0.10)',
     title: 'Complete seu perfil',
     desc:  'Adicione empresa e área de interesse para recomendações personalizadas.',
     href:  '/dashboard/conta',
@@ -26,8 +26,8 @@ const STEPS = [
   },
   {
     icon: BookOpen,
-    color: '#7B2CFF',
-    bg:   'rgba(123,44,255,0.10)',
+    color: '#168F9C',
+    bg:   'rgba(22,143,156,0.10)',
     title: 'Explore materiais gratuitos',
     desc:  'Guias, checklists e e-books para aplicar na sua empresa agora.',
     href:  '/recursos',
@@ -35,8 +35,8 @@ const STEPS = [
   },
   {
     icon: MessageSquarePlus,
-    color: '#00A3FF',
-    bg:   'rgba(0,163,255,0.10)',
+    color: '#5CB1BA',
+    bg:   'rgba(92,177,186,0.10)',
     title: 'Solicite uma solução',
     desc:  'Fale com um especialista e descubra como podemos ajudar o seu negócio.',
     href:  '/contato',
@@ -70,7 +70,7 @@ export default function OnboardingWelcome({ userId, firstName }: Props) {
           className="relative mb-6 overflow-hidden rounded-[1.75rem] border border-[#E3E7F0] bg-white shadow-[0_20px_70px_rgba(11,16,32,0.08)]"
         >
           {/* Gradient top strip */}
-          <div className="h-1 w-full bg-gradient-to-r from-[#005BFF] via-[#7B2CFF] to-[#00A3FF]" />
+          <div className="h-1 w-full bg-gradient-to-r from-[#0B1020] via-[#168F9C] to-[#5CB1BA]" />
 
           {/* Close button */}
           <button
@@ -87,8 +87,8 @@ export default function OnboardingWelcome({ userId, firstName }: Props) {
             {/* Header */}
             <div className="mb-6 flex items-start gap-4">
               <div
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_8px_24px_rgba(0,91,255,0.25)]"
-                style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_8px_24px_rgba(11,16,32,0.25)]"
+                style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
               >
                 <Rocket size={24} aria-hidden="true" />
               </div>
@@ -115,7 +115,7 @@ export default function OnboardingWelcome({ userId, firstName }: Props) {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 + i * 0.1 }}
-                  className="group rounded-2xl border border-[#E3E7F0] bg-[#F7F8FC]/70 p-4 transition-all duration-300 hover:border-[#005BFF]/20 hover:bg-white hover:shadow-md"
+                  className="group rounded-2xl border border-[#E3E7F0] bg-[#F7F8FC]/70 p-4 transition-all duration-300 hover:border-[#0B1020]/20 hover:bg-white hover:shadow-md"
                 >
                   {/* Step number + icon */}
                   <div className="mb-3 flex items-center gap-3">
@@ -165,14 +165,14 @@ export default function OnboardingWelcome({ userId, firstName }: Props) {
                   type="button"
                   onClick={dismiss}
                   disabled={dismissing}
-                  className="rounded-xl border border-[#E3E7F0] bg-white px-4 py-2 text-xs font-semibold text-[#5D6475] transition-all hover:border-[#005BFF]/30 hover:text-[#005BFF] disabled:opacity-50"
+                  className="rounded-xl border border-[#E3E7F0] bg-white px-4 py-2 text-xs font-semibold text-[#5D6475] transition-all hover:border-[#0B1020]/30 hover:text-[#0B1020] disabled:opacity-50"
                 >
                   {dismissing ? 'Salvando...' : 'Pular por agora'}
                 </button>
                 <Link
                   href="/dashboard/conta"
                   onClick={dismiss}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-4 py-2 text-xs font-bold text-white shadow-[0_6px_18px_rgba(0,91,255,0.22)] transition-all hover:-translate-y-0.5"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-4 py-2 text-xs font-bold text-white shadow-[0_6px_18px_rgba(11,16,32,0.22)] transition-all hover:-translate-y-0.5"
                 >
                   <Sparkles size={12} aria-hidden="true" />
                   Completar configuração

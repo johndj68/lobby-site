@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowRight, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Container from '@/components/layout/Container'
-import { colors } from '@/lib/design-tokens'
+import { colors, gradients } from '@/lib/design-tokens'
 
 export default function MarketplaceHero() {
   const router = useRouter()
@@ -59,7 +59,7 @@ export default function MarketplaceHero() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Busque apps, ferramentas e soluções"
-                  className="w-full pl-12 pr-4 py-3 border rounded-2xl text-base focus:outline-none focus:ring-4 focus:ring-[#005BFF]/10 focus:border-[#005BFF]/40"
+                  className="w-full pl-12 pr-4 py-3 border rounded-2xl text-base focus:outline-none focus:ring-4 focus:ring-[#0B1020]/10 focus:border-[#0B1020]/40"
                   style={{
                     borderColor: colors.border,
                     backgroundColor: 'white',
@@ -73,7 +73,7 @@ export default function MarketplaceHero() {
               <Link
                 href="#explore-apps"
                 className="inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold text-white gap-2 transition-all hover:shadow-lg"
-                style={{ backgroundColor: colors.primary }}
+                style={{ background: gradients.primaryBold }}
               >
                 Explorar aplicativos
                 <ArrowRight size={18} />

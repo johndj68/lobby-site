@@ -29,7 +29,7 @@ export default function SectionTitle({
             'mb-4 inline-flex rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em]',
             light
               ? 'border-white/20 bg-white/15 text-white'
-              : 'border-[#005BFF]/15 bg-[#005BFF]/[0.08] text-[#005BFF]'
+              : 'border-[#0B1020]/15 bg-[#0B1020]/[0.08] text-[#0B1020]'
           )}
         >
           {eyebrow}
@@ -62,7 +62,7 @@ export default function SectionTitle({
       {accentLine && (
         <div
           className={cn(
-            'mt-5 h-1 w-20 rounded-full bg-gradient-to-r from-[#005BFF] to-[#7B2CFF]',
+            'mt-5 h-1 w-20 rounded-full bg-gradient-to-r from-[#0B1020] to-[#168F9C]',
             centered && 'mx-auto'
           )}
         />

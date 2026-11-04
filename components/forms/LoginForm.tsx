@@ -196,7 +196,7 @@ export default function LoginForm() {
         </div>
         <Link
           href="/recuperar-senha"
-          className="text-sm font-semibold transition-colors hover:text-[#7B2CFF]"
+          className="text-sm font-semibold transition-colors hover:text-[#168F9C]"
           style={{ color: colors.primary }}
         >
           Esqueci minha senha
@@ -262,7 +262,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={loading || (showChallenge && challengeStatus !== 'verified')}
-        className="group mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+        className="group mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         style={{ background: gradients.primaryBold }}
       >
         {loading ? (
@@ -324,7 +324,7 @@ export default function LoginForm() {
         Ainda não tem conta?{' '}
         <Link
           href="/cadastro"
-          className="font-semibold transition-colors hover:text-[#7B2CFF]"
+          className="font-semibold transition-colors hover:text-[#168F9C]"
           style={{ color: colors.primary }}
         >
           Criar conta

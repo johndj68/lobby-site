@@ -207,7 +207,7 @@ export function buildAppPurchaseReceiptEmailHtml({
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#F7F8FC;font-family:'Inter',Arial,sans-serif;">
   <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E3E7F0;box-shadow:0 4px 24px rgba(11,16,32,0.07);">
-    <div style="background:linear-gradient(135deg,#005BFF,#7B2CFF);padding:24px 32px;">
+    <div style="background:linear-gradient(135deg,#0B1020,#168F9C);padding:24px 32px;">
       <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.65);">LOBBY · Marketplace</p>
       <h1 style="margin:6px 0 0;font-size:20px;font-weight:800;color:#fff;">Compra confirmada!</h1>
       <p style="margin:4px 0 0;font-size:13px;color:rgba(255,255,255,.70);">Pagamento recebido</p>
@@ -234,7 +234,7 @@ export function buildAppPurchaseReceiptEmailHtml({
       </div>
       ${accessBlock}
       <a href="${eUrl}" target="_blank"
-        style="display:inline-block;background:linear-gradient(135deg,#005BFF,#7B2CFF);color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 24px;border-radius:10px;">
+        style="display:inline-block;background:linear-gradient(135deg,#0B1020,#168F9C);color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 24px;border-radius:10px;">
         Ver minhas compras
       </a>
     </div>
@@ -366,19 +366,19 @@ export function buildMessageEmailHtml({
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#F7F8FC;font-family:'Inter',Arial,sans-serif;">
   <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E3E7F0;box-shadow:0 4px 24px rgba(11,16,32,0.07);">
-    <div style="background:linear-gradient(135deg,#005BFF,#7B2CFF);padding:24px 32px;">
+    <div style="background:linear-gradient(135deg,#0B1020,#168F9C);padding:24px 32px;">
       <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.65);">LOBBY · Mensagem</p>
       <h1 style="margin:6px 0 0;font-size:20px;font-weight:800;color:#fff;">Nova mensagem recebida</h1>
       <p style="margin:4px 0 0;font-size:13px;color:rgba(255,255,255,.70);">De: <strong style="color:#fff;">${eSender}</strong></p>
     </div>
     <div style="padding:24px 32px;">
       <p style="margin:0 0 16px;font-size:14px;color:#374151;">Olá, <strong>${eName}</strong>!</p>
-      <div style="background:#F7F8FC;border-left:3px solid #005BFF;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:20px;">
+      <div style="background:#F7F8FC;border-left:3px solid #0B1020;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:20px;">
         <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9CA3AF;">Mensagem</p>
         <p style="margin:0;font-size:14px;color:#374151;line-height:1.65;white-space:pre-wrap;">${ePreview}</p>
       </div>
       <a href="${eUrl}" target="_blank"
-        style="display:inline-block;background:linear-gradient(135deg,#005BFF,#7B2CFF);color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 24px;border-radius:10px;">
+        style="display:inline-block;background:linear-gradient(135deg,#0B1020,#168F9C);color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:12px 24px;border-radius:10px;">
         ${eLabel}
       </a>
     </div>

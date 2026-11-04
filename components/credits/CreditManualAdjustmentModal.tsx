@@ -156,7 +156,7 @@ export default function CreditManualAdjustmentModal({ open, onOpenChange, preset
             {/* Confirma que a transação foi registrada para auditoria */}
             <p className="mt-1 text-xs text-white/40">Registrado no histórico de auditoria de {found?.full_name || found?.email}.</p>
             <button type="button" onClick={handleClose}
-              className="mt-5 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-5 py-2.5 text-sm font-bold text-white">
+              className="mt-5 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-5 py-2.5 text-sm font-bold text-white">
               Fechar
             </button>
           </div>
@@ -175,7 +175,7 @@ export default function CreditManualAdjustmentModal({ open, onOpenChange, preset
                     onChange={e => setEmail(e.target.value)}
                     // Enter aciona a busca sem submeter o formulário
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
-                    className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50"
+                    className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50"
                   />
                   {/* Botão de busca — exibe spinner durante a requisição */}
                   <button type="button" onClick={handleSearch} disabled={searching}
@@ -227,7 +227,7 @@ export default function CreditManualAdjustmentModal({ open, onOpenChange, preset
                 value={amount}
                 // Remove qualquer caractere que não seja dígito para garantir inteiro positivo
                 onChange={e => setAmount(e.target.value.replace(/[^0-9]/g, ''))}
-                className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50"
+                className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50"
               />
               {/* Preview da quantidade formatada enquanto o usuário digita */}
               {amount && <p className="mt-1 text-[11px] text-white/35">{formatCredits(Number(amount))}</p>}
@@ -244,7 +244,7 @@ export default function CreditManualAdjustmentModal({ open, onOpenChange, preset
                 placeholder="Ex: Compensação por instabilidade no sistema em 10/07."
                 value={reason}
                 onChange={e => setReason(e.target.value)}
-                className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50"
+                className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50"
               />
               {/* Lembrete de que o ajuste fica registrado em auditoria */}
               <p className="mt-1 text-[11px] text-white/35">Ajustes manuais ficam registrados no histórico de auditoria.</p>
@@ -262,7 +262,7 @@ export default function CreditManualAdjustmentModal({ open, onOpenChange, preset
               </button>
               {/* Confirmar — desabilitado se não há cliente selecionado ou durante salvamento */}
               <button type="button" onClick={handleSubmit} disabled={saving || !found}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] py-2.5 text-sm font-bold text-white disabled:opacity-50">
                 {saving ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null}
                 {saving ? 'Aplicando...' : 'Confirmar ajuste'}
               </button>

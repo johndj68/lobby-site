@@ -31,7 +31,7 @@ export function OGLayout({ logoSrc, title, subtitle }: OGLayoutProps) {
           left: 0,
           right: 0,
           height: '4px',
-          background: 'linear-gradient(90deg, #005BFF 0%, #00A3FF 50%, #7B2CFF 100%)',
+          background: 'linear-gradient(90deg, #0B1020 0%, #5CB1BA 50%, #168F9C 100%)',
           display: 'flex',
         }}
       />
@@ -46,7 +46,7 @@ export function OGLayout({ logoSrc, title, subtitle }: OGLayoutProps) {
           height: '640px',
           borderRadius: '50%',
           background:
-            'radial-gradient(circle, rgba(0,91,255,0.18) 0%, rgba(123,44,255,0.08) 50%, transparent 70%)',
+            'radial-gradient(circle, rgba(11,16,32,0.18) 0%, rgba(22,143,156,0.08) 50%, transparent 70%)',
           display: 'flex',
         }}
       />
@@ -70,7 +70,7 @@ export function OGLayout({ logoSrc, title, subtitle }: OGLayoutProps) {
               width: '4px',
               height: '4px',
               borderRadius: '50%',
-              backgroundColor: `rgba(0,91,255,${0.08 + (i % 5) * 0.06})`,
+              backgroundColor: `rgba(11,16,32,${0.08 + (i % 5) * 0.06})`,
             }}
           />
         ))}
@@ -129,7 +129,7 @@ export function OGLayout({ logoSrc, title, subtitle }: OGLayoutProps) {
           style={{
             width: '80px',
             height: '3px',
-            background: 'linear-gradient(90deg, transparent, #005BFF)',
+            background: 'linear-gradient(90deg, transparent, #0B1020)',
             borderRadius: '2px',
           }}
         />
@@ -137,7 +137,7 @@ export function OGLayout({ logoSrc, title, subtitle }: OGLayoutProps) {
           style={{
             width: '48px',
             height: '3px',
-            background: 'linear-gradient(90deg, transparent, #00A3FF)',
+            background: 'linear-gradient(90deg, transparent, #5CB1BA)',
             borderRadius: '2px',
           }}
         />
@@ -145,7 +145,7 @@ export function OGLayout({ logoSrc, title, subtitle }: OGLayoutProps) {
           style={{
             width: '24px',
             height: '3px',
-            background: 'linear-gradient(90deg, transparent, #7B2CFF)',
+            background: 'linear-gradient(90deg, transparent, #168F9C)',
             borderRadius: '2px',
           }}
         />

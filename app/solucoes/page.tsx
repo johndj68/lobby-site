@@ -64,8 +64,9 @@ export default function SolucoesPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }} // anima apenas uma vez ao entrar na viewport
                 transition={{ delay: i * 0.1 }}
+                className="flex" // flex para que o ServiceCard ocupe toda a altura da célula
               >
-                <ServiceCard {...s} />
+                <ServiceCard {...s} className="w-full" />
               </motion.div>
             ))}
           </div>
@@ -86,10 +87,10 @@ export default function SolucoesPage() {
       <section className="relative overflow-hidden bg-[#F7F8FC] py-20 lg:py-24">
         {/* Decoração de fundo: gradientes + grid de pontos + blobs desfocados */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,91,255,0.08),transparent_32%),radial-gradient(circle_at_85%_50%,rgba(123,44,255,0.10),transparent_36%),radial-gradient(circle_at_50%_100%,rgba(0,163,255,0.08),transparent_40%)]" />
-          <div className="absolute inset-0 opacity-[0.26] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.14)_1px,transparent_0)] bg-[size:26px_26px]" />
-          <div className="absolute -left-32 top-20 h-80 w-80 rounded-full bg-[#005BFF]/[0.08] blur-3xl" />
-          <div className="absolute -right-32 bottom-10 h-96 w-96 rounded-full bg-[#7B2CFF]/[0.09] blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(11,16,32,0.08),transparent_32%),radial-gradient(circle_at_85%_50%,rgba(22,143,156,0.10),transparent_36%),radial-gradient(circle_at_50%_100%,rgba(28,36,64,0.08),transparent_40%)]" />
+          <div className="absolute inset-0 opacity-[0.26] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.14)_1px,transparent_0)] bg-[size:26px_26px]" />
+          <div className="absolute -left-32 top-20 h-80 w-80 rounded-full bg-[#0B1020]/[0.08] blur-3xl" />
+          <div className="absolute -right-32 bottom-10 h-96 w-96 rounded-full bg-[#168F9C]/[0.09] blur-3xl" />
         </div>
 
         <Container className="relative z-10">
@@ -97,7 +98,7 @@ export default function SolucoesPage() {
           <div className="mx-auto max-w-5xl rounded-[2rem] border border-[#E3E7F0] bg-white/85 p-8 text-center shadow-[0_24px_80px_rgba(11,16,32,0.08)] backdrop-blur md:p-12">
 
             {/* Badge identificador da seção */}
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#005BFF]/15 bg-[#005BFF]/[0.08] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#005BFF]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#0B1020]/15 bg-[#0B1020]/[0.08] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#0B1020]">
               <Sparkles size={13} aria-hidden="true" />
               Diagnóstico rápido
             </span>
@@ -128,15 +129,15 @@ export default function SolucoesPage() {
                     className={
                       isActive
                         // Chip ativo: gradiente azul/roxo com sombra
-                        ? 'inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.22)] transition-all duration-300'
+                        ? 'inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.22)] transition-all duration-300'
                         // Chip inativo: borda cinza, hover com cor azul
-                        : 'group inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-5 py-3 text-sm font-semibold text-[#5D6475] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:bg-[#005BFF]/[0.05] hover:text-[#005BFF]'
+                        : 'group inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-5 py-3 text-sm font-semibold text-[#5D6475] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:bg-[#0B1020]/[0.05] hover:text-[#0B1020]'
                     }
                   >
                     {/* Ativo: mostra check; inativo: mostra ícone do pain point */}
                     {isActive
                       ? <Check size={15} aria-hidden="true" />
-                      : <Icon size={15} className="text-[#005BFF]" aria-hidden="true" />
+                      : <Icon size={15} className="text-[#0B1020]" aria-hidden="true" />
                     }
                     {p.label}
                   </button>
@@ -158,17 +159,17 @@ export default function SolucoesPage() {
                 {hasRecommendation ? (
                   /* Card de recomendação — exibe quando pelo menos 1 desafio está selecionado */
                   /* Tune border, gradient, icon, colors */
-                  <div className="rounded-3xl border border-[#005BFF]/15 bg-gradient-to-br from-[#005BFF]/[0.05] to-[#7B2CFF]/[0.05] p-6 text-left">
+                  <div className="rounded-3xl border border-[#0B1020]/15 bg-gradient-to-br from-[#0B1020]/[0.05] to-[#168F9C]/[0.05] p-6 text-left">
                     <div className="flex items-start gap-4">
                       <div
                         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white"
-                        style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+                        style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
                         aria-hidden="true"
                       >
                         <Sparkles size={20} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#005BFF]">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#0B1020]">
                           Recomendação
                         </p>
                         {/* Junta múltiplas recomendações com " + " quando há mais de uma */}
@@ -200,7 +201,7 @@ export default function SolucoesPage() {
             {/* Tune gradient, shadow, hover shadow */}
             <Link
               href="/contato"
-              className="group mt-8 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)]"
+              className="group mt-8 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)]"
             >
               Receber diagnóstico gratuito
               <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />

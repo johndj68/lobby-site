@@ -149,7 +149,7 @@ async function sendEmailToLeaders(contact: ContactInput, to: string[]) {
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E3E7F0;box-shadow:0 4px 24px rgba(11,16,32,0.07);">
 
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#005BFF,#7B2CFF);padding:28px 32px;">
+    <div style="background:linear-gradient(135deg,#0B1020,#168F9C);padding:28px 32px;">
       <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.65);">LOBBY · Plataforma</p>
       <h1 style="margin:6px 0 0;font-size:22px;font-weight:800;color:#fff;line-height:1.2;">Nova solicitação recebida</h1>
       <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.70);">Área: <strong style="color:#fff;">${areaLabel}</strong></p>
@@ -173,7 +173,7 @@ async function sendEmailToLeaders(contact: ContactInput, to: string[]) {
             <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9CA3AF;">E-mail</p>
           </td>
           <td style="padding:10px 0;border-bottom:1px solid #F0F3FA;">
-            <a href="${mailLink}" style="font-size:14px;color:#005BFF;text-decoration:none;">${eEmail}</a>
+            <a href="${mailLink}" style="font-size:14px;color:#0B1020;text-decoration:none;">${eEmail}</a>
           </td>
         </tr>
         <tr>
@@ -195,7 +195,7 @@ async function sendEmailToLeaders(contact: ContactInput, to: string[]) {
       </table>
 
       <!-- Message -->
-      <div style="background:#F7F8FC;border-left:3px solid #005BFF;border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:24px;">
+      <div style="background:#F7F8FC;border-left:3px solid #0B1020;border-radius:0 8px 8px 0;padding:16px 18px;margin-bottom:24px;">
         <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9CA3AF;">Mensagem</p>
         <p style="margin:0;font-size:14px;color:#374151;line-height:1.65;white-space:pre-wrap;">${eMessage}</p>
       </div>
@@ -212,7 +212,7 @@ async function sendEmailToLeaders(contact: ContactInput, to: string[]) {
           </td>
           <td style="padding-right:10px;">
             <a href="${mailLink}"
-              style="display:inline-block;background:#005BFF;color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 20px;border-radius:10px;">
+              style="display:inline-block;background:#0B1020;color:#fff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 20px;border-radius:10px;">
               E-mail direto
             </a>
           </td>
@@ -268,7 +268,7 @@ async function sendConfirmationEmail(contact: ContactInput) {
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recebemos sua mensagem</title></head>
 <body style="margin:0;padding:0;background:#F7F8FC;font-family:'Inter',Arial,sans-serif;">
   <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E3E7F0;box-shadow:0 4px 24px rgba(11,16,32,0.07);">
-    <div style="background:linear-gradient(135deg,#005BFF,#7B2CFF);padding:24px 32px;">
+    <div style="background:linear-gradient(135deg,#0B1020,#168F9C);padding:24px 32px;">
       <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.65);">LOBBY · Solicitação recebida</p>
       <h1 style="margin:6px 0 0;font-size:20px;font-weight:800;color:#fff;">Recebemos sua mensagem!</h1>
     </div>
@@ -277,7 +277,7 @@ async function sendConfirmationEmail(contact: ContactInput) {
       <p style="margin:0 0 16px;font-size:14px;color:#374151;line-height:1.65;">
         Sua solicitação sobre <strong>${areaLabel}</strong> foi registrada com sucesso. Nossa equipe entrará em contato em breve para dar continuidade ao seu projeto.
       </p>
-      <div style="background:#F7F8FC;border-left:3px solid #005BFF;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:20px;">
+      <div style="background:#F7F8FC;border-left:3px solid #0B1020;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:20px;">
         <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9CA3AF;">Sua mensagem</p>
         <p style="margin:0;font-size:13px;color:#374151;line-height:1.65;white-space:pre-wrap;">${eMessage}</p>
       </div>

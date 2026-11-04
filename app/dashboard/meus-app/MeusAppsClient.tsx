@@ -161,7 +161,7 @@ export default function MeusAppsClient({
               <label htmlFor="apps-search" className="sr-only">Buscar aplicativo</label>
               <input id="apps-search" value={searchInput} onChange={e => onSearchChange(e.target.value)}
                 placeholder="Buscar aplicativo…"
-                className="w-full rounded-xl border py-2 pl-8 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#005BFF]/20"
+                className="w-full rounded-xl border py-2 pl-8 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#0B1020]/20"
                 style={{ borderColor: C.border, color: C.text, background: C.background }} />
             </div>
             <Select label="Análise" value={filters.analise} onChange={v => pushFilters({ analise: v })} options={ANALISE_OPTIONS} />

@@ -29,18 +29,18 @@ const METRIC_ICONS: Record<string, React.ElementType> = {
  * Per-metric color: hex (icon + number + label) + colorBg (icon badge background).
  * Keys match the `icon` string field in lib/data.ts metrics.
  * Tune: change hex/colorBg values here.
- *   Projetos entregues  → blue   #005BFF
- *   Empresas atendidas  → purple #7B2CFF
+ *   Projetos entregues  → blue   #0B1020
+ *   Empresas atendidas  → purple #168F9C
  *   Satisfação          → green  #16A34A
  *   Tempo médio         → orange #F97316
  */
 const METRIC_COLORS: Record<string, { hex: string; bg: string }> = {
-  Rocket:    { hex: '#005BFF', bg: 'rgba(0,91,255,0.10)'   },
-  Building2: { hex: '#7B2CFF', bg: 'rgba(123,44,255,0.10)' },
+  Rocket:    { hex: '#0B1020', bg: 'rgba(11,16,32,0.10)'   },
+  Building2: { hex: '#168F9C', bg: 'rgba(22,143,156,0.10)' },
   Star:      { hex: '#16A34A', bg: 'rgba(22,163,74,0.10)'  },
   Clock:     { hex: '#F97316', bg: 'rgba(249,115,22,0.10)' },
 }
-const DEFAULT_METRIC_COLOR = { hex: '#005BFF', bg: 'rgba(0,91,255,0.10)' }
+const DEFAULT_METRIC_COLOR = { hex: '#0B1020', bg: 'rgba(11,16,32,0.10)' }
 
 /**
  * Filter tabs config.
@@ -124,13 +124,13 @@ export default function ProjetosPage() {
       <section className="relative overflow-hidden bg-[#F7F8FC] py-20 lg:py-28">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           {/* Radial gradient zones */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(0,91,255,0.08),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(123,44,255,0.14),transparent_36%),radial-gradient(circle_at_55%_95%,rgba(0,163,255,0.10),transparent_42%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(11,16,32,0.08),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(22,143,156,0.14),transparent_36%),radial-gradient(circle_at_55%_95%,rgba(28,36,64,0.10),transparent_42%)]" />
           {/* Dot grid */}
-          <div className="absolute inset-0 opacity-[0.28] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute inset-0 opacity-[0.28] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
           {/* Blur blobs */}
-          <div className="absolute -left-40 top-20 h-[480px] w-[480px] rounded-full bg-[#00A3FF]/[0.08] blur-3xl" />
-          <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#7B2CFF]/[0.12] blur-3xl" />
-          <div className="absolute right-0 -bottom-40 h-[420px] w-[700px] rounded-full bg-[#005BFF]/[0.07] blur-3xl" />
+          <div className="absolute -left-40 top-20 h-[480px] w-[480px] rounded-full bg-[#1C2440]/[0.08] blur-3xl" />
+          <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#168F9C]/[0.12] blur-3xl" />
+          <div className="absolute right-0 -bottom-40 h-[420px] w-[700px] rounded-full bg-[#0B1020]/[0.07] blur-3xl" />
         </div>
 
         <Container className="relative z-10">
@@ -143,7 +143,7 @@ export default function ProjetosPage() {
               transition={{ duration: 0.5 }}
             >
               {/* Badge — tune: text, icon, colors */}
-              <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#005BFF]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#005BFF] shadow-sm backdrop-blur">
+              <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#0B1020]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#0B1020] shadow-sm backdrop-blur">
                 <Rocket size={13} aria-hidden="true" />
                 Projetos que geram impacto
               </span>
@@ -156,7 +156,7 @@ export default function ProjetosPage() {
                 Projetos que mostram o que a{' '}
                 <span
                   style={{
-                    background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                    background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -175,14 +175,14 @@ export default function ProjetosPage() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/contato"
-                  className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)]"
+                  className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)]"
                 >
                   Quero algo parecido
                   <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
                 </Link>
                 <Link
                   href="/contato"
-                  className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white/85 px-7 py-4 text-sm font-bold text-[#0B1020] shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+                  className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white/85 px-7 py-4 text-sm font-bold text-[#0B1020] shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:text-[#0B1020]"
                 >
                   Falar com especialista
                 </Link>
@@ -206,7 +206,7 @@ export default function ProjetosPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.32 + i * 0.09 }}
-                    className="group rounded-3xl border border-[#E3E7F0] bg-white/85 p-6 shadow-[0_8px_40px_rgba(11,16,32,0.06)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-[#005BFF]/25 hover:shadow-[0_20px_60px_rgba(0,91,255,0.12)]"
+                    className="group rounded-3xl border border-[#E3E7F0] bg-white/85 p-6 shadow-[0_8px_40px_rgba(11,16,32,0.06)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-[#0B1020]/25 hover:shadow-[0_20px_60px_rgba(11,16,32,0.12)]"
                   >
                     <div className="flex items-center gap-4">
                       <div
@@ -244,8 +244,8 @@ export default function ProjetosPage() {
       <section className="relative overflow-hidden bg-[#F7F8FC] pb-20 pt-10">
         {/* Subtle background */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(123,44,255,0.05),transparent_40%),radial-gradient(circle_at_20%_80%,rgba(0,91,255,0.05),transparent_40%)]" />
-          <div className="absolute inset-0 opacity-[0.16] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(22,143,156,0.05),transparent_40%),radial-gradient(circle_at_20%_80%,rgba(11,16,32,0.05),transparent_40%)]" />
+          <div className="absolute inset-0 opacity-[0.16] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
         </div>
 
         <Container className="relative z-10">
@@ -269,8 +269,8 @@ export default function ProjetosPage() {
                       onClick={() => handleFilter(cat)}
                       className={
                         isActive
-                          ? 'inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-4 py-2 text-sm font-bold text-white shadow-[0_6px_20px_rgba(0,91,255,0.22)] transition-all duration-300'
-                          : 'group inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-4 py-2 text-sm font-medium text-[#5D6475] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:bg-[#005BFF]/[0.04] hover:text-[#005BFF]'
+                          ? 'inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-4 py-2 text-sm font-bold text-white shadow-[0_6px_20px_rgba(11,16,32,0.22)] transition-all duration-300'
+                          : 'group inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-4 py-2 text-sm font-medium text-[#5D6475] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:bg-[#0B1020]/[0.04] hover:text-[#0B1020]'
                       }
                     >
                       <Icon size={14} aria-hidden="true" />
@@ -317,10 +317,10 @@ export default function ProjetosPage() {
               <div className="flex items-center gap-4">
                 <div
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-                  style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.10), rgba(123,44,255,0.10))' }}
+                  style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.10), rgba(22,143,156,0.10))' }}
                   aria-hidden="true"
                 >
-                  <Rocket size={20} style={{ color: '#005BFF' }} />
+                  <Rocket size={20} style={{ color: '#0B1020' }} />
                 </div>
                 <div>
                   <h3
@@ -336,7 +336,7 @@ export default function ProjetosPage() {
               </div>
               <Link
                 href="/contato"
-                className="group inline-flex shrink-0 items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_30px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(123,44,255,0.28)]"
+                className="group inline-flex shrink-0 items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_30px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(22,143,156,0.28)]"
               >
                 Fale com um especialista
                 <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />

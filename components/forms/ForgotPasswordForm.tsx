@@ -81,8 +81,8 @@ export default function ForgotPasswordForm() {
       <div className="flex flex-col items-center text-center gap-4 py-8">
         {/* Ícone de sucesso com gradiente da marca */}
         <div
-          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-[0_12px_40px_rgba(0,91,255,0.28)]"
-          style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-[0_12px_40px_rgba(11,16,32,0.28)]"
+          style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
         >
           <CheckCircle size={28} />
         </div>
@@ -95,7 +95,7 @@ export default function ForgotPasswordForm() {
           </p>
         </div>
         {/* Link de retorno ao login */}
-        <Link href="/login" className="text-sm font-semibold text-[#005BFF] hover:text-[#7B2CFF] transition-colors">
+        <Link href="/login" className="text-sm font-semibold text-[#0B1020] hover:text-[#168F9C] transition-colors">
           Voltar ao login
         </Link>
       </div>
@@ -120,7 +120,7 @@ export default function ForgotPasswordForm() {
             placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-12 rounded-2xl border-[#E3E7F0] pl-10 text-sm transition-all duration-300 focus-visible:border-[#005BFF]/40 focus-visible:ring-4 focus-visible:ring-[#005BFF]/10"
+            className="h-12 rounded-2xl border-[#E3E7F0] pl-10 text-sm transition-all duration-300 focus-visible:border-[#0B1020]/40 focus-visible:ring-4 focus-visible:ring-[#0B1020]/10"
             required
           />
         </div>
@@ -151,7 +151,7 @@ export default function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={loading || challengeStatus !== 'verified'}
-        className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? (
           <><Loader2 size={16} className="animate-spin" />Enviando...</>
@@ -164,7 +164,7 @@ export default function ForgotPasswordForm() {
       {/* Link para voltar ao login caso o usuário já lembre a senha */}
       <p className="text-center text-sm text-[#5D6475]">
         Lembrou a senha?{' '}
-        <Link href="/login" className="font-semibold text-[#005BFF] hover:text-[#7B2CFF] transition-colors">
+        <Link href="/login" className="font-semibold text-[#0B1020] hover:text-[#168F9C] transition-colors">
           Voltar ao login
         </Link>
       </p>

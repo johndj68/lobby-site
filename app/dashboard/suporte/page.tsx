@@ -52,31 +52,31 @@ export default async function SuportePage() {
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Canal 1: Chat com o técnico — redireciona para /dashboard/mensagens */}
             <Link href="/dashboard/mensagens"
-              className="group flex flex-col gap-3 rounded-2xl border border-[#E3E7F0] bg-white p-5 transition-all hover:border-[#005BFF]/30 hover:shadow-[0_4px_20px_rgba(0,91,255,0.08)]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#005BFF]/10">
-                <MessageCircle size={18} className="text-[#005BFF]" aria-hidden="true" />
+              className="group flex flex-col gap-3 rounded-2xl border border-[#E3E7F0] bg-white p-5 transition-all hover:border-[#0B1020]/30 hover:shadow-[0_4px_20px_rgba(11,16,32,0.08)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B1020]/10">
+                <MessageCircle size={18} className="text-[#0B1020]" aria-hidden="true" />
               </div>
               <div>
                 <p className="font-bold text-[#0B1020]">Chat com o técnico</p>
                 <p className="mt-0.5 text-xs text-[#5D6475]">Fale diretamente com a equipe responsável pelo seu projeto.</p>
               </div>
               {/* Label de ação com seta — cor azul */}
-              <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-[#005BFF]">
+              <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-[#0B1020]">
                 Abrir mensagens <ArrowRight size={11} aria-hidden="true" />
               </span>
             </Link>
 
             {/* Canal 2: E-mail */}
             <a href={`mailto:${SUPPORT_EMAIL}`}
-              className="group flex flex-col gap-3 rounded-2xl border border-[#E3E7F0] bg-white p-5 transition-all hover:border-[#7B2CFF]/30 hover:shadow-[0_4px_20px_rgba(123,44,255,0.08)]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7B2CFF]/10">
-                <Mail size={18} className="text-[#7B2CFF]" aria-hidden="true" />
+              className="group flex flex-col gap-3 rounded-2xl border border-[#E3E7F0] bg-white p-5 transition-all hover:border-[#168F9C]/30 hover:shadow-[0_4px_20px_rgba(22,143,156,0.08)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#168F9C]/10">
+                <Mail size={18} className="text-[#168F9C]" aria-hidden="true" />
               </div>
               <div>
                 <p className="font-bold text-[#0B1020]">E-mail</p>
                 <p className="mt-0.5 text-xs text-[#5D6475]">Envie um e-mail e responderemos em até 24h úteis.</p>
               </div>
-              <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-[#7B2CFF]">
+              <span className="mt-auto inline-flex items-center gap-1 text-xs font-bold text-[#168F9C]">
                 {SUPPORT_EMAIL} <ArrowRight size={11} aria-hidden="true" />
               </span>
             </a>
@@ -115,16 +115,16 @@ export default async function SuportePage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {/* Atalho para a página de projetos */}
             <Link href="/dashboard/projetos"
-              className="flex items-center gap-3 rounded-xl border border-[#E3E7F0] bg-white px-4 py-3 transition-colors hover:border-[#005BFF]/30">
-              <FolderKanban size={16} className="shrink-0 text-[#005BFF]" aria-hidden="true" />
+              className="flex items-center gap-3 rounded-xl border border-[#E3E7F0] bg-white px-4 py-3 transition-colors hover:border-[#0B1020]/30">
+              <FolderKanban size={16} className="shrink-0 text-[#0B1020]" aria-hidden="true" />
               <span className="text-sm font-medium text-[#0B1020]">Ver meus projetos</span>
               {/* Seta decorativa alinhada à direita */}
               <ArrowRight size={13} className="ml-auto text-[#94A3B8]" aria-hidden="true" />
             </Link>
             {/* Atalho para a página de mensagens */}
             <Link href="/dashboard/mensagens"
-              className="flex items-center gap-3 rounded-xl border border-[#E3E7F0] bg-white px-4 py-3 transition-colors hover:border-[#005BFF]/30">
-              <MessageCircle size={16} className="shrink-0 text-[#005BFF]" aria-hidden="true" />
+              className="flex items-center gap-3 rounded-xl border border-[#E3E7F0] bg-white px-4 py-3 transition-colors hover:border-[#0B1020]/30">
+              <MessageCircle size={16} className="shrink-0 text-[#0B1020]" aria-hidden="true" />
               <span className="text-sm font-medium text-[#0B1020]">Minhas mensagens</span>
               <ArrowRight size={13} className="ml-auto text-[#94A3B8]" aria-hidden="true" />
             </Link>
@@ -141,7 +141,7 @@ export default async function SuportePage() {
               <div key={i} className="rounded-2xl border border-[#E3E7F0] bg-white p-4">
                 <div className="flex items-start gap-3">
                   {/* Ícone de interrogação — identifica visualmente cada item do FAQ */}
-                  <HelpCircle size={15} className="mt-0.5 shrink-0 text-[#005BFF]" aria-hidden="true" />
+                  <HelpCircle size={15} className="mt-0.5 shrink-0 text-[#0B1020]" aria-hidden="true" />
                   <div>
                     {/* Pergunta em negrito */}
                     <p className="text-sm font-bold text-[#0B1020]">{item.q}</p>

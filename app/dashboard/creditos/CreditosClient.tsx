@@ -94,7 +94,7 @@ export default function CreditosClient({ user, initialWallet, packages, initialT
         {/* ── TÍTULO DA PÁGINA ───────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <h1 className="flex items-center gap-2 text-3xl font-bold text-[#0B1020]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-            <Coins size={26} className="text-[#005BFF]" aria-hidden="true" />
+            <Coins size={26} className="text-[#0B1020]" aria-hidden="true" />
             Meus créditos
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[#5D6475]">
@@ -106,11 +106,11 @@ export default function CreditosClient({ user, initialWallet, packages, initialT
         {/* Quatro métricas principais: saldo, comprados, usados e última movimentação */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" role="list" aria-label="Resumo de créditos">
           {[
-            { icon: Wallet,      label: 'Saldo disponível',   value: formatCredits(balance),   color: '#005BFF', bg: 'rgba(0,91,255,0.10)'   },
+            { icon: Wallet,      label: 'Saldo disponível',   value: formatCredits(balance),   color: '#0B1020', bg: 'rgba(11,16,32,0.10)'   },
             { icon: TrendingUp,  label: 'Créditos comprados', value: formatCredits(purchased), color: '#10B981', bg: 'rgba(16,185,129,0.10)' },
             { icon: TrendingDown,label: 'Créditos usados',    value: formatCredits(spent),     color: '#F59E0B', bg: 'rgba(245,158,11,0.10)' },
             // Última movimentação: exibe tempo relativo da transação mais recente
-            { icon: Clock,       label: 'Última movimentação',value: lastTx ? timeAgo(lastTx.created_at) : 'Nenhuma', color: '#7B2CFF', bg: 'rgba(123,44,255,0.10)' },
+            { icon: Clock,       label: 'Última movimentação',value: lastTx ? timeAgo(lastTx.created_at) : 'Nenhuma', color: '#168F9C', bg: 'rgba(22,143,156,0.10)' },
           ].map(({ icon: Icon, label, value, color, bg }, i) => (
             <motion.article key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 + i * 0.05 }}
               className="rounded-3xl border border-[#E3E7F0] bg-white p-5 shadow-[0_8px_40px_rgba(11,16,32,0.06)]" role="listitem">
@@ -228,8 +228,8 @@ export default function CreditosClient({ user, initialWallet, packages, initialT
                     <div key={`purchase-${p.id}`} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-start gap-3">
                         {/* Ícone de carrinho para compra de pacote */}
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#005BFF]/10">
-                          <ShoppingCart size={15} className="text-[#005BFF]" aria-hidden="true" />
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0B1020]/10">
+                          <ShoppingCart size={15} className="text-[#0B1020]" aria-hidden="true" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-[#0B1020]">Compra de {formatCredits(p.credits_amount)}</p>

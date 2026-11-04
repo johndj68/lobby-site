@@ -220,7 +220,7 @@ export default function EditorClient({ draft, vendorName, completion, reviewByTa
               const Icon = t.icon
               return (
                 <button key={t.id} type="button" onClick={() => setActiveTab(t.id)} aria-current={isActive ? 'page' : undefined}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005BFF]"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B1020]"
                   style={{ background: isActive ? colors.backgroundAlt : 'transparent', color: isActive ? colors.primary : colors.textSecondary }}>
                   <Icon size={14} aria-hidden="true" />
                   {t.label}

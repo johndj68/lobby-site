@@ -242,12 +242,12 @@ describe('getFinanceTypeStyle', () => {
     expect(s.bg).toContain('rgba')
   })
 
-  it('projeto tem cor azul', () => {
-    expect(getFinanceTypeStyle('projeto').color).toBe('#005BFF')
+  it('projeto tem cor preta (marca)', () => {
+    expect(getFinanceTypeStyle('projeto').color).toBe('#0B1020')
   })
 
-  it('ebook tem cor roxa', () => {
-    expect(getFinanceTypeStyle('ebook').color).toBe('#7B2CFF')
+  it('ebook tem cor petróleo', () => {
+    expect(getFinanceTypeStyle('ebook').color).toBe('#168F9C')
   })
 })
 

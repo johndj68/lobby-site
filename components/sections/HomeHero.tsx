@@ -54,7 +54,7 @@ export default function HomeHero() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
               className="text-xs font-bold tracking-widest uppercase mb-4"
-              style={{ color: '#005BFF', letterSpacing: '0.18em' }}
+              style={{ color: '#0B1020', letterSpacing: '0.18em' }}
             >
               Tecnologia que gera resultados
             </motion.p>
@@ -67,7 +67,7 @@ export default function HomeHero() {
               Tecnologia{' '}
               <span
                 style={{
-                  background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                  background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -89,14 +89,14 @@ export default function HomeHero() {
             <div className="flex flex-col sm:flex-row gap-3 mb-7">
               <Link
                 href="/contato"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 lobby-gradient text-white font-semibold rounded-xl hover:opacity-90 transition-opacity text-sm shadow-lg shadow-[#005BFF]/15"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 lobby-gradient text-white font-semibold rounded-xl hover:opacity-90 transition-opacity text-sm shadow-lg shadow-[#0B1020]/15"
               >
                 Solicitar diagnóstico gratuito
                 <ArrowRight size={15} />
               </Link>
               <Link
                 href="/solucoes"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 border border-[#E3E7F0] text-[#0B1020] font-semibold rounded-xl hover:border-[#005BFF]/30 hover:bg-[#F7F8FC] transition-all text-sm"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 border border-[#E3E7F0] text-[#0B1020] font-semibold rounded-xl hover:border-[#0B1020]/30 hover:bg-[#F7F8FC] transition-all text-sm"
               >
                 Conhecer soluções
               </Link>
@@ -129,7 +129,7 @@ export default function HomeHero() {
               {/* Anel externo tracejado girando lentamente (22s de rotação) */}
               <div
                 className="absolute inset-0 rounded-full border-2 border-dashed opacity-20 animate-spin"
-                style={{ borderColor: '#005BFF', animationDuration: '22s' }}
+                style={{ borderColor: '#0B1020', animationDuration: '22s' }}
               />
 
               {/* Anel intermediário estático */}
@@ -138,13 +138,13 @@ export default function HomeHero() {
               {/* Brilho interno central com gradiente azul/roxo */}
               <div
                 className="absolute inset-[32%] rounded-full opacity-[0.07]"
-                style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+                style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
               />
 
               {/* Logo central dentro de card branco arredondado */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <Link href="/" className="inline-flex items-center justify-center">
-                  <div className="w-[136px] h-[136px] sm:w-[156px] sm:h-[156px] lg:w-[180px] lg:h-[180px] xl:w-[200px] xl:h-[200px] rounded-3xl overflow-hidden flex items-center justify-center bg-white shadow-xl shadow-[#005BFF]/10 border border-[#E3E7F0]">
+                  <div className="w-[136px] h-[136px] sm:w-[156px] sm:h-[156px] lg:w-[180px] lg:h-[180px] xl:w-[200px] xl:h-[200px] rounded-3xl overflow-hidden flex items-center justify-center bg-white shadow-xl shadow-[#0B1020]/10 border border-[#E3E7F0]">
                     <Image
                       src="/logorgb.png"
                       alt="Logo Lobby Rgb"
@@ -171,7 +171,7 @@ export default function HomeHero() {
                 >
                   {/* Card quadrado com ícone azul */}
                   <div className="w-11 h-11 sm:w-12 sm:h-12 xl:w-14 xl:h-14 rounded-2xl bg-white border border-[#E3E7F0] shadow-lg flex items-center justify-center">
-                    <Icon size={19} style={{ color: '#005BFF' }} />
+                    <Icon size={19} style={{ color: '#0B1020' }} />
                   </div>
                   {/* Rótulo visível apenas em sm+ */}
                   <span className="hidden sm:block text-[9px] font-semibold text-[#5D6475] whitespace-nowrap leading-none">
@@ -189,7 +189,7 @@ export default function HomeHero() {
                 className="absolute -left-2 sm:-left-5 lg:-left-8 xl:-left-10 bottom-[16%] bg-white rounded-2xl border border-[#E3E7F0] shadow-xl px-4 py-3 min-w-[132px]"
               >
                 <p className="text-xs text-[#5D6475] mb-0.5">Projetos entregues</p>
-                <p className="text-2xl font-bold text-[#005BFF]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                <p className="text-2xl font-bold text-[#0B1020]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                   +120
                 </p>
               </motion.div>
@@ -203,7 +203,7 @@ export default function HomeHero() {
                 className="absolute -right-2 sm:-right-5 lg:-right-8 xl:-right-10 top-[16%] bg-white rounded-2xl border border-[#E3E7F0] shadow-xl px-4 py-3 min-w-[120px]"
               >
                 <p className="text-xs text-[#5D6475] mb-0.5">Satisfação</p>
-                <p className="text-2xl font-bold text-[#7B2CFF]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                <p className="text-2xl font-bold text-[#168F9C]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                   +98%
                 </p>
               </motion.div>
@@ -235,7 +235,7 @@ export default function HomeHero() {
                   className="text-2xl sm:text-3xl font-bold mb-0.5"
                   style={{
                     fontFamily: 'Space Grotesk, sans-serif',
-                    background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                    background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',

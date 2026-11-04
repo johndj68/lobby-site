@@ -23,8 +23,8 @@ const PHASE_STATUS_OPTIONS: { value: ProjectPhaseStatus; label: string }[] = [
   { value: 'bloqueado',          label: 'Bloqueado'          },
 ]
 
-const inputClass = 'h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50'
-const textareaClass = 'w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50'
+const inputClass = 'h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50'
+const textareaClass = 'w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50'
 
 export default function CurrentPhaseEditor({ value, onChange, selectedPhase, onClose }: Props) {
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -147,7 +147,7 @@ export default function CurrentPhaseEditor({ value, onChange, selectedPhase, onC
         <label className="flex items-center gap-2.5 text-xs font-medium text-white/60">
           <input type="checkbox" checked={phase.visibleToClient ?? true}
             onChange={e => updatePhase({ visibleToClient: e.target.checked })}
-            className="h-4 w-4 accent-[#005BFF]" />
+            className="h-4 w-4 accent-[#0B1020]" />
           Visível para o cliente
         </label>
 
@@ -205,7 +205,7 @@ export default function CurrentPhaseEditor({ value, onChange, selectedPhase, onC
               <input type="text" placeholder="Título (opcional)" value={linkTitle} onChange={e => setLinkTitle(e.target.value)} className={inputClass} />
               <input type="url" placeholder="https://..." value={linkUrl} onChange={e => setLinkUrl(e.target.value)} className={inputClass} />
               <button type="button" onClick={addLink}
-                className="w-full rounded-lg bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] py-1.5 text-[11px] font-bold text-white">
+                className="w-full rounded-lg bg-gradient-to-r from-[#0B1020] to-[#168F9C] py-1.5 text-[11px] font-bold text-white">
                 Adicionar link
               </button>
             </div>

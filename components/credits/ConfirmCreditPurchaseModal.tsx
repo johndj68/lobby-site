@@ -86,7 +86,7 @@ export default function ConfirmCreditPurchaseModal({ purchase, onClose, onConfir
             </label>
             <input id="credit-confirm-ref" type="text" placeholder="Ex: código Pix, nº do comprovante" value={reference}
               onChange={e => setReference(e.target.value)} disabled={saving}
-              className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50" />
+              className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50" />
           </div>
 
           <div>
@@ -95,7 +95,7 @@ export default function ConfirmCreditPurchaseModal({ purchase, onClose, onConfir
             </label>
             <textarea id="credit-confirm-notes" rows={3} placeholder="Ex: Cliente pagou via Pix direto, confirmado por print no WhatsApp."
               value={notes} onChange={e => setNotes(e.target.value)} disabled={saving}
-              className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50" />
+              className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50" />
           </div>
 
           {error && <p role="alert" className="rounded-xl bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400">{error}</p>}

@@ -61,8 +61,8 @@ export default function MensalidadeSubscribeCard({ project }: Props) {
       <div className="rounded-2xl border border-[#93C5FD]/40 bg-[#EFF6FF] p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#005BFF]/12">
-              <RefreshCw size={18} className="text-[#005BFF]" aria-hidden="true" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0B1020]/12">
+              <RefreshCw size={18} className="text-[#0B1020]" aria-hidden="true" />
             </div>
             <div>
               <p className="text-sm font-bold text-[#0B1020]">Mensalidade deste projeto</p>
@@ -76,7 +76,7 @@ export default function MensalidadeSubscribeCard({ project }: Props) {
             </span>
           ) : (
             <button type="button" onClick={handleSubscribe} disabled={loading}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-4 py-2.5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 disabled:opacity-60">
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-4 py-2.5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 disabled:opacity-60">
               {loading ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <RefreshCw size={14} aria-hidden="true" />}
               {loading ? 'Redirecionando...' : 'Assinar mensalidade'}
             </button>

@@ -253,11 +253,11 @@ export default function AdminShell({ user, profile, children }: AdminShellProps)
         <div className="flex flex-col gap-1 border-b border-white/[0.08] px-6 py-5">
           <Link href="/admin">
             <Image
-              src="/logowhite.svg"
+              src="/LOBBY-servicos-dark-transparente.svg"
               alt="LOBBY"
-              width={176}
-              height={88}
-              className="h-[56px] w-auto object-contain"
+              width={212}
+              height={106}
+              className="h-[68px] w-auto object-contain"
               priority
             />
           </Link>
@@ -286,14 +286,14 @@ export default function AdminShell({ user, profile, children }: AdminShellProps)
                   aria-current={isActive ? 'page' : undefined}
                   className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                     isActive
-                      ? 'bg-[#005BFF]/20 text-[#60A5FA]'   // item ativo: azul claro
+                      ? 'bg-[#0B1020]/20 text-[#60A5FA]'   // item ativo: azul claro
                       : 'text-white/45 hover:bg-white/[0.04] hover:text-white/85'
                   }`}
                 >
                   {/* Barra azul vertical à esquerda para indicar item ativo */}
                   {isActive && (
                     <span
-                      className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#005BFF]"
+                      className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#0B1020]"
                       aria-hidden="true"
                     />
                   )}
@@ -318,7 +318,7 @@ export default function AdminShell({ user, profile, children }: AdminShellProps)
             {/* Avatar com inicial e gradiente LOBBY */}
             <div
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-              style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+              style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
             >
               {initial}
             </div>
@@ -387,7 +387,7 @@ export default function AdminShell({ user, profile, children }: AdminShellProps)
             {/* Botão principal: nova solicitação com gradiente azul/roxo */}
             <Link
               href="/admin/solicitacoes"
-              className="hidden items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-3 py-1.5 text-xs font-bold text-white shadow-[0_4px_12px_rgba(0,91,255,0.30)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(0,91,255,0.40)] sm:flex"
+              className="hidden items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-3 py-1.5 text-xs font-bold text-white shadow-[0_4px_12px_rgba(11,16,32,0.30)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(11,16,32,0.40)] sm:flex"
             >
               <Plus size={13} aria-hidden="true" />
               Nova solicitação

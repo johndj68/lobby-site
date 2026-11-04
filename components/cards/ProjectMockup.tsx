@@ -34,15 +34,15 @@ function FinanceMockup() {
             <div className="h-2 w-24 rounded-full bg-[#0B1020]/20" />
             <div className="h-1.5 w-16 rounded-full bg-[#0B1020]/10" />
           </div>
-          <div className="rounded-lg bg-[#005BFF]/10 px-2 py-1 text-[9px] font-bold text-[#005BFF]">
+          <div className="rounded-lg bg-[#0B1020]/10 px-2 py-1 text-[9px] font-bold text-[#0B1020]">
             Mai 2025
           </div>
         </div>
         <div className="mb-3 grid grid-cols-3 gap-1.5">
           {[
-            { label: 'Receita',  accent: '#005BFF', barW: 'w-14' },
-            { label: 'Despesas', accent: '#7B2CFF', barW: 'w-10' },
-            { label: 'Lucro',    accent: '#00A3FF', barW: 'w-12' },
+            { label: 'Receita',  accent: '#0B1020', barW: 'w-14' },
+            { label: 'Despesas', accent: '#168F9C', barW: 'w-10' },
+            { label: 'Lucro',    accent: '#5CB1BA', barW: 'w-12' },
           ].map(({ label, accent, barW }) => (
             <div key={label} className="rounded-xl bg-[#F7F8FC] p-2">
               <div className="mb-1.5 h-1.5 w-10 rounded-full bg-[#5D6475]/20" />
@@ -57,13 +57,13 @@ function FinanceMockup() {
                 <div
                   key={i}
                   className="flex-1 rounded-sm"
-                  style={{ height: `${h}%`, background: i % 2 === 0 ? 'rgba(0,91,255,0.48)' : 'rgba(123,44,255,0.42)' }}
+                  style={{ height: `${h}%`, background: i % 2 === 0 ? 'rgba(11,16,32,0.48)' : 'rgba(22,143,156,0.42)' }}
                 />
               ))}
             </div>
           </div>
           <div className="flex items-center justify-center rounded-xl bg-[#F7F8FC]">
-            <div className="h-14 w-14 rounded-full border-[9px] border-[#7B2CFF]/30 border-r-[#005BFF] border-t-[#00A3FF]" />
+            <div className="h-14 w-14 rounded-full border-[9px] border-[#168F9C]/30 border-r-[#0B1020] border-t-[#5CB1BA]" />
           </div>
         </div>
       </div>
@@ -81,7 +81,7 @@ function AutomationMockup() {
         <div className="mb-3 grid grid-cols-5 gap-1">
           {stages.map((stage, i) => (
             <div key={stage} className="rounded-lg bg-[#F7F8FC] p-1.5">
-              <div className="mb-1.5 h-1 w-full rounded-full" style={{ background: `rgba(123,44,255,${0.14 + i * 0.06})` }} />
+              <div className="mb-1.5 h-1 w-full rounded-full" style={{ background: `rgba(22,143,156,${0.14 + i * 0.06})` }} />
               <p className="mb-1.5 text-[8px] font-bold leading-none text-[#0B1020]">{stage}</p>
               <div className="space-y-1">
                 <div className="h-5 rounded-md bg-white shadow-sm" />
@@ -95,7 +95,7 @@ function AutomationMockup() {
             <div key={item} className="flex flex-col items-center gap-0.5">
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-full border"
-                style={{ borderColor: 'rgba(123,44,255,0.22)', background: 'rgba(123,44,255,0.08)' }}
+                style={{ borderColor: 'rgba(22,143,156,0.22)', background: 'rgba(22,143,156,0.08)' }}
               />
               <span className="text-[7px] font-medium text-[#5D6475]">{item}</span>
             </div>
@@ -113,7 +113,7 @@ function PortalMockup() {
     <div className="absolute inset-0 bg-gradient-to-br from-[#EFF6FF] via-[#F7F8FC] to-[#F5F3FF]">
       <div className="absolute inset-4 overflow-hidden rounded-2xl border border-white/75 bg-white/80 shadow-lg backdrop-blur">
         <div className="flex h-full">
-          <div className="flex w-10 flex-col items-center gap-2.5 bg-gradient-to-b from-[#005BFF] to-[#0B2070] py-3">
+          <div className="flex w-10 flex-col items-center gap-2.5 bg-gradient-to-b from-[#0B1020] to-[#0B2070] py-3">
             {Array.from({ length: 5 }).map((_, n) => (
               <div key={n} className="h-5 w-5 rounded-md bg-white/15" />
             ))}
@@ -124,12 +124,12 @@ function PortalMockup() {
                 <div className="h-2 w-20 rounded-full bg-[#0B1020]/20" />
                 <div className="h-1.5 w-32 rounded-full bg-[#5D6475]/15" />
               </div>
-              <div className="h-7 w-7 rounded-full bg-[#005BFF]/20" />
+              <div className="h-7 w-7 rounded-full bg-[#0B1020]/20" />
             </div>
             <div className="mb-3 grid grid-cols-4 gap-1.5">
               {items.map((item) => (
                 <div key={item} className="rounded-xl bg-[#F7F8FC] p-2">
-                  <div className="mb-2 h-6 w-6 rounded-lg bg-[#005BFF]/10" />
+                  <div className="mb-2 h-6 w-6 rounded-lg bg-[#0B1020]/10" />
                   <div className="h-1.5 w-10 rounded-full bg-[#0B1020]/20" />
                   <div className="mt-1 h-1 w-7 rounded-full bg-[#5D6475]/15" />
                 </div>
@@ -138,7 +138,7 @@ function PortalMockup() {
             <div className="rounded-xl bg-[#F7F8FC] px-3 py-2">
               <div className="flex items-center justify-between">
                 <div className="h-1.5 w-20 rounded-full bg-[#0B1020]/20" />
-                <div className="h-4 w-16 rounded-full" style={{ background: 'rgba(123,44,255,0.12)' }} />
+                <div className="h-4 w-16 rounded-full" style={{ background: 'rgba(22,143,156,0.12)' }} />
               </div>
             </div>
           </div>
@@ -159,7 +159,7 @@ function ManagementMockup() {
         <div className="mb-3 flex items-center justify-between">
           <div className="h-2 w-28 rounded-full bg-[#0B1020]/20" />
           <div className="flex gap-1.5">
-            {['bg-[#7B2CFF]/20', 'bg-[#005BFF]/20', 'bg-[#10B981]/20'].map((c, i) => (
+            {['bg-[#168F9C]/20', 'bg-[#0B1020]/20', 'bg-[#10B981]/20'].map((c, i) => (
               <div key={i} className={`h-5 w-5 rounded-full ${c}`} />
             ))}
           </div>
@@ -181,7 +181,7 @@ function ManagementMockup() {
                     <div className="mb-1 h-1.5 w-full rounded-full bg-[#0B1020]/15" />
                     <div
                       className="h-1 rounded-full"
-                      style={{ width: `${55 + ci * 14 + ti * 8}%`, background: ci === 0 ? 'rgba(123,44,255,0.30)' : ci === 1 ? 'rgba(0,91,255,0.30)' : 'rgba(16,185,129,0.30)' }}
+                      style={{ width: `${55 + ci * 14 + ti * 8}%`, background: ci === 0 ? 'rgba(22,143,156,0.30)' : ci === 1 ? 'rgba(11,16,32,0.30)' : 'rgba(16,185,129,0.30)' }}
                     />
                   </div>
                 ))}
@@ -208,8 +208,8 @@ function SecurityMockup() {
       <div className="absolute inset-4 rounded-2xl border border-white/75 bg-white/80 p-4 shadow-lg backdrop-blur">
         {/* Shield header */}
         <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#005BFF]/15 to-[#7B2CFF]/15">
-            <div className="h-6 w-5 rounded-t-full border-2 border-[#005BFF]/60" style={{ borderBottom: '2px solid transparent', borderRadius: '50% 50% 40% 40%' }} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0B1020]/15 to-[#168F9C]/15">
+            <div className="h-6 w-5 rounded-t-full border-2 border-[#0B1020]/60" style={{ borderBottom: '2px solid transparent', borderRadius: '50% 50% 40% 40%' }} />
           </div>
           <div>
             <div className="h-2 w-24 rounded-full bg-[#0B1020]/20" />
@@ -221,10 +221,10 @@ function SecurityMockup() {
         </div>
         {/* Progress ring area */}
         <div className="mb-3 flex gap-2">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-[#E3E7F0] border-t-[#005BFF] border-r-[#7B2CFF]" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-[#E3E7F0] border-t-[#0B1020] border-r-[#168F9C]" />
           <div className="flex-1 space-y-1.5">
             <div className="h-1.5 rounded-full bg-[#E3E7F0]">
-              <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-[#005BFF] to-[#7B2CFF]" />
+              <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-[#0B1020] to-[#168F9C]" />
             </div>
             <div className="h-1.5 rounded-full bg-[#E3E7F0]">
               <div className="h-full w-[45%] rounded-full bg-[#F59E0B]/60" />
@@ -266,8 +266,8 @@ function ReportsMockup() {
             <div className="h-1.5 w-28 rounded-full bg-[#5D6475]/15" />
           </div>
           <div className="flex gap-1.5">
-            <div className="rounded-lg bg-[#00A3FF]/12 px-2 py-1 text-[8px] font-bold text-[#007ACC]">Auto</div>
-            <div className="rounded-lg bg-[#7B2CFF]/10 px-2 py-1 text-[8px] font-bold text-[#7B2CFF]">PDF</div>
+            <div className="rounded-lg bg-[#5CB1BA]/14 px-2 py-1 text-[8px] font-bold text-[#168F9C]">Auto</div>
+            <div className="rounded-lg bg-[#168F9C]/10 px-2 py-1 text-[8px] font-bold text-[#168F9C]">PDF</div>
           </div>
         </div>
         {/* Main chart */}
@@ -292,7 +292,7 @@ function ReportsMockup() {
           {['Receita', 'Custo', 'ROI'].map((label, i) => (
             <div key={label} className="rounded-lg bg-[#F7F8FC] p-1.5">
               <div className="mb-1 h-1.5 w-10 rounded-full bg-[#0B1020]/15" />
-              <div className="h-2 rounded" style={{ background: `rgba(0,91,255,${0.20 + i * 0.08})` }} />
+              <div className="h-2 rounded" style={{ background: `rgba(11,16,32,${0.20 + i * 0.08})` }} />
             </div>
           ))}
         </div>
@@ -304,12 +304,12 @@ function ReportsMockup() {
 /* ── Default / Generic ──────────────────────────────────────────── */
 function DefaultMockup({ category }: { category: string }) {
   const accentMap: Record<string, string> = {
-    'Software':       '#005BFF',
-    'Automação':      '#7B2CFF',
-    'Dados':          '#00A3FF',
-    'Cibersegurança': '#005BFF',
+    'Software':       '#0B1020',
+    'Automação':      '#168F9C',
+    'Dados':          '#5CB1BA',
+    'Cibersegurança': '#0B1020',
   }
-  const accent = accentMap[category] ?? '#005BFF'
+  const accent = accentMap[category] ?? '#0B1020'
   return (
     <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 65% 40%, ${accent}18, transparent 65%)` }}>
       <div className="absolute inset-0 bg-gradient-to-br from-[#EFF6FF] to-[#F5F3FF] opacity-80" />

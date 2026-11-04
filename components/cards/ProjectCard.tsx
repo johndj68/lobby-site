@@ -35,7 +35,7 @@ export default function ProjectCard({ project, index = 0 }: ProjectCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.45, delay: index * 0.1 }}
-      className="group flex flex-col overflow-hidden bg-white/90 transition-all duration-300 hover:-translate-y-2 hover:border-[#005BFF]/25 hover:shadow-[0_24px_80px_rgba(0,91,255,0.12)]"
+      className="group flex flex-col overflow-hidden bg-white/90 transition-all duration-300 hover:-translate-y-2 hover:border-[#0B1020]/25 hover:shadow-[0_24px_80px_rgba(11,16,32,0.12)]"
       style={{
         borderRadius: borderRadius['3xl'],
         border: `1px solid ${colors.border}`,
@@ -100,7 +100,7 @@ export default function ProjectCard({ project, index = 0 }: ProjectCardProps) {
         {/* Impact pill — tune bg/color/border here */}
         {/* Pílula de impacto: exibe o resultado de negócio do projeto (ex: "30% de redução de custo") */}
         {project.impact && (
-          <div className="mb-4 inline-flex items-center gap-1.5 self-start rounded-full border border-[#005BFF]/15 bg-[#005BFF]/[0.07] px-3 py-1.5 text-xs font-semibold text-[#005BFF]">
+          <div className="mb-4 inline-flex items-center gap-1.5 self-start rounded-full border border-[#0B1020]/15 bg-[#0B1020]/[0.07] px-3 py-1.5 text-xs font-semibold text-[#0B1020]">
             <TrendingUp size={11} aria-hidden="true" />
             {project.impact}
           </div>
@@ -129,7 +129,7 @@ export default function ProjectCard({ project, index = 0 }: ProjectCardProps) {
         {/* CTA — link para a página de detalhes do projeto */}
         <Link
           href={`/projetos/${project.slug}`}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all hover:text-[#7B2CFF]"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold transition-all hover:text-[#168F9C]"
           style={{ color: colors.primary }}
         >
           Ver projeto

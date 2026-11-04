@@ -32,8 +32,8 @@ const QUICK_BENEFITS = [
 /* Barra de métricas abaixo dos benefícios rápidos.
    color/colorBg controlam a cor do ícone e o fundo do ícone respectivamente. */
 const METRICS = [
-  { icon: Briefcase,  value: '+120', label: 'Projetos entregues', desc: 'com sucesso',          color: '#005BFF', colorBg: 'rgba(0,91,255,0.10)'   },
-  { icon: Users,      value: '+80',  label: 'Empresas atendidas',  desc: 'em diversos segmentos', color: '#7B2CFF', colorBg: 'rgba(123,44,255,0.10)' },
+  { icon: Briefcase,  value: '+120', label: 'Projetos entregues', desc: 'com sucesso',          color: '#0B1020', colorBg: 'rgba(11,16,32,0.10)'   },
+  { icon: Users,      value: '+80',  label: 'Empresas atendidas',  desc: 'em diversos segmentos', color: '#168F9C', colorBg: 'rgba(22,143,156,0.10)' },
   { icon: TrendingUp, value: '+35%', label: 'Ganho de eficiência', desc: 'na operação',           color: '#F97316', colorBg: 'rgba(249,115,22,0.10)'  },
   { icon: Star,       value: '98%',  label: 'Satisfação',          desc: 'dos clientes',          color: '#16A34A', colorBg: 'rgba(22,163,74,0.10)'   },
 ]
@@ -91,18 +91,18 @@ export default function SolutionsHero() {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
 
         {/* Zonas de gradiente radial */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(0,91,255,0.08),transparent_32%),radial-gradient(circle_at_86%_34%,rgba(123,44,255,0.16),transparent_38%),radial-gradient(circle_at_70%_94%,rgba(0,163,255,0.12),transparent_42%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(11,16,32,0.08),transparent_32%),radial-gradient(circle_at_86%_34%,rgba(22,143,156,0.16),transparent_38%),radial-gradient(circle_at_70%_94%,rgba(28,36,64,0.12),transparent_42%)]" />
 
         {/* Grid de pontos semitransparentes */}
-        <div className="absolute inset-0 opacity-[0.35] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
+        <div className="absolute inset-0 opacity-[0.35] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
 
         {/* Máscara que clareia o lado esquerdo para garantir legibilidade do texto */}
         <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-[#F7F8FC] via-[#F7F8FC]/88 to-transparent lg:w-[56%]" />
 
         {/* Blobs coloridos com desfoque — efeito de profundidade */}
-        <div className="absolute -right-44 top-16 h-[640px] w-[640px] rounded-full bg-[#7B2CFF]/[0.17] blur-3xl" />
-        <div className="absolute right-16 -bottom-40 h-[560px] w-[560px] rounded-full bg-[#005BFF]/[0.13] blur-3xl" />
-        <div className="absolute -left-48 bottom-10 h-[460px] w-[460px] rounded-full bg-[#00A3FF]/[0.08] blur-3xl" />
+        <div className="absolute -right-44 top-16 h-[640px] w-[640px] rounded-full bg-[#168F9C]/[0.17] blur-3xl" />
+        <div className="absolute right-16 -bottom-40 h-[560px] w-[560px] rounded-full bg-[#0B1020]/[0.13] blur-3xl" />
+        <div className="absolute -left-48 bottom-10 h-[460px] w-[460px] rounded-full bg-[#1C2440]/[0.08] blur-3xl" />
 
         {/* Ondas SVG decorativas — visíveis apenas em md+ */}
         <svg
@@ -113,9 +113,9 @@ export default function SolutionsHero() {
         >
           <defs>
             <linearGradient id="solHeroWave" x1="0" y1="0" x2="980" y2="620" gradientUnits="userSpaceOnUse">
-              <stop offset="0%"   stopColor="#00A3FF" stopOpacity="0.04" />
-              <stop offset="45%"  stopColor="#005BFF" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="#7B2CFF" stopOpacity="0.30" />
+              <stop offset="0%"   stopColor="#1C2440" stopOpacity="0.04" />
+              <stop offset="45%"  stopColor="#0B1020" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#168F9C" stopOpacity="0.30" />
             </linearGradient>
           </defs>
           {/* Três curvas com espessura e opacidade decrescentes */}
@@ -125,7 +125,7 @@ export default function SolutionsHero() {
         </svg>
 
         {/* Feixe de luz suave na base da seção */}
-        <div className="absolute -bottom-32 left-1/2 h-48 w-[120%] -translate-x-1/2 -rotate-[3deg] bg-gradient-to-r from-[#005BFF]/[0.09] via-[#7B2CFF]/[0.15] to-[#00A3FF]/[0.09] blur-2xl" />
+        <div className="absolute -bottom-32 left-1/2 h-48 w-[120%] -translate-x-1/2 -rotate-[3deg] bg-gradient-to-r from-[#0B1020]/[0.09] via-[#168F9C]/[0.15] to-[#1C2440]/[0.09] blur-2xl" />
       </div>
 
       <Container className="relative z-10">
@@ -140,7 +140,7 @@ export default function SolutionsHero() {
             transition={{ duration: 0.55, ease: 'easeOut' }}
           >
             {/* Badge de identificação da seção */}
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#005BFF]/20 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#005BFF] shadow-sm backdrop-blur">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#0B1020]/20 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#0B1020] shadow-sm backdrop-blur">
               <Sparkles size={13} aria-hidden="true" />
               Soluções inteligentes
             </span>
@@ -153,7 +153,7 @@ export default function SolutionsHero() {
               Soluções para{' '}
               <span
                 style={{
-                  background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                  background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -164,7 +164,7 @@ export default function SolutionsHero() {
               e{' '}
               <span
                 style={{
-                  background: 'linear-gradient(135deg, #7B2CFF, #005BFF)',
+                  background: 'linear-gradient(135deg, #168F9C, #0B1020)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -186,7 +186,7 @@ export default function SolutionsHero() {
               {/* CTA primário — hover eleva o card (-translate-y-0.5) */}
               <Link
                 href="/contato"
-                className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)]"
+                className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)]"
               >
                 Falar com especialista
                 {/* Seta desliza para direita no hover */}
@@ -196,7 +196,7 @@ export default function SolutionsHero() {
               {/* CTA secundário — borda com backdrop-blur */}
               <Link
                 href="/projetos"
-                className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white/85 px-7 py-4 text-sm font-bold text-[#0B1020] shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+                className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white/85 px-7 py-4 text-sm font-bold text-[#0B1020] shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:text-[#0B1020]"
               >
                 Ver projetos
                 <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
@@ -214,10 +214,10 @@ export default function SolutionsHero() {
                   {/* Ícone com fundo em gradiente suave azul/roxo */}
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                    style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.10), rgba(123,44,255,0.10))' }}
+                    style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.10), rgba(22,143,156,0.10))' }}
                     aria-hidden="true"
                   >
-                    <Icon size={16} style={{ color: '#005BFF' }} />
+                    <Icon size={16} style={{ color: '#0B1020' }} />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[#0B1020]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
@@ -276,29 +276,29 @@ export default function SolutionsHero() {
             <div className="relative mx-auto hidden h-[520px] max-w-[520px] lg:block">
 
               {/* Anel orbital externo estático */}
-              <div className="absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#005BFF]/[0.09]" />
+              <div className="absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#0B1020]/[0.09]" />
 
               {/* Anel orbital interno tracejado girando devagar (32s) */}
               <div
-                className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-[#005BFF]/[0.20] animate-spin"
+                className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-[#0B1020]/[0.20] animate-spin"
                 style={{ animationDuration: '32s' }}
               />
 
               {/* Brilho interno pulsante (6s de ciclo) */}
               <div
-                className="absolute left-1/2 top-1/2 h-[240px] w-[240px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7B2CFF]/[0.09] blur-2xl animate-pulse motion-reduce:animate-none"
+                className="absolute left-1/2 top-1/2 h-[240px] w-[240px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#168F9C]/[0.09] blur-2xl animate-pulse motion-reduce:animate-none"
                 style={{ animationDuration: '6s' }}
               />
 
               {/* Card central com logo da LOBBY */}
               <div className="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-                <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white shadow-[0_30px_80px_rgba(0,91,255,0.20)]">
+                <div className="relative flex h-44 w-44 items-center justify-center rounded-3xl border border-[#E3E7F0] bg-white shadow-[0_30px_80px_rgba(11,16,32,0.20)]">
                   <Image
-                    src="/logohome.png"
+                    src="/LOBBY-light-transparente.svg"
                     alt="LOBBY"
-                    width={288}
-                    height={288}
-                    className="h-full w-full object-contain p-3"
+                    width={352}
+                    height={352}
+                    className="h-64 w-64 max-w-none translate-y-4 object-contain"
                     priority
                     quality={100}
                   />
@@ -317,19 +317,19 @@ export default function SolutionsHero() {
                     style={{ animationDelay: floatDelay }}
                   >
                     {/* Card com hover: muda sombra/borda sem mexer na posição */}
-                    <div className="group z-10 w-36 rounded-2xl border border-[#E3E7F0] bg-white/88 p-3.5 shadow-[0_8px_30px_rgba(11,16,32,0.08)] backdrop-blur transition-all duration-300 hover:border-[#005BFF]/25 hover:shadow-[0_14px_50px_rgba(0,91,255,0.14)]">
+                    <div className="group z-10 w-36 rounded-2xl border border-[#E3E7F0] bg-white/88 p-3.5 shadow-[0_8px_30px_rgba(11,16,32,0.08)] backdrop-blur transition-all duration-300 hover:border-[#0B1020]/25 hover:shadow-[0_14px_50px_rgba(11,16,32,0.14)]">
                       {/* Ícone com escala no hover */}
                       <div
                         className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
-                        style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.10), rgba(123,44,255,0.10))' }}
+                        style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.10), rgba(22,143,156,0.10))' }}
                         aria-hidden="true"
                       >
-                        <Icon size={17} style={{ color: '#005BFF' }} />
+                        <Icon size={17} style={{ color: '#0B1020' }} />
                       </div>
                       <p className="text-xs font-bold leading-snug text-[#0B1020]">{title}</p>
                       <p className="mt-1 text-[10px] leading-snug text-[#5D6475]">{desc}</p>
                       {/* Linha decorativa de separação em gradiente */}
-                      <div className="mt-2.5 h-0.5 w-8 rounded-full bg-gradient-to-r from-[#005BFF] to-[#7B2CFF]" />
+                      <div className="mt-2.5 h-0.5 w-8 rounded-full bg-gradient-to-r from-[#0B1020] to-[#168F9C]" />
                     </div>
                   </div>
                 </div>
@@ -347,10 +347,10 @@ export default function SolutionsHero() {
                   {/* Ícone sem animação em mobile */}
                   <div
                     className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl"
-                    style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.10), rgba(123,44,255,0.10))' }}
+                    style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.10), rgba(22,143,156,0.10))' }}
                     aria-hidden="true"
                   >
-                    <Icon size={18} style={{ color: '#005BFF' }} />
+                    <Icon size={18} style={{ color: '#0B1020' }} />
                   </div>
                   <p
                     className="text-sm font-bold text-[#0B1020]"

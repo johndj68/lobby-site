@@ -31,9 +31,9 @@ export interface CategoryCfg {
    Usado em cards de portfólio, listas de projetos e filtros visíveis
    para clientes (empresas) na área pública. */
 export const CATEGORY_STYLE: Record<string, CategoryStyle> = {
-  'Software':       { bg: 'rgba(0,91,255,0.08)',   text: '#005BFF', border: 'rgba(0,91,255,0.22)'   },
-  'Automação':      { bg: 'rgba(123,44,255,0.08)', text: '#7B2CFF', border: 'rgba(123,44,255,0.22)' },
-  'Dados':          { bg: 'rgba(0,163,255,0.08)',  text: '#007ACC', border: 'rgba(0,163,255,0.22)'  },
+  'Software':       { bg: 'rgba(11,16,32,0.08)',   text: '#0B1020', border: 'rgba(11,16,32,0.22)'   },
+  'Automação':      { bg: 'rgba(22,143,156,0.08)', text: '#168F9C', border: 'rgba(22,143,156,0.22)' },
+  'Dados':          { bg: 'rgba(28,36,64,0.08)',  text: '#007ACC', border: 'rgba(28,36,64,0.22)'  },
   'Cibersegurança': { bg: 'rgba(5,150,105,0.08)',  text: '#059669', border: 'rgba(5,150,105,0.22)'  },
 }
 

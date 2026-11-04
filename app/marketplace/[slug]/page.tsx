@@ -127,13 +127,13 @@ export default function AppDetailPage() {
   }
 
   if (loading) {
-    return <Container className="py-24 text-center"><Loader2 size={24} className="mx-auto animate-spin text-[#005BFF]" aria-hidden="true" /></Container>
+    return <Container className="py-24 text-center"><Loader2 size={24} className="mx-auto animate-spin text-[#0B1020]" aria-hidden="true" /></Container>
   }
   if (notFound || !app) {
     return (
       <Container className="py-24 text-center">
         <p className="text-sm text-[#5D6475]">Aplicativo não encontrado.</p>
-        <Link href="/marketplace" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#005BFF]"><ArrowLeft size={14} />Voltar ao marketplace</Link>
+        <Link href="/marketplace" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#0B1020]"><ArrowLeft size={14} />Voltar ao marketplace</Link>
       </Container>
     )
   }
@@ -148,7 +148,7 @@ export default function AppDetailPage() {
         {app.logo_url ? (
           <Image src={app.logo_url} alt="" width={72} height={72} className="rounded-2xl object-cover" />
         ) : (
-          <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-[#F7F8FC] text-2xl font-bold text-[#005BFF]">
+          <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-[#F7F8FC] text-2xl font-bold text-[#0B1020]">
             {app.name.charAt(0).toUpperCase()}
           </div>
         )}

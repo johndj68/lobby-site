@@ -246,7 +246,7 @@ function ChecklistRow({ item, isOpen, onToggle, onGoTo }: {
   return (
     <div className="rounded-xl border" style={{ borderColor: colors.border }}>
       <button type="button" onClick={onToggle} aria-expanded={isOpen}
-        className="flex w-full items-center gap-3 p-3.5 text-left hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005BFF]">
+        className="flex w-full items-center gap-3 p-3.5 text-left hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B1020]">
         <Icon size={18} style={{ color: colors.textSecondary }} aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold" style={{ color: colors.text }}>{item.name}</p>
@@ -327,7 +327,7 @@ function CheckboxRow({ id, checked, disabled, onChange, label }: { id: string; c
   return (
     <label htmlFor={id} className={`flex items-start gap-3 rounded-lg p-2.5 ${disabled ? '' : 'cursor-pointer hover:bg-gray-50'}`}>
       <input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#005BFF]" />
+        className="mt-0.5 h-4 w-4 shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0B1020]" />
       <span className="text-sm" style={{ color: disabled ? colors.textMuted : colors.text }}>{label}</span>
     </label>
   )

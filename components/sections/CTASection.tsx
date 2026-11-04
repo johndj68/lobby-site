@@ -54,14 +54,14 @@ export default function CTASection({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-[2rem] p-10 shadow-[0_24px_80px_rgba(0,91,255,0.22)] md:p-14"
-          style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+          className="relative overflow-hidden rounded-[2rem] p-10 shadow-[0_24px_80px_rgba(11,16,32,0.22)] md:p-14"
+          style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
         >
           {/* Decorative blobs — tune h/w and blur here */}
           {/* Blob decorativo no canto superior direito */}
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/[0.08] blur-2xl" aria-hidden="true" />
           {/* Blob decorativo azul claro na parte inferior */}
-          <div className="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-[#00A3FF]/[0.14] blur-2xl" aria-hidden="true" />
+          <div className="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-[#1C2440]/[0.14] blur-2xl" aria-hidden="true" />
 
           {/* White dot grid — tune opacity-[X] here */}
           {/* Grade de pontos brancos semitransparentes — textura de fundo */}
@@ -115,7 +115,7 @@ export default function CTASection({
             {/* Botão principal branco — contrasta com o fundo gradiente */}
             <Link
               href={buttonHref}
-              className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-bold text-[#005BFF] shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-xl whitespace-nowrap"
+              className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-bold text-[#0B1020] shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-xl whitespace-nowrap"
             >
               {buttonLabel}
               {/* Seta desliza para direita no hover */}

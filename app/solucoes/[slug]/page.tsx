@@ -37,10 +37,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
    Cada entrada define: cor principal, fundo translúcido, borda e gradiente.
    Usada para personalizar visualmente cada página de solução. */
 const ACCENT_COLORS: Record<string, { color: string; bg: string; border: string; grad: string }> = {
-  blue:   { color: '#005BFF', bg: 'rgba(0,91,255,0.08)',   border: 'rgba(0,91,255,0.20)',   grad: 'from-[#005BFF] to-[#00A3FF]' },
-  purple: { color: '#7B2CFF', bg: 'rgba(123,44,255,0.08)', border: 'rgba(123,44,255,0.20)', grad: 'from-[#7B2CFF] to-[#005BFF]' },
-  cyan:   { color: '#00A3FF', bg: 'rgba(0,163,255,0.08)',  border: 'rgba(0,163,255,0.20)',  grad: 'from-[#00A3FF] to-[#7B2CFF]' },
-  mixed:  { color: '#005BFF', bg: 'rgba(0,91,255,0.08)',   border: 'rgba(91,77,255,0.20)',  grad: 'from-[#005BFF] to-[#7B2CFF]' },
+  blue:   { color: '#0B1020', bg: 'rgba(11,16,32,0.08)',   border: 'rgba(11,16,32,0.20)',   grad: 'from-[#0B1020] to-[#1C2440]' },
+  purple: { color: '#168F9C', bg: 'rgba(22,143,156,0.08)', border: 'rgba(22,143,156,0.20)', grad: 'from-[#168F9C] to-[#0B1020]' },
+  cyan:   { color: '#168F9C', bg: 'rgba(92,177,186,0.10)', border: 'rgba(92,177,186,0.22)', grad: 'from-[#5CB1BA] to-[#168F9C]' },
+  mixed:  { color: '#0B1020', bg: 'rgba(11,16,32,0.08)',   border: 'rgba(17,80,94,0.20)',  grad: 'from-[#0B1020] to-[#168F9C]' },
 }
 
 /* Página de detalhe de um serviço/solução (rota: /solucoes/[slug]).
@@ -93,7 +93,7 @@ export default async function SolucaoDetailPage({ params }: Props) {
               {/* CTA principal: leva para a página de contato */}
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href="/contato"
-                  className={`inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r ${ac.grad} px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.25)] transition-all hover:-translate-y-0.5`}>
+                  className={`inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r ${ac.grad} px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.25)] transition-all hover:-translate-y-0.5`}>
                   {service.cta}
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>

@@ -279,7 +279,7 @@ export default function MensagensClient({ user, initialMessages, threads, initia
             <div className="flex-1 overflow-y-auto p-2">
               {/* Thread de Suporte geral — sempre disponível, project_id null */}
               <button type="button" onClick={() => { setSelectedProjectId(null); setMobileShowThread(true) }}
-                className={`flex w-full items-start gap-2.5 rounded-2xl px-3 py-3 text-left transition-colors ${selectedProjectId === null ? 'bg-[#005BFF]/8' : 'hover:bg-[#F7F8FC]'}`}>
+                className={`flex w-full items-start gap-2.5 rounded-2xl px-3 py-3 text-left transition-colors ${selectedProjectId === null ? 'bg-[#0B1020]/8' : 'hover:bg-[#F7F8FC]'}`}>
                 {/* Avatar escuro com ícone de suporte */}
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0B1020]">
                   <LifeBuoy size={14} className="text-white" aria-hidden="true" />
@@ -289,7 +289,7 @@ export default function MensagensClient({ user, initialMessages, threads, initia
                     <p className="truncate text-xs font-bold text-[#0B1020]">Suporte geral</p>
                     {/* Badge de não lidas para o suporte geral */}
                     {(unreadByThread.get('__general__') ?? 0) > 0 && (
-                      <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#005BFF] px-1 text-[9px] font-bold text-white">
+                      <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#0B1020] px-1 text-[9px] font-bold text-white">
                         {unreadByThread.get('__general__')}
                       </span>
                     )}
@@ -302,9 +302,9 @@ export default function MensagensClient({ user, initialMessages, threads, initia
               {/* Threads por projeto — uma para cada projeto com técnico atribuído */}
               {threads.map(t => (
                 <button key={t.projectId} type="button" onClick={() => { setSelectedProjectId(t.projectId); setMobileShowThread(true) }}
-                  className={`flex w-full items-start gap-2.5 rounded-2xl px-3 py-3 text-left transition-colors ${selectedProjectId === t.projectId ? 'bg-[#005BFF]/8' : 'hover:bg-[#F7F8FC]'}`}>
+                  className={`flex w-full items-start gap-2.5 rounded-2xl px-3 py-3 text-left transition-colors ${selectedProjectId === t.projectId ? 'bg-[#0B1020]/8' : 'hover:bg-[#F7F8FC]'}`}>
                   {/* Avatar gradiente com ícone de pasta para thread de projeto */}
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#005BFF] to-[#7B2CFF]">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0B1020] to-[#168F9C]">
                     <FolderKanban size={13} className="text-white" aria-hidden="true" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -312,7 +312,7 @@ export default function MensagensClient({ user, initialMessages, threads, initia
                       <p className="truncate text-xs font-bold text-[#0B1020]">{t.projectTitle}</p>
                       {/* Badge de não lidas por project_id */}
                       {(unreadByThread.get(t.projectId as string) ?? 0) > 0 && (
-                        <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#005BFF] px-1 text-[9px] font-bold text-white">
+                        <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-[#0B1020] px-1 text-[9px] font-bold text-white">
                           {unreadByThread.get(t.projectId as string)}
                         </span>
                       )}
@@ -358,8 +358,8 @@ export default function MensagensClient({ user, initialMessages, threads, initia
                 /* Estado vazio da thread — convida a iniciar a conversa */
                 <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl"
-                    style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.08), rgba(123,44,255,0.08))' }}>
-                    <MessageCircle size={26} style={{ color: '#005BFF' }} />
+                    style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.08), rgba(22,143,156,0.08))' }}>
+                    <MessageCircle size={26} style={{ color: '#0B1020' }} />
                   </div>
                   <div>
                     <p className="text-base font-bold text-[#0B1020]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
@@ -400,7 +400,7 @@ export default function MensagensClient({ user, initialMessages, threads, initia
                                   {/* Bolha da mensagem — azul/roxo para o cliente, cinza para o técnico */}
                                   <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                                     mine
-                                      ? 'rounded-br-md bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-white'
+                                      ? 'rounded-br-md bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-white'
                                       : 'rounded-bl-md border border-[#E3E7F0] bg-[#F7F8FC] text-[#0B1020]'
                                   }`}>
                                     {m.content}
@@ -409,7 +409,7 @@ export default function MensagensClient({ user, initialMessages, threads, initia
                                   <div className={`mt-1 flex items-center gap-1 px-1 text-[10px] text-[#5D6475] ${mine ? 'justify-end' : 'justify-start'}`}>
                                     {timeLabel(m.created_at)}
                                     {/* Double-check azul indica que o técnico leu a mensagem */}
-                                    {mine && m.read_at && <CheckCheck size={11} className="text-[#005BFF]" />}
+                                    {mine && m.read_at && <CheckCheck size={11} className="text-[#0B1020]" />}
                                   </div>
                                 </div>
                               </div>
@@ -445,11 +445,11 @@ export default function MensagensClient({ user, initialMessages, threads, initia
                 placeholder="Digite sua mensagem..."
                 value={text}
                 onChange={e => handleTextChange(e.target.value)}
-                className="h-12 flex-1 rounded-2xl border border-[#E3E7F0] bg-[#F7F8FC] px-4 text-sm text-[#0B1020] placeholder:text-[#5D6475]/50 outline-none focus:border-[#005BFF]/40 focus:ring-4 focus:ring-[#005BFF]/10 transition-all"
+                className="h-12 flex-1 rounded-2xl border border-[#E3E7F0] bg-[#F7F8FC] px-4 text-sm text-[#0B1020] placeholder:text-[#5D6475]/50 outline-none focus:border-[#0B1020]/40 focus:ring-4 focus:ring-[#0B1020]/10 transition-all"
               />
               {/* Botão de envio — desabilitado enquanto envia ou texto vazio */}
               <button type="submit" disabled={sending || !text.trim()}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-white shadow-[0_8px_24px_rgba(0,91,255,0.25)] transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0">
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-white shadow-[0_8px_24px_rgba(11,16,32,0.25)] transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0">
                 {/* Spinner durante envio, ícone de avião quando idle */}
                 {sending ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
               </button>

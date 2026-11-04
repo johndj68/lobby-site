@@ -25,10 +25,10 @@ export function VisualImageGalleryCard({
           <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: st.bg, color: st.color }}>{st.label}</span>
         </div>
         {img.description && <p className="mb-2 text-xs text-[#5D6475]">{img.description}</p>}
-        {img.phase && <p className="mb-2 text-[10px] font-semibold text-[#005BFF]">{img.phase}</p>}
+        {img.phase && <p className="mb-2 text-[10px] font-semibold text-[#0B1020]">{img.phase}</p>}
         {resolvedLink && (
           <a href={resolvedLink} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[#005BFF] hover:underline">
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#0B1020] hover:underline">
             <Eye size={11} aria-hidden="true" />Ver imagem
           </a>
         )}
@@ -67,7 +67,7 @@ export function VisualDocumentRow({
             <p className="text-sm font-bold text-[#0B1020]">{doc.title}</p>
             <span className="rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: st.bg, color: st.color }}>{st.label}</span>
           </div>
-          {doc.phase && <p className="text-[10px] font-semibold text-[#005BFF]">{doc.phase}</p>}
+          {doc.phase && <p className="text-[10px] font-semibold text-[#0B1020]">{doc.phase}</p>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {resolved === undefined && <span className="text-[11px] text-[#94A3B8]">Carregando…</span>}
@@ -75,15 +75,15 @@ export function VisualDocumentRow({
           {resolved && (
             <>
               <a href={resolved} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-lg border border-[#E3E7F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF]">
+                className="inline-flex items-center gap-1 rounded-lg border border-[#E3E7F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020]">
                 <Eye size={11} aria-hidden="true" />Visualizar
               </a>
               <a href={resolved} download
-                className="inline-flex items-center gap-1 rounded-lg border border-[#E3E7F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF]">
+                className="inline-flex items-center gap-1 rounded-lg border border-[#E3E7F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020]">
                 <DownloadIcon size={11} aria-hidden="true" />Baixar
               </a>
               <button type="button" onClick={() => { navigator.clipboard.writeText(resolved); toast.success('URL copiada') }}
-                className="inline-flex items-center gap-1 rounded-lg border border-[#E3E7F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF]">
+                className="inline-flex items-center gap-1 rounded-lg border border-[#E3E7F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020]">
                 <Link2 size={11} aria-hidden="true" />Copiar URL
               </button>
             </>

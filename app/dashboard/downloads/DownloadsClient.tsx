@@ -76,28 +76,28 @@ function DownloadLibraryIllustration() {
   return (
     <div className="relative mx-auto hidden h-64 w-full max-w-xs select-none lg:block" aria-hidden="true">
       {/* Brilhos ambiente */}
-      <div className="absolute left-1/2 top-1/2 h-48 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#005BFF]/10 blur-3xl" />
-      <div className="absolute right-4 top-8 h-28 w-28 rounded-full bg-[#7B2CFF]/10 blur-2xl" />
+      <div className="absolute left-1/2 top-1/2 h-48 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0B1020]/10 blur-3xl" />
+      <div className="absolute right-4 top-8 h-28 w-28 rounded-full bg-[#168F9C]/10 blur-2xl" />
 
       {/* Documento PDF — esquerda, inclinado para dar profundidade */}
       <motion.div
         initial={{ opacity: 0, y: 10, rotate: -8 }}
         animate={{ opacity: 1, y: 0, rotate: -8 }}
         transition={{ delay: 0.3, duration: 0.5 }}
-        className="absolute left-2 top-4 h-36 w-[5.5rem] rounded-2xl border border-[#E3E7F0] bg-white/95 p-3 shadow-[0_8px_28px_rgba(0,91,255,0.14)]"
+        className="absolute left-2 top-4 h-36 w-[5.5rem] rounded-2xl border border-[#E3E7F0] bg-white/95 p-3 shadow-[0_8px_28px_rgba(11,16,32,0.14)]"
       >
         <span className="inline-flex rounded-md bg-[#EF4444] px-1.5 py-0.5 text-[9px] font-bold text-white">
           PDF
         </span>
         <div className="mt-4 space-y-1.5">
-          <div className="h-1.5 rounded-full bg-[#005BFF]/15" />
-          <div className="h-1.5 w-4/5 rounded-full bg-[#005BFF]/10" />
-          <div className="h-1.5 w-3/5 rounded-full bg-[#005BFF]/08" />
-          <div className="h-1.5 w-4/5 rounded-full bg-[#005BFF]/06" />
+          <div className="h-1.5 rounded-full bg-[#0B1020]/15" />
+          <div className="h-1.5 w-4/5 rounded-full bg-[#0B1020]/10" />
+          <div className="h-1.5 w-3/5 rounded-full bg-[#0B1020]/08" />
+          <div className="h-1.5 w-4/5 rounded-full bg-[#0B1020]/06" />
         </div>
         <div className="mt-3 flex gap-1">
-          <div className="h-3 w-3 rounded-sm bg-[#005BFF]/12" />
-          <div className="h-3 w-3 rounded-sm bg-[#005BFF]/08" />
+          <div className="h-3 w-3 rounded-sm bg-[#0B1020]/12" />
+          <div className="h-3 w-3 rounded-sm bg-[#0B1020]/08" />
         </div>
       </motion.div>
 
@@ -106,9 +106,9 @@ function DownloadLibraryIllustration() {
         initial={{ opacity: 0, y: 10, rotate: 8 }}
         animate={{ opacity: 1, y: 0, rotate: 8 }}
         transition={{ delay: 0.45, duration: 0.5 }}
-        className="absolute right-2 top-4 h-36 w-[5.5rem] rounded-2xl border border-[#E3E7F0] bg-white/95 p-3 shadow-[0_8px_28px_rgba(123,44,255,0.14)]"
+        className="absolute right-2 top-4 h-36 w-[5.5rem] rounded-2xl border border-[#E3E7F0] bg-white/95 p-3 shadow-[0_8px_28px_rgba(22,143,156,0.14)]"
       >
-        <span className="inline-flex rounded-md bg-[#7B2CFF] px-1.5 py-0.5 text-[9px] font-bold text-white">
+        <span className="inline-flex rounded-md bg-[#168F9C] px-1.5 py-0.5 text-[9px] font-bold text-white">
           GUIA
         </span>
         <div className="mt-4 space-y-2.5">
@@ -137,10 +137,10 @@ function DownloadLibraryIllustration() {
         {/* Aba da pasta */}
         <div className="absolute left-8 top-[-13px] h-6 w-20 rounded-t-xl bg-gradient-to-r from-[#EEF4FF] to-[#F0EEFF]" />
         {/* Corpo da pasta */}
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#EEF4FF] to-[#F4EEFF] shadow-[0_20px_56px_rgba(0,91,255,0.18)]" />
+        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#EEF4FF] to-[#F4EEFF] shadow-[0_20px_56px_rgba(11,16,32,0.18)]" />
         {/* Círculo com ícone de download centralizado */}
-        <div className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl bg-white shadow-[0_4px_18px_rgba(0,91,255,0.18)]">
-          <Download size={22} className="text-[#005BFF]" />
+        <div className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl bg-white shadow-[0_4px_18px_rgba(11,16,32,0.18)]">
+          <Download size={22} className="text-[#0B1020]" />
         </div>
       </motion.div>
     </div>
@@ -273,7 +273,7 @@ export default function DownloadsClient({ user, downloads }: Props) {
           {/* CTA para explorar mais materiais na biblioteca pública */}
           <Link
             href="/recursos"
-            className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(123,44,255,0.28)]"
+            className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(22,143,156,0.28)]"
           >
             Explorar materiais gratuitos
             <ArrowRight
@@ -310,7 +310,7 @@ export default function DownloadsClient({ user, downloads }: Props) {
               return (
                 <div
                   key={dl.id}
-                  className="group flex items-center gap-4 rounded-2xl border border-[#E3E7F0] bg-white/90 p-4 shadow-[0_4px_20px_rgba(11,16,32,0.05)] transition-all hover:-translate-y-0.5 hover:border-[#005BFF]/20 hover:shadow-[0_8px_32px_rgba(0,91,255,0.10)]"
+                  className="group flex items-center gap-4 rounded-2xl border border-[#E3E7F0] bg-white/90 p-4 shadow-[0_4px_20px_rgba(11,16,32,0.05)] transition-all hover:-translate-y-0.5 hover:border-[#0B1020]/20 hover:shadow-[0_8px_32px_rgba(11,16,32,0.10)]"
                 >
                   {/* Mini capa do recurso */}
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl">
@@ -343,7 +343,7 @@ export default function DownloadsClient({ user, downloads }: Props) {
                   <a
                     href={resource.fileUrl}
                     download
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[#E3E7F0] bg-white px-3 py-2 text-xs font-semibold text-[#005BFF] transition-all hover:border-[#005BFF]/30 hover:bg-[#005BFF]/5"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[#E3E7F0] bg-white px-3 py-2 text-xs font-semibold text-[#0B1020] transition-all hover:border-[#0B1020]/30 hover:bg-[#0B1020]/5"
                   >
                     <Download size={13} aria-hidden="true" />
                     Baixar
@@ -364,13 +364,13 @@ export default function DownloadsClient({ user, downloads }: Props) {
             {/* Gradientes decorativos de fundo */}
             <div
               className="pointer-events-none absolute inset-0 rounded-[2rem]"
-              style={{ background: 'radial-gradient(circle at 80% 40%,rgba(123,44,255,0.09) 0%,transparent 35%),radial-gradient(circle at 45% 110%,rgba(0,91,255,0.07) 0%,transparent 40%)' }}
+              style={{ background: 'radial-gradient(circle at 80% 40%,rgba(22,143,156,0.09) 0%,transparent 35%),radial-gradient(circle at 45% 110%,rgba(11,16,32,0.07) 0%,transparent 40%)' }}
               aria-hidden="true"
             />
             {/* Grid de pontos decorativos no canto direito */}
             <div
               className="pointer-events-none absolute right-0 top-0 h-full w-1/2 opacity-20"
-              style={{ backgroundImage: 'radial-gradient(circle at 1px 1px,rgba(0,91,255,0.18) 1px,transparent 0)', backgroundSize: '24px 24px' }}
+              style={{ backgroundImage: 'radial-gradient(circle at 1px 1px,rgba(11,16,32,0.18) 1px,transparent 0)', backgroundSize: '24px 24px' }}
               aria-hidden="true"
             />
 
@@ -378,8 +378,8 @@ export default function DownloadsClient({ user, downloads }: Props) {
               {/* Coluna esquerda: texto e CTAs */}
               <div>
                 {/* Ícone de download em container gradiente */}
-                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#005BFF]/10 to-[#7B2CFF]/10">
-                  <Download size={28} className="text-[#005BFF]" aria-hidden="true" />
+                <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0B1020]/10 to-[#168F9C]/10">
+                  <Download size={28} className="text-[#0B1020]" aria-hidden="true" />
                 </div>
 
                 <h2
@@ -397,7 +397,7 @@ export default function DownloadsClient({ user, downloads }: Props) {
                   {/* CTA principal: vai para a biblioteca pública */}
                   <Link
                     href="/recursos"
-                    className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(123,44,255,0.28)]"
+                    className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(22,143,156,0.28)]"
                   >
                     Explorar materiais gratuitos
                     <ArrowRight
@@ -409,7 +409,7 @@ export default function DownloadsClient({ user, downloads }: Props) {
                   {/* CTA secundário: rola para a seção de recomendados abaixo */}
                   <a
                     href="#recomendados"
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-6 py-3 text-sm font-semibold text-[#0B1020] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:shadow-md"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-6 py-3 text-sm font-semibold text-[#0B1020] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:shadow-md"
                   >
                     Ver recomendações
                   </a>
@@ -463,8 +463,8 @@ export default function DownloadsClient({ user, downloads }: Props) {
                   aria-pressed={activeCategory === cat}
                   className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
                     activeCategory === cat
-                      ? 'bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-white shadow-[0_4px_12px_rgba(0,91,255,0.25)]'
-                      : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF]'
+                      ? 'bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-white shadow-[0_4px_12px_rgba(11,16,32,0.25)]'
+                      : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020]'
                   }`}
                 >
                   {cat}
@@ -475,7 +475,7 @@ export default function DownloadsClient({ user, downloads }: Props) {
             {/* Botão de ordenação (visual apenas — sem lógica implementada ainda) */}
             <button
               type="button"
-              className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-xl border border-[#E3E7F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#5D6475] transition-all hover:border-[#005BFF]/30 hover:text-[#005BFF] sm:self-auto"
+              className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-xl border border-[#E3E7F0] bg-white px-3 py-1.5 text-xs font-semibold text-[#5D6475] transition-all hover:border-[#0B1020]/30 hover:text-[#0B1020] sm:self-auto"
             >
               Mais recentes
               <ChevronDown size={13} aria-hidden="true" />
@@ -509,7 +509,7 @@ export default function DownloadsClient({ user, downloads }: Props) {
               <button
                 type="button"
                 onClick={() => setActiveCategory('Todos')}
-                className="mt-3 text-sm font-bold text-[#005BFF] hover:underline"
+                className="mt-3 text-sm font-bold text-[#0B1020] hover:underline"
               >
                 Ver todos os materiais
               </button>
@@ -545,16 +545,16 @@ export default function DownloadsClient({ user, downloads }: Props) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
-                className="rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 shadow-[0_4px_24px_rgba(11,16,32,0.05)] transition-all hover:border-[#005BFF]/20 hover:shadow-[0_8px_40px_rgba(0,91,255,0.08)]"
+                className="rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 shadow-[0_4px_24px_rgba(11,16,32,0.05)] transition-all hover:border-[#0B1020]/20 hover:shadow-[0_8px_40px_rgba(11,16,32,0.08)]"
               >
                 <div className="mb-5 flex items-center gap-3">
                   {/* Número do passo com gradiente lobby */}
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#005BFF] to-[#7B2CFF] text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,91,255,0.25)]">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0B1020] to-[#168F9C] text-xs font-bold text-white shadow-[0_2px_8px_rgba(11,16,32,0.25)]">
                     {step}
                   </span>
                   {/* Ícone ilustrativo do passo */}
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#005BFF]/8">
-                    <Icon size={20} className="text-[#005BFF]" aria-hidden="true" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0B1020]/8">
+                    <Icon size={20} className="text-[#0B1020]" aria-hidden="true" />
                   </div>
                 </div>
                 <h3

@@ -62,9 +62,9 @@ import type { User as SupabaseUser } from '@supabase/supabase-js'
 // Usado nos cards de módulos na aba Segurança.
 const MODULE_STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
   nao_iniciado:         { label: 'Planejado',            color: '#94A3B8', bg: 'rgba(148,163,184,0.10)' },
-  em_andamento:         { label: 'Em andamento',         color: '#005BFF', bg: 'rgba(0,91,255,0.10)'    },
+  em_andamento:         { label: 'Em andamento',         color: '#0B1020', bg: 'rgba(11,16,32,0.10)'    },
   concluido:            { label: 'Concluído',            color: '#10B981', bg: 'rgba(16,185,129,0.10)'  },
-  aguardando_validacao: { label: 'Em validação',         color: '#7B2CFF', bg: 'rgba(123,44,255,0.10)'  },
+  aguardando_validacao: { label: 'Em validação',         color: '#168F9C', bg: 'rgba(22,143,156,0.10)'  },
   aguardando_cliente:   { label: 'Aguardando cliente',   color: '#F59E0B', bg: 'rgba(245,158,11,0.10)'  },
   bloqueado:            { label: 'Bloqueado',            color: '#EF4444', bg: 'rgba(239,68,68,0.10)'   },
 }
@@ -304,7 +304,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
 
         {/* Botão voltar para a lista de projetos */}
         <Link href="/dashboard/projetos"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5D6475] transition-colors hover:text-[#005BFF]">
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#5D6475] transition-colors hover:text-[#0B1020]">
           <ArrowLeft size={13} aria-hidden="true" />
           Voltar aos meus projetos
         </Link>
@@ -317,7 +317,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
               <cfg.icon size={10} aria-hidden="true" />
               {cfg.label}
             </span>
-            {project.category && <span className="text-xs text-[#005BFF]">{project.category}</span>}
+            {project.category && <span className="text-xs text-[#0B1020]">{project.category}</span>}
           </div>
           <h1 className="text-2xl font-bold text-[#0B1020] sm:text-3xl" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
             {project.title}
@@ -408,7 +408,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
               <p className="mt-2 text-base font-bold text-[#0B1020]">{leadTechnicianName ?? 'Em análise'}</p>
               {leadTechnicianName ? (
                 <Link href={`/dashboard/mensagens?project=${project.id}`}
-                  className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[#005BFF] hover:underline">
+                  className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[#0B1020] hover:underline">
                   Falar com o técnico
                 </Link>
               ) : (
@@ -419,8 +419,8 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
 
           {/* Resumo textual do projeto (preenchido pelo técnico em cp.projectSummary) */}
           {cp.projectSummary && (
-            <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-[#005BFF]/15 bg-[#005BFF]/[0.04] px-4 py-3">
-              <MessageCircle size={16} className="mt-0.5 shrink-0 text-[#005BFF]" aria-hidden="true" />
+            <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-[#0B1020]/15 bg-[#0B1020]/[0.04] px-4 py-3">
+              <MessageCircle size={16} className="mt-0.5 shrink-0 text-[#0B1020]" aria-hidden="true" />
               <p className="text-sm leading-relaxed text-[#3A4256]">{cp.projectSummary}</p>
             </div>
           )}
@@ -439,7 +439,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
             <div className="relative h-2.5 overflow-hidden rounded-full bg-[#F1F3F9]">
               <motion.div initial={{ width: 0 }} animate={{ width: `${project.progress}%` }} transition={{ duration: 0.8 }}
                 className="absolute left-0 top-0 h-full rounded-full"
-                style={{ background: 'linear-gradient(to right, #005BFF, #7B2CFF)' }} />
+                style={{ background: 'linear-gradient(to right, #0B1020, #168F9C)' }} />
             </div>
           </div>
         </section>
@@ -467,14 +467,14 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
               aria-current={activeTab === id ? 'page' : undefined}
               className={`relative flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2.5 text-xs font-semibold transition-all
                 ${activeTab === id
-                  ? 'bg-white shadow-sm text-[#005BFF]'
+                  ? 'bg-white shadow-sm text-[#0B1020]'
                   : 'text-[#5D6475] hover:text-[#0B1020]'}`}
             >
               <Icon size={13} aria-hidden="true" />
               <span className="hidden sm:inline">{label}</span>
               {/* Badge numérico para contagem de assets (ex.: "3" em Materiais) */}
               {(count ?? 0) > 0 && (
-                <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[#005BFF]/10 px-1 text-[9px] font-bold text-[#005BFF]">
+                <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[#0B1020]/10 px-1 text-[9px] font-bold text-[#0B1020]">
                   {count}
                 </span>
               )}
@@ -599,7 +599,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                 {/* Card: itens em andamento */}
                 <div className="rounded-3xl border border-[#E3E7F0] bg-white p-5">
                   <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-[#0B1020]">
-                    <Loader2 size={15} className="text-[#005BFF]" aria-hidden="true" />
+                    <Loader2 size={15} className="text-[#0B1020]" aria-hidden="true" />
                     O que estamos fazendo agora
                   </h3>
                   {inProgress.length === 0 ? (
@@ -608,7 +608,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                     <ul className="space-y-2">
                       {inProgress.map((item, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-[#3A4256]">
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#005BFF]" aria-hidden="true" />
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0B1020]" aria-hidden="true" />
                           {item}
                         </li>
                       ))}
@@ -624,7 +624,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                 {/* Card: próximos passos (numerados) */}
                 <div className="rounded-3xl border border-[#E3E7F0] bg-white p-5">
                   <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-[#0B1020]">
-                    <ArrowRight size={15} className="text-[#7B2CFF]" aria-hidden="true" />
+                    <ArrowRight size={15} className="text-[#168F9C]" aria-hidden="true" />
                     Próximos passos
                   </h3>
                   {nextSteps.length === 0 ? (
@@ -633,7 +633,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                     <ul className="space-y-2">
                       {nextSteps.map((item, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-[#3A4256]">
-                          <span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#7B2CFF]/10 text-[9px] font-bold text-[#7B2CFF]">
+                          <span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#168F9C]/10 text-[9px] font-bold text-[#168F9C]">
                             {i + 1}
                           </span>
                           {item}
@@ -721,14 +721,14 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                       const hasData  = card.count > 0
                       return (
                         <div key={card.key} className="rounded-2xl border border-[#E3E7F0] bg-white p-4">
-                          <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#005BFF]/10">
-                            <CardIcon size={18} className="text-[#005BFF]" aria-hidden="true" />
+                          <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B1020]/10">
+                            <CardIcon size={18} className="text-[#0B1020]" aria-hidden="true" />
                           </div>
                           <p className="text-sm font-bold text-[#0B1020]">{card.title}</p>
                           <p className="mt-1 text-xs leading-relaxed text-[#5D6475]">{card.desc}</p>
                           <button type="button"
                             onClick={() => setExpandedVisual(v => ({ ...v, [card.key]: !v[card.key] }))}
-                            className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#005BFF] hover:underline disabled:cursor-default disabled:text-[#94A3B8] disabled:no-underline"
+                            className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#0B1020] hover:underline disabled:cursor-default disabled:text-[#94A3B8] disabled:no-underline"
                             disabled={!hasData}
                           >
                             {hasData ? (isOpen ? 'Ocultar' : `Ver detalhes (${card.count})`) : 'Ainda não disponível'}
@@ -780,7 +780,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                       <div className="flex flex-col items-center gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
                         {orgChart.map((r, i) => (
                           <div key={i} className="flex w-full max-w-[180px] flex-col items-center gap-1 rounded-2xl border border-[#E3E7F0] bg-[#F7F8FC] px-4 py-3 text-center">
-                            <Users size={16} className="text-[#005BFF]" aria-hidden="true" />
+                            <Users size={16} className="text-[#0B1020]" aria-hidden="true" />
                             <p className="text-xs font-bold text-[#0B1020]">{r.role || '—'}</p>
                             {r.name && <p className="text-[10px] text-[#5D6475]">{r.name}</p>}
                           </div>
@@ -805,8 +805,8 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                           return (
                             <div key={i} className="flex items-center gap-2">
                               <div className="flex w-32 flex-col items-center gap-1.5 text-center">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#005BFF]/10">
-                                  <StepIcon size={16} className="text-[#005BFF]" aria-hidden="true" />
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0B1020]/10">
+                                  <StepIcon size={16} className="text-[#0B1020]" aria-hidden="true" />
                                 </div>
                                 <p className="text-xs font-bold text-[#0B1020]">{s.title}</p>
                                 <p className="text-[10px] text-[#5D6475]">{s.description}</p>
@@ -822,8 +822,8 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                           const StepIcon = FLOW_ICON_MAP[s.icon] ?? Network
                           return (
                             <div key={i} className="flex items-start gap-3">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#005BFF]/10">
-                                <StepIcon size={15} className="text-[#005BFF]" aria-hidden="true" />
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0B1020]/10">
+                                <StepIcon size={15} className="text-[#0B1020]" aria-hidden="true" />
                               </div>
                               <div>
                                 <p className="text-sm font-bold text-[#0B1020]">{s.title}</p>
@@ -845,7 +845,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                       {screenMap.map((g, i) => (
                         <div key={i} className="rounded-2xl border border-[#E3E7F0] bg-white p-4">
                           <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-[#0B1020]">
-                            <LayoutGrid size={14} className="text-[#7B2CFF]" aria-hidden="true" />
+                            <LayoutGrid size={14} className="text-[#168F9C]" aria-hidden="true" />
                             {g.module}
                           </p>
                           <ul className="space-y-1">
@@ -921,7 +921,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
               <section aria-label="Segurança do projeto">
                 <div className="rounded-3xl border border-[#E3E7F0] bg-white p-5 sm:p-6">
                   <h3 className="flex items-center gap-2 text-sm font-bold text-[#0B1020]">
-                    <ShieldCheck size={16} className="text-[#005BFF]" aria-hidden="true" />
+                    <ShieldCheck size={16} className="text-[#0B1020]" aria-hidden="true" />
                     Segurança do projeto
                   </h3>
                   <p className="mt-0.5 text-xs text-[#5D6475]">Entenda como protegemos seus dados e acessos.</p>
@@ -942,7 +942,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                   {cp.securityDetails && (
                     <div className="mt-4 border-t border-[#F1F3F9] pt-3">
                       <button type="button" onClick={() => setShowSecurityDetails(v => !v)}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-[#005BFF]">
+                        className="flex items-center gap-1.5 text-xs font-semibold text-[#0B1020]">
                         <ChevronDown size={13} className={`transition-transform ${showSecurityDetails ? 'rotate-180' : ''}`} aria-hidden="true" />
                         Ver detalhes da segurança
                       </button>
@@ -980,7 +980,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                       <div key={i} className="rounded-2xl border border-[#E3E7F0] bg-white p-4">
                         <div className="mb-2 flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <LayoutGrid size={14} className="text-[#7B2CFF]" aria-hidden="true" />
+                            <LayoutGrid size={14} className="text-[#168F9C]" aria-hidden="true" />
                             <p className="text-sm font-bold text-[#0B1020]">{m.name}</p>
                           </div>
                           <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: st.bg, color: st.color }}>
@@ -990,7 +990,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                         {m.description && <p className="mb-2 text-xs text-[#5D6475]">{m.description}</p>}
                         <div className="flex items-center gap-2">
                           <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-[#F1F3F9]">
-                            <div className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-[#005BFF] to-[#7B2CFF]" style={{ width: `${m.progress}%` }} />
+                            <div className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-[#0B1020] to-[#168F9C]" style={{ width: `${m.progress}%` }} />
                           </div>
                           <span className="text-[10px] font-bold text-[#5D6475]">{m.progress}%</span>
                         </div>
@@ -1032,7 +1032,7 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                           Relatório executivo
                         </h3>
                         <button type="button" onClick={copyReport}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E7F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#5D6475] transition-colors hover:border-[#005BFF]/30 hover:text-[#005BFF]">
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E7F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#5D6475] transition-colors hover:border-[#0B1020]/30 hover:text-[#0B1020]">
                           <Copy size={11} aria-hidden="true" />
                           Copiar relatório
                         </button>
@@ -1049,8 +1049,8 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                         </p>
                       )}
                       {report.nextMilestone && (
-                        <p className="mt-3 rounded-xl border border-[#005BFF]/20 bg-[#005BFF]/[0.05] px-3 py-2 text-xs text-[#5D6475]">
-                          <span className="font-bold text-[#005BFF]">Próximo marco: </span>{report.nextMilestone}
+                        <p className="mt-3 rounded-xl border border-[#0B1020]/20 bg-[#0B1020]/[0.05] px-3 py-2 text-xs text-[#5D6475]">
+                          <span className="font-bold text-[#0B1020]">Próximo marco: </span>{report.nextMilestone}
                         </p>
                       )}
                       {report.finalNote && <p className="mt-3 text-xs italic text-[#94A3B8]">{report.finalNote}</p>}
@@ -1068,9 +1068,9 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                       com data da resposta */}
                 {cp.approvalRequired && (
                   <section aria-label="Aprovação da etapa">
-                    <div className="rounded-3xl border border-[#005BFF]/25 bg-[#005BFF]/[0.03] p-5 sm:p-6">
+                    <div className="rounded-3xl border border-[#0B1020]/25 bg-[#0B1020]/[0.03] p-5 sm:p-6">
                       <h3 className="mb-1 flex items-center gap-2 text-sm font-bold text-[#0B1020]">
-                        <CheckCircle2 size={16} className="text-[#005BFF]" aria-hidden="true" />
+                        <CheckCircle2 size={16} className="text-[#0B1020]" aria-hidden="true" />
                         Aprovação da etapa
                       </h3>
                       {/* Mensagem personalizada do técnico explicando o que precisa ser aprovado */}
@@ -1084,13 +1084,13 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                             <div className="mb-3">
                               <textarea rows={2} placeholder="O que precisa ser ajustado?" value={adjustNote}
                                 onChange={e => setAdjustNote(e.target.value)}
-                                className="w-full resize-none rounded-xl border border-[#E3E7F0] bg-white px-3 py-2.5 text-sm text-[#0B1020] placeholder:text-[#94A3B8] outline-none focus:border-[#005BFF]/40" />
+                                className="w-full resize-none rounded-xl border border-[#E3E7F0] bg-white px-3 py-2.5 text-sm text-[#0B1020] placeholder:text-[#94A3B8] outline-none focus:border-[#0B1020]/40" />
                             </div>
                           )}
                           <div className="flex flex-wrap gap-2">
                             {/* Botão principal: aprovar etapa imediatamente */}
                             <button type="button" disabled={!!submittingApproval} onClick={() => handleApproval('aprovado')}
-                              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.22)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60">
+                              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.22)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60">
                               {submittingApproval === 'aprovado' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                               Aprovar etapa
                             </button>
@@ -1150,14 +1150,14 @@ export default function ProjectDetailClient({ project: initialProject, leadTechn
                       <ul className="space-y-4">
                         {history.map((entry, i) => (
                           <li key={i} className="flex gap-3 border-b border-[#F1F3F9] pb-4 last:border-b-0 last:pb-0">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#005BFF]/10">
-                              <HistoryIcon size={13} className="text-[#005BFF]" aria-hidden="true" />
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0B1020]/10">
+                              <HistoryIcon size={13} className="text-[#0B1020]" aria-hidden="true" />
                             </div>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#94A3B8]">
                                 <span className="flex items-center gap-1"><Clock size={9} aria-hidden="true" />{new Date(entry.date).toLocaleDateString('pt-BR')}</span>
                                 <span>·</span>
-                                <span className="font-semibold text-[#005BFF]">{entry.type}</span>
+                                <span className="font-semibold text-[#0B1020]">{entry.type}</span>
                               </div>
                               <p className="mt-0.5 text-sm font-bold text-[#0B1020]">{entry.title}</p>
                               {entry.description && <p className="mt-0.5 text-xs text-[#5D6475]">{entry.description}</p>}

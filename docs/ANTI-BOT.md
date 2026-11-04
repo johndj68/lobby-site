@@ -29,8 +29,8 @@ protegidos por token sem justificativa concreta.
 ## 1.1 Nota sobre identidade visual
 
 O pedido original menciona preservar "preto e laranja" e uma identidade "Núcleo".
-Nenhum dos dois existe neste repositório — a marca LOBBY usa azul/roxo
-(`lib/design-tokens.ts`, `#005BFF`/`#7B2CFF`) e não há nenhum sistema de design
+Nenhum dos dois existe neste repositório — a marca LOBBY usa preto/petróleo
+(`lib/design-tokens.ts`, `#0B1020`/`#168F9C`) e não há nenhum sistema de design
 chamado "Núcleo" no código. O widget foi implementado com `theme="dark"` fixo
 (exigência que se aplica independente da marca) e `language="en"`, sem inventar
 uma paleta preto/laranja que não existe aqui.

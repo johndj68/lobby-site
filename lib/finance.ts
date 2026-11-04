@@ -56,8 +56,8 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
 
 export function getFinanceTypeStyle(type: FinanceType): { color: string; bg: string } {
   const map: Record<FinanceType, { color: string; bg: string }> = {
-    ebook:          { color: '#7B2CFF', bg: 'rgba(123,44,255,0.12)' },
-    projeto:        { color: '#005BFF', bg: 'rgba(0,91,255,0.12)'   },
+    ebook:          { color: '#168F9C', bg: 'rgba(22,143,156,0.12)' },
+    projeto:        { color: '#0B1020', bg: 'rgba(11,16,32,0.12)'   },
     visita_tecnica: { color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
     consultoria:    { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
     mensalidade:    { color: '#38BDF8', bg: 'rgba(56,189,248,0.12)' },

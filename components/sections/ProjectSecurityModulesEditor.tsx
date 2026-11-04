@@ -65,8 +65,8 @@ const APPROVAL_STATUS_INFO: Record<string, { label: string; color: string; bg: s
   ajustes_solicitados: { label: 'Ajuste solicitado',         color: '#EF4444', bg: 'rgba(239,68,68,0.10)'   },
 }
 
-const inputClass = 'h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50'
-const textareaClass = 'w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50'
+const inputClass = 'h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50'
+const textareaClass = 'w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50'
 const labelClass = 'mb-1.5 block text-xs font-semibold text-white/60'
 
 function withModuleIds(mods: ProjectModule[] | undefined): ProjectModule[] {
@@ -169,20 +169,20 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <button type="button" onClick={() => setSubTab('seguranca')}
-          className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition-colors hover:border-[#005BFF]/40">
-          <ShieldCheck size={16} className="text-[#005BFF]" aria-hidden="true" />
+          className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition-colors hover:border-[#0B1020]/40">
+          <ShieldCheck size={16} className="text-[#0B1020]" aria-hidden="true" />
           <p className="mt-1.5 text-lg font-bold text-white">{securityItems.length}</p>
           <p className="text-[10px] text-white/40">itens de segurança</p>
         </button>
         <button type="button" onClick={() => setSubTab('modulos')}
-          className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition-colors hover:border-[#7B2CFF]/40">
-          <LayoutGrid size={16} className="text-[#7B2CFF]" aria-hidden="true" />
+          className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition-colors hover:border-[#168F9C]/40">
+          <LayoutGrid size={16} className="text-[#168F9C]" aria-hidden="true" />
           <p className="mt-1.5 text-lg font-bold text-white">{modules.length}</p>
           <p className="text-[10px] text-white/40">módulos cadastrados</p>
         </button>
         <button type="button" onClick={() => setSubTab('relatorio')}
-          className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition-colors hover:border-[#00A3FF]/40">
-          <FileText size={16} className="text-[#00A3FF]" aria-hidden="true" />
+          className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition-colors hover:border-[#5CB1BA]/40">
+          <FileText size={16} className="text-[#5CB1BA]" aria-hidden="true" />
           <p className="mt-1.5 text-sm font-bold text-white">{reportFilled ? 'Preenchido' : 'Pendente'}</p>
           <p className="text-[10px] text-white/40">relatório executivo</p>
         </button>
@@ -211,7 +211,7 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
           <button key={t.key} type="button" onClick={() => setSubTab(t.key)}
             className={`relative flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-bold transition-colors ${subTab === t.key ? 'text-white' : 'text-white/35 hover:text-white/60'}`}>
             <t.icon size={13} aria-hidden="true" />{t.label}
-            {subTab === t.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-[#005BFF] to-[#7B2CFF]" />}
+            {subTab === t.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-[#0B1020] to-[#168F9C]" />}
           </button>
         ))}
       </div>
@@ -228,13 +228,13 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
               className={textareaClass} />
             <div className="mt-2 flex items-center justify-between">
               <button type="button" onClick={applySuggestedSecuritySummary}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#005BFF] hover:underline">
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0B1020] hover:underline">
                 <Wand2 size={11} aria-hidden="true" />Usar texto sugerido
               </button>
               <label className="flex items-center gap-2 text-[11px] font-medium text-white/50">
                 <input type="checkbox" checked={value.securityVisibleToClient ?? true}
                   onChange={e => set('securityVisibleToClient', e.target.checked)}
-                  className="h-3.5 w-3.5 accent-[#005BFF]" />
+                  className="h-3.5 w-3.5 accent-[#0B1020]" />
                 Mostrar segurança no dashboard do cliente
               </label>
             </div>
@@ -260,7 +260,7 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
                 <p className="text-xs text-white/40">Nenhum item de segurança cadastrado.</p>
                 <p className="mt-1 text-[11px] text-white/25">Use o checklist padrão para explicar como o projeto será protegido.</p>
                 <button type="button" onClick={applyDefaultChecklist}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#005BFF]/10 px-3 py-1.5 text-xs font-bold text-[#005BFF] hover:bg-[#005BFF]/20">
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#0B1020]/10 px-3 py-1.5 text-xs font-bold text-[#0B1020] hover:bg-[#0B1020]/20">
                   <ListChecks size={12} aria-hidden="true" />Usar checklist padrão
                 </button>
               </div>
@@ -288,10 +288,10 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
             )}
           </div>
 
-          <div className="rounded-2xl border border-[#7B2CFF]/20 bg-[#7B2CFF]/[0.04] p-4">
+          <div className="rounded-2xl border border-[#168F9C]/20 bg-[#168F9C]/[0.04] p-4">
             <div className="mb-1 flex items-center justify-between">
               <p className={labelClass + ' mb-0'}>Detalhes técnicos internos</p>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#7B2CFF]/15 px-2 py-0.5 text-[9px] font-bold text-[#B794F6]">Interno</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#168F9C]/15 px-2 py-0.5 text-[9px] font-bold text-[#B794F6]">Interno</span>
             </div>
             <p className="mb-2 text-[11px] text-white/35">Use este campo para observações técnicas da equipe. O cliente não verá essa informação.</p>
             <textarea rows={3} placeholder="Ex: Autenticação JWT, controle de acesso por perfil, políticas de permissão, logs e proteção de arquivos."
@@ -330,7 +330,7 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
               <p className="mx-auto mt-1 max-w-xs text-[11px] text-white/25">Adicione os módulos que fazem parte do projeto para o cliente acompanhar o progresso.</p>
               <div className="mt-3 flex justify-center gap-2">
                 <button type="button" onClick={addModule}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#005BFF]/10 px-3 py-1.5 text-xs font-bold text-[#005BFF] hover:bg-[#005BFF]/20">
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#0B1020]/10 px-3 py-1.5 text-xs font-bold text-[#0B1020] hover:bg-[#0B1020]/20">
                   <Plus size={12} aria-hidden="true" />Adicionar primeiro módulo
                 </button>
                 <button type="button" onClick={applyDefaultModules}
@@ -345,7 +345,7 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
                 const Icon = MODULE_ICONS[m.icon ?? ''] ?? LayoutGrid
                 const st = getModuleStatusStyle(m.status)
                 return (
-                  <div key={m.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5 transition-colors hover:border-[#005BFF]/30">
+                  <div key={m.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5 transition-colors hover:border-[#0B1020]/30">
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <select value={m.icon ?? 'LayoutDashboard'} onChange={e => updateModule(m.id, { icon: e.target.value })}
@@ -380,7 +380,7 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
                       <input type="range" min={0} max={100} step={5} value={m.progress}
                         aria-label="Progresso do módulo"
                         onChange={e => updateModule(m.id, { progress: Number(e.target.value) })}
-                        className="flex-1 accent-[#005BFF]" />
+                        className="flex-1 accent-[#0B1020]" />
                       <span className="w-9 shrink-0 text-right text-xs font-bold text-white/70">{m.progress}%</span>
                     </div>
                     <button type="button" onClick={() => updateModule(m.id, { visibleToClient: m.visibleToClient === false })}
@@ -403,11 +403,11 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
               <label className="flex items-center gap-2 text-[11px] font-medium text-white/50">
                 <input type="checkbox" checked={report.visibleToClient ?? true}
                   onChange={e => setReport({ visibleToClient: e.target.checked })}
-                  className="h-3.5 w-3.5 accent-[#005BFF]" />
+                  className="h-3.5 w-3.5 accent-[#0B1020]" />
                 Mostrar relatório ao cliente
               </label>
               <button type="button" onClick={applyAutoReport}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#005BFF]/10 px-2.5 py-1.5 text-xs font-bold text-[#005BFF] hover:bg-[#005BFF]/20">
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0B1020]/10 px-2.5 py-1.5 text-xs font-bold text-[#0B1020] hover:bg-[#0B1020]/20">
                 <Wand2 size={12} aria-hidden="true" />Gerar relatório automático
               </button>
             </div>
@@ -465,7 +465,7 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
           <label className="flex items-center gap-2.5 text-sm font-medium text-white/70">
             <input type="checkbox" checked={value.approvalRequired ?? false}
               onChange={e => set('approvalRequired', e.target.checked)}
-              className="h-4 w-4 accent-[#005BFF]" />
+              className="h-4 w-4 accent-[#0B1020]" />
             Esta etapa precisa de aprovação do cliente
           </label>
 
@@ -476,7 +476,7 @@ export default function ProjectSecurityModulesEditor({ value, onChange }: Props)
                 value={value.approvalMessage ?? ''} onChange={e => set('approvalMessage', e.target.value)}
                 className={textareaClass} />
               <button type="button" onClick={applySuggestedApprovalMessage}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#005BFF] hover:underline">
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0B1020] hover:underline">
                 <Wand2 size={11} aria-hidden="true" />Usar mensagem sugerida
               </button>
             </div>

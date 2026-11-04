@@ -40,7 +40,7 @@ export default function MessagesPanel({ messages, appId, isLatest }: { messages:
           <div key={m.id} className="rounded-2xl border bg-white p-5" style={{ borderColor: C.border }}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}>L</div>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}>L</div>
                 <div>
                   <p className="text-xs font-semibold" style={{ color: C.text }}>Equipe LOBBY</p>
                   <p className="text-xs" style={{ color: C.textSecondary }}>{formatDateTimeBR(m.at)}</p>

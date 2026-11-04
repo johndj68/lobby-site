@@ -78,7 +78,7 @@ const PAYMENT_STATUS_META: Record<PaymentStatus, { label: string; color: string;
 const PAYOUT_STATUS_META: Record<PayoutStatus, { label: string; color: string; Icon: typeof CheckCircle2 }> = {
   retido:                  { label: 'Retido',                  color: '#F59E0B', Icon: Clock },
   elegivel:                { label: 'Elegível',                color: colors.primary, Icon: CheckCircle2 },
-  parcialmente_repassado:  { label: 'Parcialmente repassado',  color: '#6D28D9', Icon: Clock },
+  parcialmente_repassado:  { label: 'Parcialmente repassado',  color: '#0D565E', Icon: Clock },
   repassado:                { label: 'Repassado',               color: '#10B981', Icon: CheckCircle2 },
 }
 

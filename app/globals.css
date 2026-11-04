@@ -106,10 +106,10 @@
   /* ── Tokens de cor da marca LOBBY ──────────────────────────────
      Usados como valores fixos ao longo de todo o projeto.
      Referência: identidade visual da LOBBY. */
-  --color-lobby-blue: #005BFF;          /* Azul primário — botões CTA, links ativos */
-  --color-lobby-blue-light: #00A3FF;    /* Azul claro — gradientes, destaques */
-  --color-lobby-purple: #6D28D9;        /* Roxo base — tom sólido */
-  --color-lobby-purple-light: #7B2CFF;  /* Roxo vibrante — gradientes, badges */
+  --color-lobby-blue: #0B1020;          /* Preto — botões CTA, links ativos */
+  --color-lobby-blue-light: #1C2440;    /* Preto claro — gradientes, destaques */
+  --color-lobby-purple: #0D565E;        /* Petróleo escuro — tom sólido */
+  --color-lobby-purple-light: #168F9C;  /* Petróleo — gradientes, badges */
   --color-lobby-bg: #F7F8FC;            /* Fundo claro do dashboard do cliente */
   --color-lobby-bg-alt: #EEF1F7;        /* Fundo alternativo levemente mais escuro */
   --color-lobby-text: #0B1020;          /* Texto escuro principal */
@@ -275,14 +275,14 @@
 
 /* Gradiente diagonal azul → roxo: botões principais, avatares, badges */
 .lobby-gradient {
-  background: linear-gradient(135deg, #005BFF, #7B2CFF);
+  background: linear-gradient(135deg, #0B1020, #168F9C);
 }
 
 /* Texto com gradiente azul → roxo.
    Usa background-clip: text para pintar apenas os glifos com o gradiente.
    -webkit-text-fill-color: transparent sobrescreve a cor de texto padrão. */
 .lobby-gradient-text {
-  background: linear-gradient(135deg, #005BFF, #7B2CFF);
+  background: linear-gradient(135deg, #0B1020, #168F9C);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -294,13 +294,13 @@
   background: #ffffff;
   border: 1px solid #E3E7F0;
   border-radius: 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 91, 255, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(11, 16, 32, 0.04);
   transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 /* Hover do card: eleva levemente (translateY -2px) e intensifica sombra */
 .lobby-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 91, 255, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(11, 16, 32, 0.08);
   transform: translateY(-2px);
 }
 
@@ -322,13 +322,13 @@
 
 /* Polegar (parte arrastável): gradiente azul → roxo da marca LOBBY com 45% opacidade */
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, rgba(0,91,255,0.45), rgba(123,44,255,0.45));
+  background: linear-gradient(to bottom, rgba(11,16,32,0.45), rgba(22,143,156,0.45));
   border-radius: 99px; /* cápsula totalmente arredondada */
 }
 
 /* Hover no polegar: aumenta opacidade para indicar interatividade */
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, rgba(0,91,255,0.75), rgba(123,44,255,0.75));
+  background: linear-gradient(to bottom, rgba(11,16,32,0.75), rgba(22,143,156,0.75));
 }
 
 /* Canto onde barra vertical e horizontal se encontram: transparente */
@@ -339,7 +339,7 @@
 /* Firefox — scrollbar fina com cor azul LOBBY sobre trilha transparente */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0,91,255,0.35) transparent;
+  scrollbar-color: rgba(11,16,32,0.35) transparent;
 }
 
 /* ── Bloqueia scroll do body quando o painel admin está ativo ───────
@@ -366,14 +366,14 @@ html:has(.admin-layout) {
 
 /* Polegar com gradiente azul → roxo em maior opacidade (60%) para contraste no escuro */
 .admin-layout ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, rgba(0,91,255,0.60), rgba(123,44,255,0.60));
+  background: linear-gradient(to bottom, rgba(11,16,32,0.60), rgba(22,143,156,0.60));
   border-radius: 99px;
   border: 1px solid rgba(255,255,255,0.06); /* borda sutil para separar do track */
 }
 
 /* Hover: gradiente sólido para máxima visibilidade */
 .admin-layout ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #005BFF, #7B2CFF);
+  background: linear-gradient(to bottom, #0B1020, #168F9C);
 }
 
 .admin-layout ::-webkit-scrollbar-corner {
@@ -383,7 +383,7 @@ html:has(.admin-layout) {
 /* Firefox dentro do admin: cor do polegar em 60% e trilha escura */
 .admin-layout * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0,91,255,0.60) #08101F;
+  scrollbar-color: rgba(11,16,32,0.60) #08101F;
 }
 
 /* ── 9. Animações keyframes ─────────────────────────────────────────

@@ -83,7 +83,7 @@ export default function SaldosAtuais({ overview, pendencias, loading, error, onG
             <ShieldCheck size={14} aria-hidden="true" />Reserva de segurança
           </p>
           {skeleton ? <Skeleton /> : (
-            <p className="mt-1 text-xl font-bold tabular-nums" style={{ color: '#6D28D9' }}>{formatCurrencyBRL(overview!.reserva_retida_amount)}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums" style={{ color: '#0D565E' }}>{formatCurrencyBRL(overview!.reserva_retida_amount)}</p>
           )}
           <p className="mt-1 text-[11px]" style={{ color: colors.textMuted }}>
             Parcela reservada preventivamente conforme a política da venda.
