@@ -83,6 +83,7 @@ export async function POST(
     .insert({
       application_id: applicationId,
       plan_id: planId,
+      created_by: user.id,
       name: typeof name === 'string' && name.trim() ? name.trim() : null,
       promo_price: promoPrice,
       original_price: plan.price,

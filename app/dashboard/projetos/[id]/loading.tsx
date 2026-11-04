@@ -15,7 +15,7 @@ export default function ProjectDetailLoading() {
           <div className="h-3 w-32 rounded bg-[#E3E7F0]" />
         </div>
         <div className="h-2 w-full rounded-full bg-[#E3E7F0]">
-          <div className="h-2 w-2/3 rounded-full bg-[#005BFF]/20" />
+          <div className="h-2 w-2/3 rounded-full bg-[#0B1020]/20" />
         </div>
         <div className="mt-2 h-2.5 w-16 rounded bg-[#E3E7F0]" />
       </div>

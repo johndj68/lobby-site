@@ -17,7 +17,7 @@ interface Props {
 
 const HISTORY_TYPES = ['Atualização', 'Entrega', 'Segurança', 'Bloqueio', 'Próximo passo', 'Feedback do cliente']
 
-const textareaClass = 'w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50'
+const textareaClass = 'w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50'
 const labelClass = 'mb-1.5 block text-xs font-semibold text-white/60'
 
 function linesToArray(text: string): string[] {
@@ -108,7 +108,7 @@ export default function ProjectClientProgressEditor({ value, onChange, deadline,
             onChange={e => setNewEntry(v => ({ ...v, description: e.target.value }))}
             className="resize-none rounded-lg border border-white/[0.08] bg-[#0D1428] px-2.5 py-2 text-xs text-white placeholder:text-white/20 outline-none sm:col-span-2" />
           <button type="button" onClick={addHistoryEntry}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] py-2 text-xs font-bold text-white transition-all hover:-translate-y-0.5 sm:col-span-2">
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[#0B1020] to-[#168F9C] py-2 text-xs font-bold text-white transition-all hover:-translate-y-0.5 sm:col-span-2">
             <Plus size={13} aria-hidden="true" />
             Adicionar ao histórico
           </button>

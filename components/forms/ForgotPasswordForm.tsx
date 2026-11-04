@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Mail, ArrowRight, CheckCircle, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { env } from '@/env'
+import TurnstileChallenge, { type ChallengeStatus } from '@/components/anti-bot/TurnstileChallenge'
 
 /**
  * Formulário de recuperação de senha via e-mail.
@@ -25,6 +27,12 @@ export default function ForgotPasswordForm() {
   // Mensagem de erro exibida em caso de falha no envio
   const [error, setError]   = useState('')
 
+  // Verificação de segurança sempre exigida nesta operação (seção 3 do pedido) —
+  // diferente do login, não é adaptativa: o widget sempre aparece aqui.
+  const [turnstileToken, setTurnstileToken]   = useState<string | null>(null)
+  const [challengeStatus, setChallengeStatus] = useState<ChallengeStatus>('loading')
+  const [resetSignal, setResetSignal]         = useState(0)
+
   /**
    * Valida o campo e chama resetPasswordForEmail do Supabase.
    * O redirectTo aponta para a página /atualizar-senha da própria aplicação,
@@ -33,6 +41,10 @@ export default function ForgotPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email) { setError('Digite seu e-mail.'); return }
+    if (challengeStatus !== 'verified' || !turnstileToken) {
+      setError('Conclua a verificação de segurança antes de continuar.')
+      return
+    }
 
     setLoading(true)
     setError('')
@@ -42,8 +54,16 @@ export default function ForgotPasswordForm() {
         method:      'POST',
         headers:     { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body:        JSON.stringify({ email }),
+        body:        JSON.stringify({ email, turnstileToken }),
       })
+      const data = await res.json().catch(() => ({}))
+
+      if (data.code === 'BOT_CHALLENGE_REQUIRED' || data.code === 'BOT_CHALLENGE_UNAVAILABLE') {
+        setError(data.error ?? 'Erro ao enviar. Tente novamente.')
+        setTurnstileToken(null)
+        setResetSignal(s => s + 1)
+        return
+      }
       if (!res.ok) throw new Error('failed')
 
       // Exibe a tela de confirmação de envio
@@ -61,8 +81,8 @@ export default function ForgotPasswordForm() {
       <div className="flex flex-col items-center text-center gap-4 py-8">
         {/* Ícone de sucesso com gradiente da marca */}
         <div
-          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-[0_12px_40px_rgba(0,91,255,0.28)]"
-          style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-[0_12px_40px_rgba(11,16,32,0.28)]"
+          style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
         >
           <CheckCircle size={28} />
         </div>
@@ -75,7 +95,7 @@ export default function ForgotPasswordForm() {
           </p>
         </div>
         {/* Link de retorno ao login */}
-        <Link href="/login" className="text-sm font-semibold text-[#005BFF] hover:text-[#7B2CFF] transition-colors">
+        <Link href="/login" className="text-sm font-semibold text-[#0B1020] hover:text-[#168F9C] transition-colors">
           Voltar ao login
         </Link>
       </div>
@@ -100,22 +120,38 @@ export default function ForgotPasswordForm() {
             placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-12 rounded-2xl border-[#E3E7F0] pl-10 text-sm transition-all duration-300 focus-visible:border-[#005BFF]/40 focus-visible:ring-4 focus-visible:ring-[#005BFF]/10"
+            className="h-12 rounded-2xl border-[#E3E7F0] pl-10 text-sm transition-all duration-300 focus-visible:border-[#0B1020]/40 focus-visible:ring-4 focus-visible:ring-[#0B1020]/10"
             required
           />
         </div>
       </div>
+
+      {/* Verificação de segurança — sempre exigida antes do e-mail ser disparado */}
+      {env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? (
+        <TurnstileChallenge
+          siteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+          action="forgot_password"
+          onStatusChange={setChallengeStatus}
+          onToken={setTurnstileToken}
+          resetSignal={resetSignal}
+        />
+      ) : (
+        <p className="text-xs font-medium text-amber-600">
+          Security verification is temporarily unavailable. Please try again shortly.
+        </p>
+      )}
 
       {/* Exibe mensagem de erro caso o envio falhe */}
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs font-medium text-red-600">{error}</p>
       )}
 
-      {/* Botão de envio — desabilitado e com spinner enquanto a requisição ocorre */}
+      {/* Botão de envio — desabilitado e com spinner enquanto a requisição ocorre, ou
+          até a verificação de segurança ser concluída */}
       <button
         type="submit"
-        disabled={loading}
-        className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={loading || challengeStatus !== 'verified'}
+        className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? (
           <><Loader2 size={16} className="animate-spin" />Enviando...</>
@@ -128,7 +164,7 @@ export default function ForgotPasswordForm() {
       {/* Link para voltar ao login caso o usuário já lembre a senha */}
       <p className="text-center text-sm text-[#5D6475]">
         Lembrou a senha?{' '}
-        <Link href="/login" className="font-semibold text-[#005BFF] hover:text-[#7B2CFF] transition-colors">
+        <Link href="/login" className="font-semibold text-[#0B1020] hover:text-[#168F9C] transition-colors">
           Voltar ao login
         </Link>
       </p>

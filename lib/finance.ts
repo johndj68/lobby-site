@@ -1,4 +1,4 @@
-import type { FinancialTransaction, FinanceType, FinanceStatus, PaymentMethod } from '@/types'
+import type { FinancialTransaction, FinanceType, FinanceStatus, PaymentMethod, AccountEntry } from '@/types'
 export type { FinancialTransaction }
 
 export function formatCurrencyBRL(value: number): string {
@@ -10,6 +10,22 @@ export function formatDateBR(d?: string | null): string {
   return new Date(`${d}T00:00:00`).toLocaleDateString('pt-BR')
 }
 
+/**
+ * Texto de contagem regressiva pra uma data de liberação — nunca negativo,
+ * nunca "menos de X dias" quando falta menos de 1 dia (vira "Menos de 24
+ * horas", regra explícita do pedido de Repasses e extrato). `releaseIso`
+ * é a data/hora exata (ISO) vinda do backend — nunca recalculada aqui além
+ * de "quanto falta até ela".
+ */
+export function formatCountdown(releaseIso: string): string {
+  const diffMs = new Date(releaseIso).getTime() - Date.now()
+  if (diffMs <= 0) return 'Elegível agora'
+  const hours = diffMs / 3_600_000
+  if (hours < 24) return 'Menos de 24 horas'
+  const days = Math.ceil(hours / 24)
+  return `Faltam ${days} dia${days === 1 ? '' : 's'}`
+}
+
 export const FINANCE_TYPE_LABEL: Record<FinanceType, string> = {
   ebook:          'E-book',
   projeto:        'Projeto',
@@ -17,6 +33,7 @@ export const FINANCE_TYPE_LABEL: Record<FinanceType, string> = {
   consultoria:    'Consultoria',
   mensalidade:    'Mensalidade',
   creditos:       'Créditos',
+  app:            'App',
   outro:          'Outro',
 }
 
@@ -39,12 +56,13 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
 
 export function getFinanceTypeStyle(type: FinanceType): { color: string; bg: string } {
   const map: Record<FinanceType, { color: string; bg: string }> = {
-    ebook:          { color: '#7B2CFF', bg: 'rgba(123,44,255,0.12)' },
-    projeto:        { color: '#005BFF', bg: 'rgba(0,91,255,0.12)'   },
+    ebook:          { color: '#168F9C', bg: 'rgba(22,143,156,0.12)' },
+    projeto:        { color: '#0B1020', bg: 'rgba(11,16,32,0.12)'   },
     visita_tecnica: { color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
     consultoria:    { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
     mensalidade:    { color: '#38BDF8', bg: 'rgba(56,189,248,0.12)' },
     creditos:       { color: '#EAB308', bg: 'rgba(234,179,8,0.12)'  },
+    app:            { color: '#EC4899', bg: 'rgba(236,72,153,0.12)' },
     outro:          { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' },
   }
   return map[type]
@@ -179,13 +197,24 @@ export function calculateFinanceMetrics(rows: FinancialTransaction[]): FinanceMe
   }
 }
 
+/**
+ * Escapa um campo pra CSV: aspas + neutraliza fórmula (OWASP CSV injection —
+ * valor começando com =, +, -, @ é prefixado com aspa simples pra Excel/
+ * Sheets nunca interpretar como fórmula ao abrir o arquivo).
+ */
+export function escapeCsvField(value: string): string {
+  const needsFormulaGuard = /^[=+\-@]/.test(value)
+  const guarded = needsFormulaGuard ? `'${value}` : value
+  return `"${guarded.replace(/"/g, '""')}"`
+}
+
 /** Gera e baixa um CSV com as transações filtradas — sem dependência nova. */
 export function exportFinanceCSV(rows: FinancialTransaction[]) {
   const headers = [
     'Data da venda', 'Cliente', 'Empresa', 'Tipo', 'Descrição', 'Valor',
     'Status', 'Forma de pagamento', 'Data de recebimento',
   ]
-  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`
+  const escape = escapeCsvField
   const lines = rows.map(r => [
     formatDateBR(r.sale_date),
     r.client_name ?? '',
@@ -204,6 +233,72 @@ export function exportFinanceCSV(rows: FinancialTransaction[]) {
   const a = document.createElement('a')
   a.href = url
   a.download = `financeiro-lobby-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * Data de hoje (YYYY-MM-DD) ancorada em America/Sao_Paulo (UTC-3 fixo —
+ * Brasil sem horário de verão desde 2019, mesma âncora usada na
+ * conciliação). Evita que "vence hoje" vire "atrasado" por comparação
+ * direta com UTC do servidor.
+ */
+export function todaySaoPauloDateStr(): string {
+  return new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
+}
+
+export const ACCOUNT_STATUS_LABEL: Record<string, string> = {
+  pendente: 'Em aberto', pago: 'Liquidada', recebido: 'Liquidada', parcial: 'Parcialmente liquidada', cancelado: 'Cancelada',
+}
+
+export function getAccountStatusStyle(status: string): { color: string; bg: string } {
+  const map: Record<string, { color: string; bg: string }> = {
+    pendente:  { color: '#FBBF24', bg: 'rgba(245,158,11,0.12)' },
+    parcial:   { color: '#60A5FA', bg: 'rgba(96,165,250,0.12)' },
+    pago:      { color: '#34D399', bg: 'rgba(16,185,129,0.12)' },
+    recebido:  { color: '#34D399', bg: 'rgba(16,185,129,0.12)' },
+    cancelado: { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' },
+  }
+  return map[status] ?? map.pendente
+}
+
+/** "Atrasada" é condição derivada do vencimento, nunca um status persistido — vale só pro saldo em aberto (pendente/parcial). */
+export function isAccountOverdue(dueDate: string | null, status: string): boolean {
+  if (!dueDate || (status !== 'pendente' && status !== 'parcial')) return false
+  return dueDate < todaySaoPauloDateStr()
+}
+
+/** Export CSV de contas a pagar/receber — mesmo padrão anti-fórmula do exportFinanceCSV. */
+export function exportAccountsCSV(rows: AccountEntry[], scopeLabel: string) {
+  const headers = [
+    'Referência', 'Tipo', 'Descrição', 'Origem', 'Cliente/Favorecido', 'Categoria',
+    'Emissão', 'Vencimento', 'Moeda', 'Valor original', 'Valor liquidado', 'Saldo', 'Situação',
+  ]
+  const escape = escapeCsvField
+  const lines = rows.map(r => [
+    r.reference ?? r.id.slice(0, 8),
+    r.kind === 'payable' ? 'A pagar' : 'A receber',
+    r.description,
+    'Manual',
+    r.category ?? r.payerName ?? '',
+    r.category ?? '',
+    formatDateBR(r.createdAt.slice(0, 10)),
+    formatDateBR(r.dueDate),
+    'BRL',
+    r.amount.toFixed(2).replace('.', ','),
+    r.amountSettled.toFixed(2).replace('.', ','),
+    (r.amount - r.amountSettled).toFixed(2).replace('.', ','),
+    isAccountOverdue(r.dueDate, r.status) ? `${ACCOUNT_STATUS_LABEL[r.status]} (atrasada)` : ACCOUNT_STATUS_LABEL[r.status],
+  ].map(v => escape(String(v))).join(';'))
+
+  const csv = '﻿' + [escape(scopeLabel), headers.map(escape).join(';'), ...lines].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `contas-lobby-${new Date().toISOString().slice(0, 10)}.csv`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

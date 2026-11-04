@@ -16,5 +16,12 @@ export default async function ContaPage() {
   const supabase = await createServerSupabaseClient()
   const { user, profile } = await requireClientSession(supabase)
 
-  return <AccountForm user={user} profile={profile} />
+  // Só parceiros (dono de pelo menos 1 app_draft) veem a seção de dados de
+  // recebimento — mesmo modelo de "parceiro" já usado em lib/partners.ts.
+  const { count: draftsCount } = await supabase
+    .from('app_drafts')
+    .select('id', { count: 'exact', head: true })
+    .eq('created_by', user.id)
+
+  return <AccountForm user={user} profile={profile} isPartner={!!draftsCount && draftsCount > 0} />
 }

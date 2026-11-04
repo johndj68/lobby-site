@@ -24,6 +24,10 @@ const NAV_TABS = [
   { label: 'Destaques', href: '/admin/marketplace/destaques', enabled: true },
   { label: 'Categorias', href: '/admin/marketplace/categorias', enabled: true },
   { label: 'Parceiros', href: '/admin/marketplace/parceiros', enabled: true },
+  { label: 'Comissões', href: '/admin/marketplace/comissoes', enabled: true },
+  { label: 'Repasses', href: '/admin/marketplace/repasses', enabled: true },
+  { label: 'Preços', href: '/admin/marketplace/precos', enabled: true },
+  { label: 'Promoções', href: '/admin/marketplace/promocoes', enabled: true },
 ]
 
 export interface CategoryEvent {

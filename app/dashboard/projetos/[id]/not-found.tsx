@@ -5,7 +5,7 @@ export default function ProjectNotFound() {
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center py-16 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F4FF]">
-        <FolderKanban className="h-7 w-7 text-[#005BFF]" />
+        <FolderKanban className="h-7 w-7 text-[#0B1020]" />
       </div>
 
       <h1 className="mb-2 text-xl font-bold text-[#0B1020]">Projeto não encontrado</h1>
@@ -15,7 +15,7 @@ export default function ProjectNotFound() {
 
       <Link
         href="/dashboard/projetos"
-        className="inline-flex items-center gap-2 rounded-xl bg-[#005BFF] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#0047CC]"
+        className="inline-flex items-center gap-2 rounded-xl bg-[#0B1020] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#0047CC]"
       >
         <ArrowLeft className="h-4 w-4" />
         Ver meus projetos

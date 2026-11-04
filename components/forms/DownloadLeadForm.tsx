@@ -152,7 +152,7 @@ export default function DownloadLeadForm({ resource, onClose }: DownloadLeadForm
                   placeholder="Seu nome completo"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="mt-1.5 border-[#E3E7F0] focus-visible:ring-[#005BFF]"
+                  className="mt-1.5 border-[#E3E7F0] focus-visible:ring-[#0B1020]"
                 />
               </div>
 
@@ -165,7 +165,7 @@ export default function DownloadLeadForm({ resource, onClose }: DownloadLeadForm
                   placeholder="seu@email.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="mt-1.5 border-[#E3E7F0] focus-visible:ring-[#005BFF]"
+                  className="mt-1.5 border-[#E3E7F0] focus-visible:ring-[#0B1020]"
                 />
               </div>
 
@@ -177,7 +177,7 @@ export default function DownloadLeadForm({ resource, onClose }: DownloadLeadForm
                   placeholder="Nome da sua empresa"
                   value={form.company}
                   onChange={(e) => setForm({ ...form, company: e.target.value })}
-                  className="mt-1.5 border-[#E3E7F0] focus-visible:ring-[#005BFF]"
+                  className="mt-1.5 border-[#E3E7F0] focus-visible:ring-[#0B1020]"
                 />
               </div>
 
@@ -193,8 +193,8 @@ export default function DownloadLeadForm({ resource, onClose }: DownloadLeadForm
                       // Destaca visualmente a opção selecionada
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                         form.interest_area === opt
-                          ? 'border-[#005BFF] bg-[#005BFF]/5 text-[#005BFF]'
-                          : 'border-[#E3E7F0] text-[#5D6475] hover:border-[#005BFF]/40'
+                          ? 'border-[#0B1020] bg-[#0B1020]/5 text-[#0B1020]'
+                          : 'border-[#E3E7F0] text-[#5D6475] hover:border-[#0B1020]/40'
                       }`}
                     >
                       {opt}

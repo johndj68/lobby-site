@@ -26,7 +26,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 // Cor hexadecimal de cada status — usada na barra de progresso e pill
 const STATUS_COLOR: Record<string, string> = {
-  ativo: '#005BFF', em_andamento: '#F59E0B', concluido: '#10B981',
+  ativo: '#0B1020', em_andamento: '#F59E0B', concluido: '#10B981',
   aguardando: '#94A3B8', cancelado: '#EF4444', pausado: '#6B7280',
 }
 
@@ -89,7 +89,7 @@ export default function HistoricoClient({ projects }: Props) {
             onClick={() => setFilter(f)}
             className="rounded-full border px-4 py-1.5 text-xs font-bold transition-colors"
             style={filter === f
-              ? { background: '#005BFF', borderColor: '#005BFF', color: '#fff' }
+              ? { background: '#0B1020', borderColor: '#0B1020', color: '#fff' }
               : { background: '#fff', borderColor: '#E3E7F0', color: '#5D6475' }}
           >
             {f === 'todos' ? 'Todos' : statusLabel(f)}
@@ -112,7 +112,7 @@ export default function HistoricoClient({ projects }: Props) {
               <Link
                 key={p.id}
                 href={`/dashboard/projetos/${p.id}`}
-                className="flex items-center gap-4 rounded-2xl border border-[#E3E7F0] bg-white p-4 transition-all hover:border-[#005BFF]/30 hover:shadow-[0_4px_20px_rgba(0,91,255,0.08)]"
+                className="flex items-center gap-4 rounded-2xl border border-[#E3E7F0] bg-white p-4 transition-all hover:border-[#0B1020]/30 hover:shadow-[0_4px_20px_rgba(11,16,32,0.08)]"
               >
                 {/* Ícone de pasta com cor da categoria */}
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: cs.bg }}>

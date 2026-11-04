@@ -32,7 +32,7 @@ function getSummaryQualityChecks(text: string): { label: string; ok: boolean; hi
   return checks
 }
 
-const inputClass = 'h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50'
+const inputClass = 'h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50'
 const labelClass = 'mb-1.5 block text-xs font-semibold text-white/60'
 
 export default function ProjectProgressSummary({ value, onChange }: Props) {
@@ -53,7 +53,7 @@ export default function ProjectProgressSummary({ value, onChange }: Props) {
 
       <div className="relative mb-2">
         <button type="button" onClick={() => setShowTemplates(v => !v)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-semibold text-white/60 transition-colors hover:border-[#005BFF]/40 hover:text-[#60A5FA]">
+          className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-semibold text-white/60 transition-colors hover:border-[#0B1020]/40 hover:text-[#60A5FA]">
           Usar modelo
           <ChevronDown size={11} className={`transition-transform ${showTemplates ? 'rotate-180' : ''}`} aria-hidden="true" />
         </button>
@@ -76,7 +76,7 @@ export default function ProjectProgressSummary({ value, onChange }: Props) {
       <textarea rows={3} maxLength={800}
         placeholder="Ex: Estamos avançando na etapa de desenvolvimento. As fases iniciais já foram concluídas e agora estamos construindo as principais funcionalidades do sistema."
         value={summary} onChange={e => set('projectSummary', e.target.value)}
-        className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50" />
+        className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50" />
       <p className={`mt-1 text-right text-[10px] ${summary.length > 500 ? 'text-[#F59E0B]' : 'text-white/25'}`}>{summary.length}/500</p>
 
       {(empty || tooShort) && (
@@ -113,7 +113,7 @@ export default function ProjectProgressSummary({ value, onChange }: Props) {
           <label className={labelClass}>Previsão do marco</label>
           <input type="date" value={value.nextMilestoneDate ?? ''}
             onChange={e => set('nextMilestoneDate', e.target.value)}
-            className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#0D1428] px-3 text-sm text-white outline-none focus:border-[#005BFF]/50 [color-scheme:dark]" />
+            className="h-11 w-full rounded-xl border border-white/[0.08] bg-[#0D1428] px-3 text-sm text-white outline-none focus:border-[#0B1020]/50 [color-scheme:dark]" />
         </div>
         <div>
           <label className={labelClass}>Descrição simples para o cliente</label>

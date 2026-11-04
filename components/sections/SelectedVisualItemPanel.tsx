@@ -25,8 +25,8 @@ interface Props {
 
 const STATUS_OPTIONS = Object.entries(VISUAL_STATUS_STYLES).map(([value, s]) => ({ value, label: s.label }))
 
-const inputClass = 'h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50'
-const textareaClass = 'w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#005BFF]/50'
+const inputClass = 'h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50'
+const textareaClass = 'w-full resize-none rounded-lg border border-white/[0.08] bg-white/[0.05] px-2.5 py-2 text-xs text-white placeholder:text-white/20 outline-none focus:border-[#0B1020]/50'
 const labelClass = 'mb-1.5 block text-xs font-semibold text-white/60'
 
 function linesToArray(text: string): string[] {
@@ -180,7 +180,7 @@ export default function SelectedVisualItemPanel({ selected, onUpdate, onRemove, 
         <div className="border-t border-white/[0.06] pt-3">
           <label className="flex items-center gap-2.5 text-xs font-medium text-white/60">
             <input type="checkbox" checked={visible} onChange={e => onUpdate({ visibleToClient: e.target.checked })}
-              className="h-4 w-4 accent-[#005BFF]" />
+              className="h-4 w-4 accent-[#0B1020]" />
             Visível para o cliente
           </label>
           <p className="mt-1.5 text-[10px] text-white/30">

@@ -68,9 +68,9 @@ const projectsPlanned    = projects.filter(p => PROJECT_STATUS[p.id] === 'Planej
 
 /* Cards de métricas do portfólio: Em andamento / Entregues / Planejamento */
 const METRIC_CARDS = [
-  { icon: FolderKanban, title: 'Em andamento',  value: String(projectsInProgress), desc: 'Cases da LOBBY em execução',      gradFrom: '#005BFF', gradTo: '#00A3FF', color: '#005BFF' },
+  { icon: FolderKanban, title: 'Em andamento',  value: String(projectsInProgress), desc: 'Cases da LOBBY em execução',      gradFrom: '#0B1020', gradTo: '#5CB1BA', color: '#0B1020' },
   { icon: Rocket,       title: 'Entregues',     value: String(projectsDelivered),  desc: 'Cases já concluídos',              gradFrom: '#10B981', gradTo: '#059669', color: '#10B981' },
-  { icon: Sparkles,     title: 'Planejamento',  value: String(projectsPlanned),    desc: 'Cases em fase de planejamento',    gradFrom: '#7B2CFF', gradTo: '#005BFF', color: '#7B2CFF' },
+  { icon: Sparkles,     title: 'Planejamento',  value: String(projectsPlanned),    desc: 'Cases em fase de planejamento',    gradFrom: '#168F9C', gradTo: '#0B1020', color: '#168F9C' },
 ]
 
 /* Opções do filtro de status dos cases (inclui contagem para o badge) */
@@ -88,8 +88,8 @@ const CATEGORIES = ['Todas', 'Software', 'Automação', 'Dados', 'Ciberseguranç
    cada status tem cor e borda específicas. */
 const STATUS_BADGE: Record<string, string> = {
   'Concluído':    'bg-[#10B981]/10 text-[#059669] border border-[#10B981]/25',
-  'Em andamento': 'bg-[#005BFF]/10 text-[#005BFF] border border-[#005BFF]/25',
-  'Em validação': 'bg-[#7B2CFF]/10 text-[#7B2CFF] border border-[#7B2CFF]/25',
+  'Em andamento': 'bg-[#0B1020]/10 text-[#0B1020] border border-[#0B1020]/25',
+  'Em validação': 'bg-[#168F9C]/10 text-[#168F9C] border border-[#168F9C]/25',
   'Planejamento': 'bg-[#F59E0B]/10 text-[#B45309] border border-[#F59E0B]/25',
 }
 
@@ -261,7 +261,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
             </div>
             {/* Botão de solicitar projeto no canto superior direito */}
             <button type="button" onClick={openModal}
-              className="group inline-flex items-center gap-1.5 rounded-xl border border-[#E3E7F0] bg-white px-4 py-2 text-xs font-semibold text-[#005BFF] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#005BFF]/30">
+              className="group inline-flex items-center gap-1.5 rounded-xl border border-[#E3E7F0] bg-white px-4 py-2 text-xs font-semibold text-[#0B1020] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0B1020]/30">
               <Plus size={13} aria-hidden="true" />
               Solicitar projeto
             </button>
@@ -275,8 +275,8 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
               className="flex flex-col items-center gap-5 rounded-3xl border border-dashed border-[#E3E7F0] bg-white/60 px-6 py-12 text-center"
             >
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl"
-                style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.08), rgba(123,44,255,0.08))' }}>
-                <FolderKanban size={28} style={{ color: '#005BFF' }} aria-hidden="true" />
+                style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.08), rgba(22,143,156,0.08))' }}>
+                <FolderKanban size={28} style={{ color: '#0B1020' }} aria-hidden="true" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-[#0B1020]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
@@ -287,7 +287,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                 </p>
               </div>
               <button type="button" onClick={openModal}
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.22)] transition-all hover:-translate-y-0.5">
+                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.22)] transition-all hover:-translate-y-0.5">
                 <Plus size={15} aria-hidden="true" />
                 Solicitar meu primeiro projeto
               </button>
@@ -305,7 +305,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.07 }}
-                    className="overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white shadow-[0_8px_40px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(0,91,255,0.08)]"
+                    className="overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white shadow-[0_8px_40px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(11,16,32,0.08)]"
                   >
                     {/* Faixa de cor no topo do card derivada do status */}
                     <div className="h-1 w-full" style={{ background: `linear-gradient(to right, ${cfg.color}, ${cfg.color}66)` }} />
@@ -335,7 +335,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                           </h3>
                           {/* Categoria do projeto em azul */}
                           {proj.category && (
-                            <p className="mt-0.5 text-xs text-[#005BFF]">{proj.category}</p>
+                            <p className="mt-0.5 text-xs text-[#0B1020]">{proj.category}</p>
                           )}
                         </div>
                         {/* Percentual de conclusão no canto direito */}
@@ -356,8 +356,8 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
 
                       {/* Nota da equipe técnica (atualização textual do técnico) */}
                       {proj.notes && (
-                        <div className="mb-4 rounded-xl border border-[#005BFF]/10 bg-[#005BFF]/[0.04] px-3 py-2.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#005BFF] mb-1">
+                        <div className="mb-4 rounded-xl border border-[#0B1020]/10 bg-[#0B1020]/[0.04] px-3 py-2.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#0B1020] mb-1">
                             Atualização da equipe
                           </p>
                           <p className="text-xs text-[#5D6475]">{proj.notes}</p>
@@ -387,7 +387,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
 
                       {/* Link para a página de acompanhamento detalhado do projeto */}
                       <Link href={`/dashboard/projetos/${proj.id}`}
-                        className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-[#005BFF]/20 bg-[#005BFF]/[0.04] py-2.5 text-xs font-bold text-[#005BFF] transition-all hover:bg-[#005BFF]/[0.08]">
+                        className="mt-4 flex items-center justify-center gap-1.5 rounded-xl border border-[#0B1020]/20 bg-[#0B1020]/[0.04] py-2.5 text-xs font-bold text-[#0B1020] transition-all hover:bg-[#0B1020]/[0.08]">
                         Ver acompanhamento completo
                         <ArrowRight size={12} aria-hidden="true" />
                       </Link>
@@ -406,7 +406,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                         {proj.lead_technician_id ? (
                           // Link direto para a thread do chat deste projeto
                           <Link href={`/dashboard/mensagens?project=${proj.id}`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#005BFF] transition-all hover:gap-2">
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-[#0B1020] transition-all hover:gap-2">
                             Falar com equipe
                             <ArrowRight size={11} className="transition-transform" aria-hidden="true" />
                           </Link>
@@ -432,7 +432,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
           {/* Botão para solicitar mais um projeto (exibido quando já há projetos) */}
           {myProjects.length > 0 && (
             <button type="button" onClick={openModal}
-              className="group mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#E3E7F0] bg-white/60 px-6 py-4 text-sm font-semibold text-[#5D6475] transition-all hover:border-[#005BFF]/30 hover:text-[#005BFF]">
+              className="group mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#E3E7F0] bg-white/60 px-6 py-4 text-sm font-semibold text-[#5D6475] transition-all hover:border-[#0B1020]/30 hover:text-[#0B1020]">
               <Plus size={16} aria-hidden="true" />
               Solicitar mais um projeto
             </button>
@@ -464,7 +464,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
             <button
               type="button"
               onClick={openModal}
-              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(123,44,255,0.28)]"
+              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-6 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(22,143,156,0.28)]"
             >
               Solicitar novo projeto
               <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
@@ -472,7 +472,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
             {/* Alternativa: falar diretamente com um especialista */}
             <Link
               href="/contato"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-6 py-3 text-sm font-bold text-[#0B1020] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-6 py-3 text-sm font-bold text-[#0B1020] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:text-[#0B1020]"
             >
               Falar com especialista
             </Link>
@@ -500,7 +500,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08 + i * 0.07 }}
               role="listitem"
-              className="group relative overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 shadow-[0_18px_60px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#005BFF]/25 hover:shadow-[0_24px_80px_rgba(0,91,255,0.12)]"
+              className="group relative overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 shadow-[0_18px_60px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#0B1020]/25 hover:shadow-[0_24px_80px_rgba(11,16,32,0.12)]"
             >
               {/* Faixa de cor no topo */}
               <div
@@ -551,8 +551,8 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                   aria-pressed={activeStatus === label}
                   className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
                     activeStatus === label
-                      ? 'bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-white shadow-[0_4px_12px_rgba(0,91,255,0.25)]'
-                      : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF]'
+                      ? 'bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-white shadow-[0_4px_12px_rgba(11,16,32,0.25)]'
+                      : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020]'
                   }`}
                 >
                   {label}
@@ -580,7 +580,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                   className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-all duration-150 ${
                     activeCategory === cat
                       ? 'bg-[#0B1020] text-white'
-                      : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF]'
+                      : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020]'
                   }`}
                 >
                   {cat}
@@ -589,7 +589,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
               {/* Ordenação (visual apenas — sem lógica implementada) */}
               <button
                 type="button"
-                className="inline-flex items-center gap-1 rounded-full border border-[#E3E7F0] bg-white px-3 py-1 text-[11px] font-semibold text-[#5D6475] transition-all hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+                className="inline-flex items-center gap-1 rounded-full border border-[#E3E7F0] bg-white px-3 py-1 text-[11px] font-semibold text-[#5D6475] transition-all hover:border-[#0B1020]/30 hover:text-[#0B1020]"
               >
                 Mais recentes
                 <ChevronDown size={11} aria-hidden="true" />
@@ -638,7 +638,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.45 + i * 0.06 }}
-                    className="group overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white/90 shadow-[0_18px_60px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#005BFF]/25 hover:shadow-[0_24px_80px_rgba(0,91,255,0.12)]"
+                    className="group overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white/90 shadow-[0_18px_60px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#0B1020]/25 hover:shadow-[0_24px_80px_rgba(11,16,32,0.12)]"
                   >
                     {/* Mockup visual do projeto com zoom suave no hover */}
                     <div className="relative h-44 overflow-hidden">
@@ -669,7 +669,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
 
                       {/* Resultado/impacto do projeto (opcional) */}
                       {project.impact && (
-                        <p className="mb-4 text-xs font-semibold text-[#005BFF]">
+                        <p className="mb-4 text-xs font-semibold text-[#0B1020]">
                           📈 {project.impact}
                         </p>
                       )}
@@ -685,7 +685,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                         {/* Link para a página pública detalhada do case */}
                         <Link
                           href={`/projetos/${project.slug}`}
-                          className="group/link inline-flex items-center gap-1 text-xs font-bold text-[#005BFF] transition-all hover:gap-2"
+                          className="group/link inline-flex items-center gap-1 text-xs font-bold text-[#0B1020] transition-all hover:gap-2"
                         >
                           Ver detalhes
                           <ArrowRight
@@ -709,7 +709,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
               <button
                 type="button"
                 onClick={() => { setActiveStatus('Todos'); setActiveCategory('Todas') }}
-                className="mt-3 text-sm font-bold text-[#005BFF] hover:underline"
+                className="mt-3 text-sm font-bold text-[#0B1020] hover:underline"
               >
                 Limpar filtros
               </button>
@@ -730,15 +730,15 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
           {/* Gradientes decorativos de fundo */}
           <div
             className="pointer-events-none absolute inset-0 rounded-3xl"
-            style={{ background: 'radial-gradient(circle at 80% 50%,rgba(123,44,255,0.09) 0%,transparent 35%),radial-gradient(circle at 20% 80%,rgba(0,91,255,0.06) 0%,transparent 40%)' }}
+            style={{ background: 'radial-gradient(circle at 80% 50%,rgba(22,143,156,0.09) 0%,transparent 35%),radial-gradient(circle at 20% 80%,rgba(11,16,32,0.06) 0%,transparent 40%)' }}
             aria-hidden="true"
           />
-          <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-[#7B2CFF]/6 blur-3xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-[#168F9C]/6 blur-3xl" aria-hidden="true" />
 
           <div className="relative z-10 flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-5">
               {/* Ícone com gradiente lobby */}
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl lobby-gradient shadow-[0_8px_24px_rgba(0,91,255,0.28)]">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl lobby-gradient shadow-[0_8px_24px_rgba(11,16,32,0.28)]">
                 <FolderKanban size={22} className="text-white" aria-hidden="true" />
               </div>
               <div>
@@ -767,7 +767,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
             <button
               type="button"
               onClick={openModal}
-              className="shrink-0 inline-flex items-center gap-2 rounded-2xl lobby-gradient px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.28)] transition-all hover:-translate-y-0.5 hover:opacity-90 hover:shadow-[0_12px_32px_rgba(0,91,255,0.38)]"
+              className="shrink-0 inline-flex items-center gap-2 rounded-2xl lobby-gradient px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.28)] transition-all hover:-translate-y-0.5 hover:opacity-90 hover:shadow-[0_12px_32px_rgba(11,16,32,0.38)]"
             >
               Solicitar projeto agora
               <ArrowRight size={15} aria-hidden="true" />
@@ -804,7 +804,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
               /* Tela de confirmação de sucesso após envio */
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                 className="flex flex-col items-center gap-4 py-10 text-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF]">
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C]">
                   <CheckCircle size={34} className="text-white" />
                 </div>
                 <div>
@@ -823,36 +823,36 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                   <p className="text-xs font-bold uppercase tracking-wider text-[#5D6475]">Seus dados de contato</p>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">Nome <span className="text-[#005BFF]">*</span></label>
+                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">Nome <span className="text-[#0B1020]">*</span></label>
                       <input type="text" placeholder="Seu nome completo"
                         value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#005BFF]/40 focus:ring-2 focus:ring-[#005BFF]/10 transition-all" />
+                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#0B1020]/40 focus:ring-2 focus:ring-[#0B1020]/10 transition-all" />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">E-mail <span className="text-[#005BFF]">*</span></label>
+                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">E-mail <span className="text-[#0B1020]">*</span></label>
                       <input type="email" placeholder="seu@email.com"
                         value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#005BFF]/40 focus:ring-2 focus:ring-[#005BFF]/10 transition-all" />
+                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#0B1020]/40 focus:ring-2 focus:ring-[#0B1020]/10 transition-all" />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">Telefone / WhatsApp <span className="text-[#005BFF]">*</span></label>
+                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">Telefone / WhatsApp <span className="text-[#0B1020]">*</span></label>
                       <input type="tel" placeholder="(11) 99999-9999"
                         value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#005BFF]/40 focus:ring-2 focus:ring-[#005BFF]/10 transition-all" />
+                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#0B1020]/40 focus:ring-2 focus:ring-[#0B1020]/10 transition-all" />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">Empresa <span className="text-[#005BFF]">*</span></label>
+                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">Empresa <span className="text-[#0B1020]">*</span></label>
                       <input type="text" placeholder="Nome da empresa"
                         value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
-                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#005BFF]/40 focus:ring-2 focus:ring-[#005BFF]/10 transition-all" />
+                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#0B1020]/40 focus:ring-2 focus:ring-[#0B1020]/10 transition-all" />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">CPF ou CNPJ <span className="text-[#005BFF]">*</span></label>
+                      <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">CPF ou CNPJ <span className="text-[#0B1020]">*</span></label>
                       {/* Máscara aplicada via formatDoc durante onChange */}
                       <input type="text" inputMode="numeric" maxLength={18}
                         placeholder="000.000.000-00 ou 00.000.000/0000-00"
                         value={form.document} onChange={e => setForm(f => ({ ...f, document: formatDoc(e.target.value) }))}
-                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#005BFF]/40 focus:ring-2 focus:ring-[#005BFF]/10 transition-all" />
+                        className="h-12 w-full rounded-xl border border-[#E3E7F0] bg-white px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/40 outline-none focus:border-[#0B1020]/40 focus:ring-2 focus:ring-[#0B1020]/10 transition-all" />
                     </div>
                   </div>
                 </div>
@@ -860,11 +860,11 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                 {/* Campo de título do projeto */}
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-[#0B1020]">
-                    Título do projeto <span className="text-[#005BFF]">*</span>
+                    Título do projeto <span className="text-[#0B1020]">*</span>
                   </label>
                   <input type="text" placeholder="Ex: Plataforma de automação de relatórios"
                     value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                    className="h-12 w-full rounded-2xl border border-[#E3E7F0] px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/50 outline-none focus:border-[#005BFF]/40 focus:ring-4 focus:ring-[#005BFF]/10 transition-all" />
+                    className="h-12 w-full rounded-2xl border border-[#E3E7F0] px-4 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/50 outline-none focus:border-[#0B1020]/40 focus:ring-4 focus:ring-[#0B1020]/10 transition-all" />
                 </div>
 
                 {/* Seleção de área de interesse (toggle — clica novamente para desmarcar) */}
@@ -874,7 +874,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                     {CATEGORIES_FORM.map(c => (
                       <button key={c} type="button" aria-pressed={form.category === c}
                         onClick={() => setForm(f => ({ ...f, category: f.category === c ? '' : c }))}
-                        className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-all ${form.category === c ? 'border-transparent bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-white shadow-[0_4px_12px_rgba(0,91,255,0.2)]' : 'border-[#E3E7F0] text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF]'}`}>
+                        className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-all ${form.category === c ? 'border-transparent bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-white shadow-[0_4px_12px_rgba(11,16,32,0.2)]' : 'border-[#E3E7F0] text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020]'}`}>
                         {c}
                       </button>
                     ))}
@@ -888,7 +888,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
                   </label>
                   <textarea rows={4} placeholder="Contexto sobre sua empresa, desafio atual, resultado esperado..."
                     value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                    className="w-full resize-none rounded-2xl border border-[#E3E7F0] px-4 py-3 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/50 outline-none focus:border-[#005BFF]/40 focus:ring-4 focus:ring-[#005BFF]/10 transition-all" />
+                    className="w-full resize-none rounded-2xl border border-[#E3E7F0] px-4 py-3 text-[15px] text-[#0B1020] placeholder:text-[#5D6475]/50 outline-none focus:border-[#0B1020]/40 focus:ring-4 focus:ring-[#0B1020]/10 transition-all" />
                 </div>
 
                 {/* Mensagem de erro de validação ou falha de envio */}
@@ -898,7 +898,7 @@ export default function ProjetosClient({ user, profile, clientProjects: initialP
 
                 {/* Botão de envio — mostra spinner durante submissão */}
                 <button type="submit" disabled={submitting}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] py-3.5 text-base font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.22)] transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0">
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] py-3.5 text-base font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.22)] transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0">
                   {submitting
                     ? <><Loader2 size={18} className="animate-spin" />Enviando...</>
                     : <><Send size={17} />Enviar solicitação</>}

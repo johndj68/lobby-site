@@ -63,10 +63,10 @@ export const BaseCard = React.forwardRef<HTMLDivElement, BaseCardProps>(
             {typeof icon === 'string' ? (
               <span style={{ color: colors.primary }}>{icon}</span>
             ) : (
-              React.cloneElement(icon as React.ReactElement, {
-                size: 20 as any,
+              React.cloneElement(icon as React.ReactElement<{ size?: number; style?: React.CSSProperties }>, {
+                size: 20,
                 style: { color: colors.primary },
-              } as any)
+              })
             )}
           </div>
         )}

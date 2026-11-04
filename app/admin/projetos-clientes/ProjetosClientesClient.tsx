@@ -108,6 +108,7 @@ const EMPTY_FORM = {
   progress: 0, priority: 'normal', notes: '', deadline: '',
   client_progress: {} as ClientProgress,
   credit_cost: '', allow_credit_payment: false, credit_payment_status: 'nao_aplicavel' as CreditPaymentStatus,
+  monthly_fee: '',
 }
 
 export default function ProjetosClientesClient({ user, profile, isLeader, initialProjects, clients: initialClients, technicians, initialTeam }: Props) {
@@ -318,6 +319,7 @@ export default function ProjetosClientesClient({ user, profile, isLeader, initia
       credit_cost: p.credit_cost != null ? String(p.credit_cost) : '',
       allow_credit_payment: p.allow_credit_payment ?? false,
       credit_payment_status: p.credit_payment_status ?? 'nao_aplicavel',
+      monthly_fee: p.monthly_fee != null ? String(p.monthly_fee).replace('.', ',') : '',
     })
     // Preenche campo de busca com o nome do cliente atual
     const c = clientsMap[p.client_id]
@@ -383,6 +385,7 @@ export default function ProjetosClientesClient({ user, profile, isLeader, initia
         credit_cost: form.allow_credit_payment && form.credit_cost.trim() ? Number(form.credit_cost) : null,
         allow_credit_payment: form.allow_credit_payment,
         credit_payment_status: creditPaymentStatus,
+        monthly_fee: form.monthly_fee.trim() ? Number(form.monthly_fee.replace(',', '.')) : null,
       }
       if (editingId) {
         // Atualização: persiste e atualiza estado local sem recarregar
@@ -902,6 +905,28 @@ export default function ProjetosClientesClient({ user, profile, isLeader, initia
                         )}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* 4c. Mensalidade recorrente (Stripe Billing) — leader-only, protegida pela
+                    mesma trigger de credit_cost no banco (prevent_project_credit_cost_escalation). */}
+                {isLeader && (
+                  <div className="sm:col-span-2 rounded-2xl border border-[#60A5FA]/20 bg-[#60A5FA]/[0.04] p-4">
+                    <label className="mb-1.5 block text-xs font-bold text-white/70" htmlFor="project-monthly-fee">
+                      Mensalidade recorrente (R$) <span className="text-white/30 font-normal">(opcional — deixe em branco pra não oferecer assinatura)</span>
+                    </label>
+                    <div className="max-w-xs">
+                      <input
+                        id="project-monthly-fee"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Ex: 890,00"
+                        value={form.monthly_fee}
+                        onChange={e => setForm(f => ({ ...f, monthly_fee: e.target.value.replace(/[^0-9,.]/g, '') }))}
+                        className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#60A5FA]/50"
+                      />
+                      <p className="mt-1.5 text-[11px] text-white/35">Cliente vê um botão &quot;Assinar mensalidade&quot; na página do projeto — cobrança automática via Stripe, mês a mês.</p>
+                    </div>
                   </div>
                 )}
 

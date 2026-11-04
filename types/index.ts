@@ -345,6 +345,8 @@ export interface ClientProject {
   credit_cost?:            number | null
   allow_credit_payment?:   boolean
   credit_payment_status?:  CreditPaymentStatus
+  // Mensalidade recorrente (Stripe Billing) — nullable, só o líder define.
+  monthly_fee?:            number | null
 }
 
 // Lead de download de material (tabela downloads) — antes duplicado em
@@ -399,13 +401,19 @@ export interface ChatThread {
 }
 
 // Tipo de lançamento financeiro no módulo de controle financeiro.
-export type FinanceType   = 'ebook' | 'projeto' | 'visita_tecnica' | 'consultoria' | 'mensalidade' | 'creditos' | 'outro'
+export type FinanceType   = 'ebook' | 'projeto' | 'visita_tecnica' | 'consultoria' | 'mensalidade' | 'creditos' | 'app' | 'outro'
 
 // Status de um lançamento financeiro.
 export type FinanceStatus = 'pago' | 'pendente' | 'cancelado' | 'reembolsado' | 'negociacao'
 
 // Forma de pagamento registrada em uma transação financeira.
 export type PaymentMethod = 'pix' | 'cartao' | 'boleto' | 'dinheiro' | 'transferencia' | 'outro'
+
+// Tabela de origem do pedido que gerou um lançamento financeiro (migration
+// 20260927160000). Nulo = lançamento manual sem pedido vinculado — o par
+// (source_type, source_id) é único no banco, então nunca há 2 lançamentos
+// pro mesmo pedido de origem.
+export type FinanceSourceType = 'credit_purchases' | 'ebook_purchases' | 'client_projects' | 'campaign_purchases' | 'app_purchases'
 
 // Linha da tabela financial_transactions — controle financeiro, visível só
 // pro técnico líder (ver lib/services/profile.ts:requireLeaderSession).
@@ -423,8 +431,141 @@ export interface FinancialTransaction {
   received_date?:       string | null
   responsible_user_id?: string | null
   notes?:               string | null
+  source_type?:         FinanceSourceType | null
+  source_id?:           string | null
+  refunded_amount:      number
   created_at:           string
   updated_at:           string
+}
+
+// Conciliação Stripe × registros locais (migration 20260929120000). Só os 4
+// tipos de operação abaixo são realmente casáveis via identificador Stripe —
+// e-books não têm coluna de payment_intent, ficam de fora por desenho, não
+// por esquecimento.
+export type ReconciliationOperationType = 'creditos' | 'apps' | 'destaques' | 'assinaturas'
+
+// 8 categorias de resultado por item checado. 'nao_verificavel' cobre tanto
+// runs parciais (Stripe não varrido por completo) quanto itens na borda do
+// período (ambiguidade de fuso) — nunca uma afirmação falsa de ausência.
+export type ReconciliationResultType =
+  | 'correspondente' | 'diferenca_valor' | 'diferenca_moeda' | 'diferenca_status'
+  | 'sem_registro_local' | 'sem_correspondencia_provedor' | 'possivel_duplicidade' | 'nao_verificavel'
+
+export type ReconciliationRunStatus = 'em_processamento' | 'concluido' | 'concluido_parcialmente' | 'falhou'
+
+export interface ReconciliationCurrencySummary {
+  currency:         string
+  providerAmount:   number
+  localAmount:      number
+  difference:       number
+}
+
+export interface ReconciliationCoverage {
+  tablesChecked:     ReconciliationOperationType[]
+  stripePagesFetched: number
+  truncated:          boolean
+}
+
+// Linha de reconciliation_items — um item checado (correspondente ou não).
+export interface ReconciliationItem {
+  id:                       string
+  runId:                    string
+  resultType:               ReconciliationResultType
+  operationType:            ReconciliationOperationType | null
+  stripeChargeId:           string | null
+  stripePaymentIntentId:    string | null
+  providerAmount:           number | null
+  providerCurrency:         string | null
+  providerCreatedAt:        string | null
+  localTable:               string | null
+  localId:                  string | null
+  localAmount:              number | null
+  localCurrency:            string | null
+  localStatus:              string | null
+  localRefundedAmount:      number | null
+  localCreatedAt:           string | null
+  note:                     string | null
+}
+
+// Linha de reconciliation_runs — cabeçalho de uma execução de conciliação.
+// Contas a pagar/receber (migration 20260930100000). `kind` distingue as 2
+// tabelas de origem (accounts_payable/accounts_receivable) numa listagem
+// unificada no client — não existe union real no banco.
+export type AccountKind   = 'payable' | 'receivable'
+export type AccountStatus = 'pendente' | 'pago' | 'recebido' | 'parcial' | 'cancelado'
+
+export interface AccountEntry {
+  id:              string
+  kind:            AccountKind
+  description:     string
+  amount:          number
+  amountSettled:   number
+  category:        string | null   // payable: categoria/fornecedor
+  payerName:       string | null   // receivable: pagador
+  reference:       string | null
+  dueDate:         string | null
+  status:          AccountStatus
+  notes:           string | null
+  attachmentPath:  string | null
+  createdAt:       string
+  updatedAt:       string
+}
+
+export interface AccountSettlement {
+  id:              string
+  accountKind:     AccountKind
+  accountId:       string
+  amount:          number
+  effectiveDate:   string
+  paymentMethod:   string | null
+  reference:       string | null
+  receiptPath:     string | null
+  notes:           string | null
+  createdBy:       string
+  reversedAt:      string | null
+  reversedBy:      string | null
+  reversalReason:  string | null
+  createdAt:       string
+}
+
+export type AccountAuditAction = 'criado' | 'editado' | 'liquidado' | 'estorno_liquidacao' | 'cancelado'
+
+export interface AccountAuditEvent {
+  id:              string
+  accountKind:     AccountKind
+  accountId:       string
+  actorId:         string | null
+  action:          AccountAuditAction
+  amount:          number | null
+  previousStatus:  string | null
+  newStatus:       string | null
+  reason:          string | null
+  createdAt:       string
+}
+
+export interface ReconciliationRun {
+  id:                    string
+  requestedBy:           string
+  provider:              string
+  environment:           'test' | 'live'
+  periodStart:           string
+  periodEnd:             string
+  timezone:              string
+  operationTypes:        ReconciliationOperationType[]
+  comparisonRuleVersion: string
+  status:                ReconciliationRunStatus
+  startedAt:             string
+  finishedAt:            string | null
+  checkedCount:          number
+  matchedCount:          number
+  divergenceCount:       number
+  noLocalMatchCount:     number
+  noProviderMatchCount:  number
+  notVerifiableCount:    number
+  currencySummary:       ReconciliationCurrencySummary[]
+  coverage:              ReconciliationCoverage
+  limitations:           string[]
+  errorMessage:          string | null
 }
 
 // ── Sistema de créditos ──────────────────────────────────────────────
@@ -508,12 +649,45 @@ export interface CreditPurchase {
   stripe_session_id?:       string | null
   stripe_payment_intent_id?: string | null
   paid_at?:                 string | null
+  refund_status?:           'processing' | 'refunded' | null
+  refunded_amount:          number
+  refund_reason?:           string | null
+  refunded_at?:             string | null
+  refunded_by?:             string | null
   created_at:               string
   updated_at:               string
   // Anexados manualmente pelos components (join client-side), não colunas.
   package?:                 { name: string } | null
   buyer_name?:              string | null
   buyer_email?:             string | null
+}
+
+// ── Checkout de app de parceiro/LOBBY ────────────────────────────────
+
+export type AppPurchaseStatus = 'pending' | 'paid' | 'canceled' | 'failed' | 'refunded'
+
+// Linha da tabela app_purchases. commission_percent/commission_amount são
+// snapshot resolvido no momento da venda (get_partner_commission_percent),
+// nunca recalculados depois. partner_id nulo = app da própria LOBBY.
+export interface AppPurchase {
+  id:                  string
+  application_id:      string
+  plan_id:             string
+  application_name:    string
+  plan_name:           string
+  buyer_user_id:       string
+  partner_id:          string | null
+  amount:              number
+  currency:            string
+  commission_percent:  number
+  commission_amount:   number
+  partner_amount:      number
+  status:              AppPurchaseStatus
+  stripe_session_id?:  string | null
+  stripe_payment_intent_id?: string | null
+  paid_at?:            string | null
+  created_at:          string
+  updated_at:          string
 }
 
 // Fases padrão pré-definidas para novos projetos de cliente.

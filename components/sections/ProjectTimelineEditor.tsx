@@ -97,7 +97,7 @@ export default function ProjectTimelineEditor({ value, onChange, selectedPhase, 
           const isSelected = selectedPhase === phase.title
           return (
             <div key={phase.title}
-              className={`rounded-xl border px-3.5 py-2.5 transition-colors ${isSelected ? 'border-[#005BFF]/50 bg-[#005BFF]/[0.06]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+              className={`rounded-xl border px-3.5 py-2.5 transition-colors ${isSelected ? 'border-[#0B1020]/50 bg-[#0B1020]/[0.06]' : 'border-white/[0.06] bg-white/[0.02]'}`}>
               <div className="flex items-center gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
                   style={{ background: style.bg, color: style.color }}>
@@ -115,17 +115,17 @@ export default function ProjectTimelineEditor({ value, onChange, selectedPhase, 
                   ))}
                 </select>
                 <button type="button" onClick={() => onSelectPhase(phase.title)}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11px] font-semibold text-white/50 transition-colors hover:border-[#005BFF]/40 hover:text-[#60A5FA]">
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/[0.08] px-2.5 py-1.5 text-[11px] font-semibold text-white/50 transition-colors hover:border-[#0B1020]/40 hover:text-[#60A5FA]">
                   <Pencil size={11} aria-hidden="true" />Editar
                 </button>
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <input type="text" placeholder="Descrição curta pro cliente (opcional)" value={phase.description ?? ''}
                   onChange={e => setPhaseDescription(i, e.target.value)}
-                  className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 text-xs text-white placeholder:text-white/25 outline-none focus:border-[#005BFF]/50" />
+                  className="h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 text-xs text-white placeholder:text-white/25 outline-none focus:border-[#0B1020]/50" />
                 {PHASE_SUGGESTED_DESCRIPTIONS[phase.title] && (
                   <button type="button" onClick={() => applySuggestedDescription(i, phase.title)}
-                    className="shrink-0 whitespace-nowrap rounded-lg border border-white/[0.08] px-2.5 py-2 text-[10px] font-semibold text-white/40 transition-colors hover:border-[#005BFF]/40 hover:text-[#60A5FA]">
+                    className="shrink-0 whitespace-nowrap rounded-lg border border-white/[0.08] px-2.5 py-2 text-[10px] font-semibold text-white/40 transition-colors hover:border-[#0B1020]/40 hover:text-[#60A5FA]">
                     Usar sugestão
                   </button>
                 )}

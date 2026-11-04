@@ -101,18 +101,18 @@ export default function Pagination({ page, totalPages, onPageChange, variant = '
 
   // Botão de página ATIVA — gradiente azul → roxo com sombra colorida
   const btnActive = isDark
-    ? 'bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-white shadow-[0_4px_12px_rgba(0,91,255,0.30)]'
-    : 'bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-white shadow-[0_4px_12px_rgba(0,91,255,0.22)]'
+    ? 'bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-white shadow-[0_4px_12px_rgba(11,16,32,0.30)]'
+    : 'bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-white shadow-[0_4px_12px_rgba(11,16,32,0.22)]'
 
   // Botão de página NORMAL (não ativa)
   const btnNormal = isDark
     ? 'border border-white/[0.08] bg-white/[0.04] text-white/50 hover:border-white/20 hover:text-white/80'
-    : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF]'
+    : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020]'
 
   // Botões de seta (Anterior / Próxima) — com estado desabilitado
   const btnArrow = isDark
     ? 'border border-white/[0.08] bg-white/[0.04] text-white/40 hover:border-white/20 hover:text-white/80 disabled:opacity-25 disabled:cursor-not-allowed'
-    : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#005BFF]/30 hover:text-[#005BFF] disabled:opacity-30 disabled:cursor-not-allowed'
+    : 'border border-[#E3E7F0] bg-white text-[#5D6475] hover:border-[#0B1020]/30 hover:text-[#0B1020] disabled:opacity-30 disabled:cursor-not-allowed'
 
   return (
     <div className={`flex items-center justify-center gap-1.5 ${className}`} role="navigation" aria-label="Paginação">

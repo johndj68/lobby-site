@@ -13,7 +13,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   const { data: campaign } = await supabase
     .from('sponsored_campaigns')
-    .select('*, app_drafts(id, name, logo_url, created_by, applications(id, slug, is_published, suspended_at)), space:ad_spaces(id, name), package:ad_packages(id, name, price, currency, duration_days)')
+    .select('*, app_drafts(id, name, logo_url, created_by, applications(id, slug, is_published, suspended_at)), space:ad_spaces(id, name, slug, description, accepted_formats), package:ad_packages(id, name, price, currency, duration_days, description, cancellation_policy, pause_policy)')
     .eq('id', campaignId)
     .single()
   if (!campaign) notFound()
@@ -26,20 +26,22 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
 
   const [
     { data: creatives }, { data: reservation }, { data: purchases }, { data: partner },
-    { data: spaces }, { data: packages }, { data: events },
+    { data: spaces }, { data: packages },
   ] = await Promise.all([
     supabase.from('ad_creatives').select('*').eq('campaign_id', campaignId).order('version', { ascending: false }),
     supabase.from('ad_reservations').select('*').eq('campaign_id', campaignId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('campaign_purchases').select('*').eq('campaign_id', campaignId).order('created_at', { ascending: false }),
     draft ? supabase.from('profiles').select('id, full_name, email, company_name, role, marketplace_new_apps_blocked').eq('id', draft.created_by).single() : Promise.resolve({ data: null }),
-    supabase.from('ad_spaces').select('id, name, is_active').eq('is_active', true),
-    supabase.from('ad_packages').select('id, name, space_id, price, currency, duration_days').eq('status', 'active'),
-    supabase.from('app_admin_events').select('id, action, reason, previous_status, new_status, actor_id, created_at').eq('campaign_id', campaignId).order('created_at', { ascending: false }),
+    supabase.from('ad_spaces').select('id, name, slug, description, accepted_formats, is_active').eq('is_active', true),
+    supabase.from('ad_packages').select('id, name, space_id, price, currency, duration_days, description, cancellation_policy, pause_policy').eq('status', 'active'),
   ])
-
-  const actorIds = [...new Set((events ?? []).map(e => e.actor_id).filter(Boolean))] as string[]
-  const { data: actors } = actorIds.length
-    ? await supabase.from('profiles').select('id, full_name, email').in('id', actorIds)
+  // O histórico de auditoria (app_admin_events) agora é buscado pela própria
+  // aba Histórico via /api/admin/campaigns/[id]/events — com busca, filtro,
+  // ordenação e paginação no backend (seção 5). Aqui só sobra o mapa de
+  // revisores dos criativos (ad_creatives.reviewer_id).
+  const creativeReviewerIds = [...new Set((creatives ?? []).map(c => c.reviewer_id).filter(Boolean))] as string[]
+  const { data: actors } = creativeReviewerIds.length
+    ? await supabase.from('profiles').select('id, full_name, email').in('id', creativeReviewerIds)
     : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
   const actorMap = new Map((actors ?? []).map(a => [a.id, a.full_name || a.email || 'Usuário removido']))
 
@@ -77,20 +79,27 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
       review={review}
       payment={payment}
       eligibility={eligibility}
-      space={space ? { id: space.id, name: space.name } : null}
-      pkg={pkg ? { id: pkg.id, name: pkg.name, price: pkg.price, currency: pkg.currency, durationDays: pkg.duration_days } : null}
-      spaceOptions={(spaces ?? []).map(s => ({ id: s.id, name: s.name }))}
-      packageOptions={(packages ?? []).map(p => ({ id: p.id, name: p.name, spaceId: p.space_id, price: p.price, currency: p.currency, durationDays: p.duration_days }))}
+      space={space ? { id: space.id, name: space.name, slug: space.slug, description: space.description, acceptedFormats: space.accepted_formats ?? null } : null}
+      pkg={pkg ? {
+        id: pkg.id, name: pkg.name, price: pkg.price, currency: pkg.currency, durationDays: pkg.duration_days,
+        description: pkg.description, cancellationPolicy: pkg.cancellation_policy, pausePolicy: pkg.pause_policy,
+      } : null}
+      spaceOptions={(spaces ?? []).map(s => ({ id: s.id, name: s.name, slug: s.slug, description: s.description, acceptedFormats: s.accepted_formats ?? null }))}
+      packageOptions={(packages ?? []).map(p => ({
+        id: p.id, name: p.name, spaceId: p.space_id, price: p.price, currency: p.currency, durationDays: p.duration_days,
+        description: p.description, cancellationPolicy: p.cancellation_policy, pausePolicy: p.pause_policy,
+      }))}
+      latestReservation={reservation ? { id: reservation.id, status: reservation.status, startsAt: reservation.starts_at, endsAt: reservation.ends_at, expiresAt: reservation.expires_at } : null}
       creatives={(creatives ?? []).map(c => ({
         id: c.id, version: c.version, title: c.title, description: c.description, imageUrl: c.image_url, imageAlt: c.image_alt,
         ctaLabel: c.cta_label, ctaHref: c.cta_href, reviewStatus: c.review_status, reviewerNotes: c.reviewer_notes,
         partnerFeedback: c.partner_feedback, reviewedAt: c.reviewed_at, isLive: c.id === campaign.live_creative_id,
+        reviewerName: c.reviewer_id ? (actorMap.get(c.reviewer_id) ?? null) : null, createdAt: c.created_at,
       }))}
       purchases={(purchases ?? []).map(p => ({
         id: p.id, amount: p.amount, currency: p.currency, kind: p.kind, status: p.status,
         isentoReason: p.isento_reason, refundStatus: p.refund_status, createdAt: p.created_at, paidAt: p.paid_at,
       }))}
-      events={(events ?? []).map(e => ({ ...e, actorName: e.actor_id ? (actorMap.get(e.actor_id) ?? 'Usuário removido') : 'Sistema' }))}
     />
   )
 }

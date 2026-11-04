@@ -39,6 +39,7 @@ export default async function OfertasPage({ searchParams }: { searchParams: Prom
   if (sp.promocao === 'nenhuma') filtered = filtered.filter(r => !r.promotion || r.promotion.status.key === 'encerrada' || r.promotion.status.key === 'cancelada')
   if (sp.periodo && sp.periodo !== 'todos') {
     const days = sp.periodo === '7d' ? 7 : sp.periodo === '30d' ? 30 : sp.periodo === '90d' ? 90 : null
+    // eslint-disable-next-line react-hooks/purity -- Server Component, roda uma vez por request, sem re-render
     if (days) { const cutoff = Date.now() - days * 86400000; filtered = filtered.filter(r => new Date(r.updatedAt).getTime() >= cutoff) }
   }
 

@@ -148,6 +148,37 @@ export function deriveReviewStatus(
   }
 }
 
+/** Status de uma app_submissions individual — usado tanto na listagem
+ *  (/admin/marketplace/solicitacoes) quanto no detalhe de análise. Não é o
+ *  mesmo domínio de ReviewStatus acima: aquele combina o app_draft inteiro
+ *  (rascunho/publicado/nova versão); este é o status cru de UMA submissão.
+ *  'in_review' nunca ocorre hoje — não está no CHECK constraint de
+ *  app_submissions.status — mas existe na UI para quando for adotado. */
+export const SUBMISSION_STATUS_LABELS: Record<string, string> = {
+  pending: 'Aguardando análise',
+  in_review: 'Em análise',
+  changes_requested: 'Aguardando ajustes',
+  approved: 'Aprovado',
+  rejected: 'Rejeitado',
+}
+
+export const SUBMISSION_STATUS_COLORS: Record<string, string> = {
+  pending: MARKETPLACE_COLORS.warning,
+  in_review: MARKETPLACE_COLORS.primary,
+  changes_requested: MARKETPLACE_COLORS.warning,
+  approved: MARKETPLACE_COLORS.success,
+  rejected: MARKETPLACE_COLORS.error,
+}
+
+/** Uma submissão só pode ser decidida (aprovar/rejeitar/pedir ajustes)
+ *  enquanto está pending ou in_review. changes_requested/approved/rejected
+ *  já carregam uma decisão registrada — reabrir não é algo o backend
+ *  suporta hoje (sem coluna/estado para isso), então o detalhe de análise
+ *  trata qualquer status fora desses dois como somente-consulta. */
+export function isSubmissionDecidable(status: string): boolean {
+  return status === 'pending' || status === 'in_review'
+}
+
 export const ORIGIN_LABEL = { lobby: 'LOBBY · Produto próprio', partner: 'Parceiro' } as const
 
 /** Resume as ofertas (app_plans) de um app: nenhuma, uma (com rótulo do tipo
@@ -223,6 +254,21 @@ function formatDateShort(d: Date): string {
 
 export function formatDateTimeBR(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { timeZone: TIMEZONE, dateStyle: 'short', timeStyle: 'short' })
+}
+
+/** "24 de setembro de 2026" — usado pra agrupar a linha do tempo por dia
+ *  (sempre no fuso de Brasília, igual a todo o resto da tela). */
+export function formatDateLongBR(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', { timeZone: TIMEZONE, day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+/** Chave estável (YYYY-MM-DD no fuso de Brasília) pra agrupar eventos do
+ *  mesmo dia sem depender de string formatada (evita agrupar errado por
+ *  causa de vírgula/acentuação regional). */
+export function dateKeyBR(iso: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(iso))
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? '00'
+  return `${get('year')}-${get('month')}-${get('day')}`
 }
 
 export function formatRelativeTime(iso: string): string {

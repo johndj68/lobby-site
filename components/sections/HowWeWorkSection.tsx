@@ -19,9 +19,9 @@ const STEP_ICONS = [Search, Lightbulb, Code2, Rocket]
  * Gradiente azul→roxo usado nos círculos de número e nos badges de ícone.
  * Tune here to change accent colors across all steps.
  */
-const NUMBER_GRADIENT = 'linear-gradient(135deg, #005BFF, #7B2CFF)'
+const NUMBER_GRADIENT = 'linear-gradient(135deg, #0B1020, #168F9C)'
 // Fundo semitransparente dos badges de ícone — combina com NUMBER_GRADIENT
-const ICON_BG        = 'linear-gradient(135deg, rgba(0,91,255,0.10), rgba(123,44,255,0.10))'
+const ICON_BG        = 'linear-gradient(135deg, rgba(11,16,32,0.10), rgba(22,143,156,0.10))'
 
 /* Props da seção:
    - steps: array de objetos Step com number, title e description.
@@ -42,9 +42,9 @@ export default function HowWeWorkSection({ steps }: HowWeWorkSectionProps) {
     <section className="relative overflow-hidden bg-white py-20 lg:py-24">
       {/* Background layers */}
       {/* Gradientes radiais decorativos nos cantos da seção */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(0,91,255,0.06),transparent_32%),radial-gradient(circle_at_82%_62%,rgba(123,44,255,0.07),transparent_35%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(11,16,32,0.06),transparent_32%),radial-gradient(circle_at_82%_62%,rgba(22,143,156,0.07),transparent_35%)]" />
       {/* Grade de pontos azuis semitransparentes — textura de fundo */}
-      <div className="absolute inset-0 opacity-[0.20] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.14)_1px,transparent_0)] bg-[size:26px_26px]" />
+      <div className="absolute inset-0 opacity-[0.20] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.14)_1px,transparent_0)] bg-[size:26px_26px]" />
 
       <Container className="relative z-10">
         {/* Cabeçalho da seção: eyebrow "Nosso processo", título e subtítulo */}
@@ -73,7 +73,7 @@ export default function HowWeWorkSection({ steps }: HowWeWorkSectionProps) {
             className="absolute left-[12.5%] right-[12.5%] top-6 hidden h-px xl:block"
             style={{
               background:
-                'linear-gradient(to right, transparent 0%, rgba(0,91,255,0.50) 25%, rgba(123,44,255,0.60) 75%, transparent 100%)',
+                'linear-gradient(to right, transparent 0%, rgba(11,16,32,0.50) 25%, rgba(22,143,156,0.60) 75%, transparent 100%)',
             }}
             aria-hidden="true"
           />
@@ -83,7 +83,7 @@ export default function HowWeWorkSection({ steps }: HowWeWorkSectionProps) {
           {[25, 50, 75].map((pct) => (
             <div
               key={pct}
-              className="absolute top-6 hidden h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#005BFF]/45 shadow-[0_0_8px_rgba(0,91,255,0.55)] xl:block"
+              className="absolute top-6 hidden h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0B1020]/45 shadow-[0_0_8px_rgba(11,16,32,0.55)] xl:block"
               style={{ left: `${pct}%` }}
               aria-hidden="true"
             />
@@ -107,11 +107,11 @@ export default function HowWeWorkSection({ steps }: HowWeWorkSectionProps) {
                   className="group flex flex-col items-center text-center"
                 >
                   {/* Number circle — above the card, z-10 so it sits above the line */}
-                  {/* Tune size: h-12 w-12 | shadow: shadow-[#005BFF]/X */}
+                  {/* Tune size: h-12 w-12 | shadow: shadow-[#0B1020]/X */}
                   {/* Círculo numerado: fica acima da linha de conexão (z-10).
                       Intensifica o glow/shadow no hover do card. */}
                   <div
-                    className="relative z-10 mb-5 flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white shadow-lg shadow-[#005BFF]/22 transition-shadow duration-300 group-hover:shadow-[0_0_20px_rgba(0,91,255,0.45)]"
+                    className="relative z-10 mb-5 flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white shadow-lg shadow-[#0B1020]/22 transition-shadow duration-300 group-hover:shadow-[0_0_20px_rgba(11,16,32,0.45)]"
                     style={{ background: NUMBER_GRADIENT, fontFamily: 'Space Grotesk, sans-serif' }}
                   >
                     {step.number}
@@ -120,7 +120,7 @@ export default function HowWeWorkSection({ steps }: HowWeWorkSectionProps) {
                   {/* Card body */}
                   {/* Tune: border, shadow, hover-shadow, hover-border here */}
                   {/* Card branco com bordas arredondadas: sobe 2px e intensifica sombra no hover */}
-                  <div className="w-full rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 shadow-[0_8px_40px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-2 hover:border-[#005BFF]/20 hover:shadow-[0_20px_60px_rgba(0,91,255,0.10)]">
+                  <div className="w-full rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 shadow-[0_8px_40px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-2 hover:border-[#0B1020]/20 hover:shadow-[0_20px_60px_rgba(11,16,32,0.10)]">
                     {/* Icon badge — tune size: h-12 w-12, icon size: size={22} */}
                     {/* Badge de ícone: escala 110% no hover do card (via group-hover) */}
                     <div
@@ -128,7 +128,7 @@ export default function HowWeWorkSection({ steps }: HowWeWorkSectionProps) {
                       style={{ background: ICON_BG }}
                       aria-hidden="true"
                     >
-                      <Icon size={22} style={{ color: '#005BFF' }} />
+                      <Icon size={22} style={{ color: '#0B1020' }} />
                     </div>
 
                     {/* Título do passo */}

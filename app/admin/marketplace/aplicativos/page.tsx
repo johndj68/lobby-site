@@ -135,6 +135,7 @@ export default async function AplicativosPage({ searchParams }: { searchParams: 
   if (sp.atualizado && sp.atualizado !== 'todos') {
     const days = sp.atualizado === '7d' ? 7 : sp.atualizado === '30d' ? 30 : sp.atualizado === '90d' ? 90 : null
     if (days) {
+      // eslint-disable-next-line react-hooks/purity -- Server Component, roda uma vez por request, sem re-render
       const cutoff = Date.now() - days * 86400000
       filtered = filtered.filter(r => new Date(r.updatedAt).getTime() >= cutoff)
     }

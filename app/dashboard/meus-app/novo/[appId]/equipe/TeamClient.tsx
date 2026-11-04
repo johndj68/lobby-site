@@ -2,18 +2,42 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Copy, Plus, Trash2, Edit2, RotateCcw } from 'lucide-react'
+import { ChevronRight, Trash2, RotateCcw } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
 import BackButton from '@/components/ui/BackButton'
 
 interface TeamClientProps {
-  draft: any
+  draft: { id: string; name?: string | null }
+}
+
+interface TeamInvitation {
+  id: string
+  invited_name: string
+  invited_email: string
+  permissions: string[]
+  status: string
+}
+
+interface TeamMember {
+  id: string
+  permissions: string[]
+}
+
+interface TeamMembersData {
+  owner: { name: string }
+  invitations: TeamInvitation[]
+  members: TeamMember[]
 }
 
 const PERMISSIONS = [
   { id: 'edit_app', label: 'Editar aplicativo', description: 'Atualizar textos, imagens e informações.' },
   { id: 'respond_qa', label: 'Responder perguntas e avaliações', description: 'Publicar respostas em nome da equipe.' },
   { id: 'manage_finance', label: 'Gerenciar financeiro', description: 'Acessar funções financeiras autorizadas.' },
+  { id: 'financeiro_visao_geral', label: 'Financeiro — Visão geral', description: 'Ver os indicadores financeiros agregados do dono em todos os apps dele.' },
+  { id: 'financeiro_vendas', label: 'Financeiro — Vendas', description: 'Ver o histórico de vendas do dono em todos os apps dele.' },
+  { id: 'financeiro_repasses', label: 'Financeiro — Repasses e extrato', description: 'Ver a fila de repasse e o extrato do dono em todos os apps dele.' },
+  { id: 'financeiro_ofertas', label: 'Financeiro — Ofertas e promoções', description: 'Ver e pedir promoções em nome do dono, em todos os apps dele.' },
+  { id: 'financeiro_configuracoes', label: 'Financeiro — Configurações de recebimento', description: 'Ver e editar dados de recebimento do dono em todos os apps dele.' },
 ]
 
 export default function TeamClient({ draft }: TeamClientProps) {
@@ -24,13 +48,8 @@ export default function TeamClient({ draft }: TeamClientProps) {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
-  const [members, setMembers] = useState<any>(null)
+  const [members, setMembers] = useState<TeamMembersData | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // Load members
-  useEffect(() => {
-    loadMembers()
-  }, [])
 
   const loadMembers = async () => {
     try {
@@ -44,6 +63,13 @@ export default function TeamClient({ draft }: TeamClientProps) {
       setLoading(false)
     }
   }
+
+  // Load members
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: loadMembers() liga loading de forma síncrona, padrão estável do projeto
+    loadMembers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,8 +109,8 @@ export default function TeamClient({ draft }: TeamClientProps) {
       setSelectedPerms([])
       await loadMembers()
       setTimeout(() => setSent(false), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao enviar')
     } finally {
       setSending(false)
     }
@@ -367,7 +393,7 @@ export default function TeamClient({ draft }: TeamClientProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              {members.invitations.map((inv: any) => (
+              {members.invitations.map((inv) => (
                 <div key={inv.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium text-sm" style={{ color: colors.text }}>{inv.invited_name}</p>
@@ -389,7 +415,7 @@ export default function TeamClient({ draft }: TeamClientProps) {
                   </div>
                 </div>
               ))}
-              {members.members.map((mem: any) => (
+              {members.members.map((mem) => (
                 <div key={mem.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium text-sm" style={{ color: colors.text }}>Membro</p>

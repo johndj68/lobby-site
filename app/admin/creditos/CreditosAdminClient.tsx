@@ -10,12 +10,16 @@ import { toast } from 'sonner'
 import {
   Coins, Plus, Wallet, TrendingUp, TrendingDown, Clock, Users,
   Pencil, X, Save, Loader2, Star, ShoppingCart,
-  SlidersHorizontal, CheckCircle2, Ban,
+  SlidersHorizontal, CheckCircle2, Ban, Undo2,
 } from 'lucide-react'
 // Layout padrão das páginas admin
 import AdminShell from '@/components/layout/AdminShell'
 // Modal de ajuste manual de saldo de créditos
 import CreditManualAdjustmentModal from '@/components/credits/CreditManualAdjustmentModal'
+// Modal de confirmação manual de compra de créditos (exige justificativa)
+import ConfirmCreditPurchaseModal from '@/components/credits/ConfirmCreditPurchaseModal'
+// Modal de reembolso parcial/total de compra de créditos
+import RefundCreditPurchaseModal from '@/components/credits/RefundCreditPurchaseModal'
 // Cliente do Supabase para operações no banco
 import { createClient } from '@/lib/supabase'
 // Hook genérico de modal CRUD
@@ -48,8 +52,12 @@ export default function CreditosAdminClient({ user, profile, initialWallets, ini
   const [packages,  setPackages]  = useState(initialPackages)
   // Histórico completo de compras de crédito
   const [purchases, setPurchases] = useState(initialPurchases)
-  // ID da compra em processamento de confirmação/cancelamento (evita cliques duplos)
+  // ID da compra em processamento de cancelamento (evita cliques duplos)
   const [processingPurchase, setProcessingPurchase] = useState<string | null>(null)
+  // Compra selecionada para confirmar via modal (exige justificativa)
+  const [confirmingPurchase, setConfirmingPurchase] = useState<CreditPurchase | null>(null)
+  // Compra selecionada para reembolsar via modal
+  const [refundingPurchase, setRefundingPurchase] = useState<CreditPurchase | null>(null)
 
   // Estado do modal de criação/edição de pacote via hook genérico de CRUD
   const {
@@ -150,29 +158,42 @@ export default function CreditosAdminClient({ user, profile, initialWallets, ini
     toast.success(data.is_active ? 'Pacote ativado.' : 'Pacote desativado.')
   }
 
-  /* Confirma o pagamento de uma compra pendente via RPC do banco
-     A função confirm_credit_purchase credita os créditos na carteira do cliente */
-  const confirmPurchase = async (purchase: CreditPurchase) => {
-    setProcessingPurchase(purchase.id)
-    const supabase = createClient()
-    const { error: err } = await supabase.rpc('confirm_credit_purchase', { p_purchase_id: purchase.id })
-    if (err) {
-      toast.error(err.message || 'Não foi possível confirmar o pagamento.')
-      setProcessingPurchase(null)
-      return
+  /* Abre o modal de confirmação (coleta justificativa obrigatória — a RPC
+     confirm_credit_purchase agora exige p_notes e bloqueia compras com
+     stripe_session_id preenchido, ver migration 20260927160000). */
+  const openConfirmPurchase = (purchase: CreditPurchase) => setConfirmingPurchase(purchase)
+
+  /* Chamado pelo modal após a RPC confirmar com sucesso — reflete o novo
+     saldo e status otimisticamente, sem recarregar a página. */
+  const handlePurchaseConfirmed = (purchaseId: string) => {
+    const purchase = purchases.find(p => p.id === purchaseId)
+    setPurchases(prev => prev.map(p => p.id === purchaseId ? { ...p, status: 'paid', paid_at: new Date().toISOString() } : p))
+    if (purchase) {
+      setWallets(prev => {
+        const idx = prev.findIndex(w => w.user_id === purchase.user_id)
+        if (idx === -1) return prev
+        const next = [...prev]
+        next[idx] = { ...next[idx], balance: next[idx].balance + purchase.credits_amount, total_purchased: next[idx].total_purchased + purchase.credits_amount }
+        return next
+      })
     }
-    // Atualiza compra para 'paid' no estado local
-    setPurchases(prev => prev.map(p => p.id === purchase.id ? { ...p, status: 'paid', paid_at: new Date().toISOString() } : p))
-    // Atualiza carteira do cliente otimisticamente (sem recarregar a página)
-    setWallets(prev => {
-      const idx = prev.findIndex(w => w.user_id === purchase.user_id)
-      if (idx === -1) return prev
-      const next = [...prev]
-      next[idx] = { ...next[idx], balance: next[idx].balance + purchase.credits_amount, total_purchased: next[idx].total_purchased + purchase.credits_amount }
-      return next
-    })
     toast.success('Pagamento confirmado. Créditos liberados na carteira do cliente.')
-    setProcessingPurchase(null)
+  }
+
+  /* Saldo atual da carteira do cliente dono da compra sendo reembolsada —
+     mostrado no modal pra o admin decidir quantos créditos ainda dá pra
+     debitar de volta (não dá pra saber automaticamente quanto desses
+     créditos específicos já foi gasto — saldo é um pool único). */
+  const refundingWalletBalance = refundingPurchase
+    ? wallets.find(w => w.user_id === refundingPurchase.user_id)?.balance ?? 0
+    : 0
+
+  /* Chamado pelo modal de reembolso após a API confirmar que o Stripe
+     aceitou o pedido. Reembolso pode ter debitado créditos da carteira —
+     recarrega a página pra refletir o novo saldo sem duplicar o cálculo
+     aqui (mesmo padrão de reloadAfterAdjust). */
+  const handlePurchaseRefunded = () => {
+    window.location.reload()
   }
 
   /* Cancela uma compra pendente via RPC do banco */
@@ -396,11 +417,11 @@ export default function CreditosAdminClient({ user, profile, initialWallets, ini
                       className="inline-flex items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-500/20 disabled:opacity-50">
                       <Ban size={12} aria-hidden="true" />Cancelar
                     </button>
-                    {/* Confirmar libera os créditos na carteira do cliente via RPC */}
-                    <button type="button" disabled={processingPurchase === p.id} onClick={() => confirmPurchase(p)}
+                    {/* Confirmar abre modal (justificativa obrigatória) e libera créditos via RPC */}
+                    <button type="button" onClick={() => openConfirmPurchase(p)}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-[#10B981]/12 px-3 py-1.5 text-xs font-bold text-[#34D399] hover:bg-[#10B981]/20 disabled:opacity-50">
                       <CheckCircle2 size={12} aria-hidden="true" />
-                      {processingPurchase === p.id ? 'Confirmando...' : 'Confirmar pagamento'}
+                      Confirmar pagamento
                     </button>
                   </div>
                 </div>
@@ -478,8 +499,17 @@ export default function CreditosAdminClient({ user, profile, initialWallets, ini
                       <p className="truncate text-sm font-semibold text-white">{p.buyer_name || p.buyer_email || 'Cliente'}</p>
                       <p className="text-xs text-white/40">{p.package?.name} · {formatCredits(p.credits_amount)} · {formatCurrencyBRL(p.amount_paid)}</p>
                     </div>
-                    {/* Badge de status: pago (verde), pendente (laranja), cancelado (vermelho) */}
-                    <span className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold" style={{ background: style.bg, color: style.color }}>{style.label}</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {/* Badge de status: pago (verde), pendente (laranja), cancelado (vermelho) */}
+                      <span className="rounded-full px-2.5 py-1 text-[10px] font-bold" style={{ background: style.bg, color: style.color }}>{style.label}</span>
+                      {/* Reembolsar — só compras pagas via Stripe, sem reembolso já em andamento */}
+                      {p.status === 'paid' && p.refund_status !== 'processing' && p.refunded_amount < p.amount_paid && (
+                        <button type="button" onClick={() => setRefundingPurchase(p)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-400 hover:bg-red-500/20">
+                          <Undo2 size={11} aria-hidden="true" />Reembolsar
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )
               })}
@@ -487,6 +517,21 @@ export default function CreditosAdminClient({ user, profile, initialWallets, ini
           )}
         </section>
       </div>
+
+      {/* ── MODAL: confirmação manual de compra de créditos (justificativa obrigatória) ── */}
+      <ConfirmCreditPurchaseModal
+        purchase={confirmingPurchase}
+        onClose={() => setConfirmingPurchase(null)}
+        onConfirmed={handlePurchaseConfirmed}
+      />
+
+      {/* ── MODAL: reembolso parcial/total de compra de créditos ── */}
+      <RefundCreditPurchaseModal
+        purchase={refundingPurchase}
+        walletBalance={refundingWalletBalance}
+        onClose={() => setRefundingPurchase(null)}
+        onRefunded={handlePurchaseRefunded}
+      />
 
       {/* ── MODAL DE AJUSTE MANUAL: add/sub créditos diretamente na carteira ── */}
       <CreditManualAdjustmentModal

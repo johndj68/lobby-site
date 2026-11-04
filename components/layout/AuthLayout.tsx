@@ -15,10 +15,10 @@ const BENEFIT_ICONS = [ShieldCheck, LayoutDashboard, FolderKanban, Headphones] a
 /* ── Paleta de cores para cada card de benefício (hex + fundo translúcido) ── */
 // hex: cor do ícone; bg: fundo translúcido do container do ícone
 const BENEFIT_PALETTES = [
-  { hex: '#005BFF', bg: 'rgba(0,91,255,0.10)'   }, // azul LOBBY
-  { hex: '#7B2CFF', bg: 'rgba(123,44,255,0.10)' }, // roxo LOBBY
-  { hex: '#00A3FF', bg: 'rgba(0,163,255,0.10)'  }, // azul claro
-  { hex: '#059669', bg: 'rgba(5,150,105,0.10)'  }, // verde
+  { hex: '#0B1020', bg: 'rgba(11,16,32,0.10)'    }, // preto LOBBY
+  { hex: '#168F9C', bg: 'rgba(22,143,156,0.10)'  }, // petróleo LOBBY
+  { hex: '#5CB1BA', bg: 'rgba(92,177,186,0.10)'  }, // petróleo claro
+  { hex: '#059669', bg: 'rgba(5,150,105,0.10)'   }, // verde
 ]
 
 /* ── Tipagem das props do layout de autenticação ─────────────────────────── */
@@ -45,7 +45,7 @@ function GradientTitle({ text }: { text: string }) {
       {/* Span com gradiente aplicado via background-clip: text */}
       <span
         style={{
-          background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+          background: 'linear-gradient(135deg, #0B1020, #168F9C)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
@@ -70,13 +70,13 @@ export default function AuthLayout({ children, title, subtitle, benefits }: Auth
            pointer-events-none: não interfere com cliques do usuário           */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         {/* Gradientes radiais nos cantos superior-esquerdo, superior-direito e inferior */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(0,91,255,0.08),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(123,44,255,0.12),transparent_36%),radial-gradient(circle_at_50%_100%,rgba(0,163,255,0.08),transparent_42%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(11,16,32,0.08),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(22,143,156,0.12),transparent_36%),radial-gradient(circle_at_50%_100%,rgba(28,36,64,0.08),transparent_42%)]" />
         {/* Grid de pontos azuis sutis via background-image CSS */}
-        <div className="absolute inset-0 opacity-[0.26] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
+        <div className="absolute inset-0 opacity-[0.26] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
         {/* Blobs com blur extremo — apenas efeito de cor difusa no fundo */}
-        <div className="absolute -left-40 top-20 h-[480px] w-[480px] rounded-full bg-[#00A3FF]/[0.08] blur-3xl" />
-        <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#7B2CFF]/[0.11] blur-3xl" />
-        <div className="absolute -bottom-40 left-1/2 h-[420px] w-[700px] -translate-x-1/2 rounded-full bg-[#005BFF]/[0.08] blur-3xl" />
+        <div className="absolute -left-40 top-20 h-[480px] w-[480px] rounded-full bg-[#1C2440]/[0.08] blur-3xl" />
+        <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#168F9C]/[0.11] blur-3xl" />
+        <div className="absolute -bottom-40 left-1/2 h-[420px] w-[700px] -translate-x-1/2 rounded-full bg-[#0B1020]/[0.08] blur-3xl" />
       </div>
 
       {/* ── Card principal centralizado (máx. 6xl = 72rem de largura) ─────── */}
@@ -93,19 +93,19 @@ export default function AuthLayout({ children, title, subtitle, benefits }: Auth
             {/* Círculos radiais decorativos — profundidade visual no canto superior e inferior */}
             <div
               className="absolute right-0 top-0 h-80 w-80 rounded-full opacity-25"
-              style={{ background: 'radial-gradient(circle, rgba(0,91,255,0.28), transparent 70%)' }}
+              style={{ background: 'radial-gradient(circle, rgba(11,16,32,0.28), transparent 70%)' }}
               aria-hidden="true"
             />
             <div
               className="absolute bottom-0 left-0 h-56 w-56 rounded-full opacity-18"
-              style={{ background: 'radial-gradient(circle, rgba(123,44,255,0.28), transparent 70%)' }}
+              style={{ background: 'radial-gradient(circle, rgba(22,143,156,0.28), transparent 70%)' }}
               aria-hidden="true"
             />
 
             {/* Logo — link para a home */}
             <Link href="/" className="relative z-10">
               <Image
-                src="/logowhite.svg"
+                src="/LOBBY-horizontal-transparente.svg"
                 alt="LOBBY"
                 width={176}
                 height={88}
@@ -146,7 +146,7 @@ export default function AuthLayout({ children, title, subtitle, benefits }: Auth
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.4, delay: 0.15 + i * 0.08 }}
                       // Hover: sobe levemente e aumenta sombra
-                      className="group flex items-start gap-3.5 rounded-2xl border border-[#E3E7F0] bg-white/75 p-3.5 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/25 hover:shadow-md"
+                      className="group flex items-start gap-3.5 rounded-2xl border border-[#E3E7F0] bg-white/75 p-3.5 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/25 hover:shadow-md"
                     >
                       {/* Container do ícone: fundo colorido translúcido da paleta */}
                       <div
@@ -182,7 +182,7 @@ export default function AuthLayout({ children, title, subtitle, benefits }: Auth
             {/* Logo exibido apenas no mobile (o painel esquerdo fica oculto em mobile) */}
             <Link href="/" className="mb-7 lg:hidden">
               <Image
-                src="/logowhite.svg"
+                src="/LOBBY-horizontal-transparente.svg"
                 alt="LOBBY"
                 width={160}
                 height={80}

@@ -11,6 +11,10 @@ export interface ReviewIssue {
   action?: 'edit' | 'upload' | 'add'
   editRoute?: string
   editTab?: string
+  /** id real do elemento no destino — a correção direta rola até ele e
+   *  move o foco, em vez de só abrir a etapa. Ausente quando não há um
+   *  campo único (ex.: "adicione um plano" abre o diálogo, não um input). */
+  editField?: string
 }
 
 export interface ReviewChecklistItem {
@@ -24,8 +28,32 @@ export interface ReviewChecklistItem {
   editTab?: string
 }
 
+export interface ReviewDraftInput {
+  name?: string | null
+  short_description?: string | null
+  full_description?: string | null
+  category_id?: string | null
+  website_url?: string | null
+  logo_url?: string | null
+  media_gallery?: unknown[] | null
+  features?: unknown[] | null
+  history?: unknown
+  trust_signals?: unknown
+  faq?: unknown
+}
+
+export interface ReviewPlanInput {
+  name?: string | null
+  price?: number | null
+}
+
+export interface ReviewActivationConfig {
+  activation_link?: string | null
+  support_email?: string | null
+}
+
 export interface ReviewResult {
-  app: any
+  app: ReviewDraftInput
   items: ReviewChecklistItem[]
   blockers: number
   warnings: number
@@ -33,7 +61,7 @@ export interface ReviewResult {
   isTeamOptional: boolean
 }
 
-export function validateBasicInfo(draft: any): ReviewChecklistItem {
+export function validateBasicInfo(draft: ReviewDraftInput): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!draft.name?.trim()) {
@@ -44,6 +72,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'Nome do aplicativo é obrigatório',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-name',
     })
   }
 
@@ -55,6 +84,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'Descrição breve é obrigatória',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-short',
     })
   }
 
@@ -66,6 +96,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'Descrição completa é obrigatória',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-full',
     })
   }
 
@@ -77,6 +108,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'Categoria é obrigatória',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-category',
     })
   }
 
@@ -88,6 +120,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
       message: 'URL do aplicativo é obrigatória',
       action: 'edit',
       editRoute: 'editar',
+      editField: 'f-url',
     })
   }
 
@@ -102,7 +135,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
   }
 }
 
-export function validateMedia(draft: any): ReviewChecklistItem {
+export function validateMedia(draft: ReviewDraftInput): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!draft.logo_url?.trim()) {
@@ -114,6 +147,7 @@ export function validateMedia(draft: any): ReviewChecklistItem {
       action: 'upload',
       editRoute: 'editar',
       editTab: 'media',
+      editField: 'f-logo',
     })
   }
 
@@ -126,6 +160,7 @@ export function validateMedia(draft: any): ReviewChecklistItem {
       action: 'upload',
       editRoute: 'editar',
       editTab: 'media',
+      editField: 'f-gallery',
     })
   }
 
@@ -141,7 +176,7 @@ export function validateMedia(draft: any): ReviewChecklistItem {
   }
 }
 
-export function validateFeatures(draft: any): ReviewChecklistItem {
+export function validateFeatures(draft: ReviewDraftInput): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!draft.features || (Array.isArray(draft.features) && draft.features.length === 0)) {
@@ -153,6 +188,7 @@ export function validateFeatures(draft: any): ReviewChecklistItem {
       action: 'edit',
       editRoute: 'editar',
       editTab: 'features',
+      editField: 'f-features',
     })
   }
 
@@ -168,7 +204,7 @@ export function validateFeatures(draft: any): ReviewChecklistItem {
   }
 }
 
-export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
+export function validateOfferAndPlans(plans: ReviewPlanInput[]): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!plans || plans.length === 0) {
@@ -178,8 +214,7 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
       severity: 'blocked',
       message: 'Mínimo 1 plano é obrigatório',
       action: 'add',
-      editRoute: 'editar',
-      editTab: 'offer',
+      editRoute: 'planos',
     })
   }
 
@@ -191,6 +226,7 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
         field: `plan_${idx}_name`,
         severity: 'blocked',
         message: `Plano ${idx + 1}: nome obrigatório`,
+        editRoute: 'planos',
       })
     }
     if (plan.price === null || plan.price === undefined) {
@@ -199,6 +235,7 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
         field: `plan_${idx}_price`,
         severity: 'blocked',
         message: `Plano ${idx + 1}: preço obrigatório`,
+        editRoute: 'planos',
       })
     }
   })
@@ -210,12 +247,11 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
     status: issues.length === 0 ? 'complete' : 'pending',
     issues,
     summary: issues.length === 0 ? `${plans?.length} plano(s) configurado(s)` : `${issues.length} pendência(s)`,
-    editRoute: 'editar',
-    editTab: 'offer',
+    editRoute: 'planos',
   }
 }
 
-export function validateActivation(config: any, plans: any[]): ReviewChecklistItem {
+export function validateActivation(config: ReviewActivationConfig | null | undefined, plans: ReviewPlanInput[]): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!config?.activation_link?.trim()) {
@@ -251,7 +287,7 @@ export function validateActivation(config: any, plans: any[]): ReviewChecklistIt
   }
 }
 
-export function validateOptionalSection(data: any, name: string, icon: string, id: string): ReviewChecklistItem {
+export function validateOptionalSection(data: unknown, name: string, icon: string, id: string): ReviewChecklistItem {
   const hasData = data && (typeof data === 'string' ? data.trim().length > 0 : Array.isArray(data) ? data.length > 0 : Object.keys(data || {}).length > 0)
 
   return {
@@ -266,7 +302,13 @@ export function validateOptionalSection(data: any, name: string, icon: string, i
   }
 }
 
-export function calculateReview(draft: any, plans: any[], config: any, teamMembers: any, teamInvitations: any): ReviewResult {
+export function calculateReview(
+  draft: ReviewDraftInput,
+  plans: ReviewPlanInput[],
+  config: ReviewActivationConfig | null | undefined,
+  teamMembers: unknown[] | null | undefined,
+  teamInvitations: unknown[] | null | undefined,
+): ReviewResult {
   const items = [
     validateBasicInfo(draft),
     validateMedia(draft),
@@ -274,7 +316,7 @@ export function calculateReview(draft: any, plans: any[], config: any, teamMembe
     validateOfferAndPlans(plans),
     validateActivation(config, plans),
     validateOptionalSection(draft.history, 'História do produto', '📚', 'history'),
-    validateOptionalSection(draft.benefits, 'Sinais de confiança', '⭐', 'signals'),
+    validateOptionalSection(draft.trust_signals, 'Sinais de confiança', '⭐', 'signals'),
     validateOptionalSection(draft.faq, 'Perguntas frequentes', '❓', 'faq'),
   ]
 
@@ -286,7 +328,10 @@ export function calculateReview(draft: any, plans: any[], config: any, teamMembe
     id: 'team',
     name: 'Equipe',
     icon: '👥',
-    status: 'complete', // Equipe é sempre opcional
+    // Equipe nunca bloqueia o envio (sempre opcional), mas o status ainda
+    // deve refletir se tem dado real — sem isso "Sem colaboradores" aparecia
+    // com o mesmo selo verde de "preenchido", contradizendo o resumo.
+    status: hasTeam ? 'complete' : 'optional',
     issues: teamIssues,
     summary: hasTeam ? `${(teamMembers?.length || 0) + (teamInvitations?.length || 0)} colaborador(es)` : 'Sem colaboradores (opcional)',
     editRoute: 'equipe',

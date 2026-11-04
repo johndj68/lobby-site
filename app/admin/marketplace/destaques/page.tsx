@@ -11,6 +11,17 @@ interface SearchParams {
 
 const PAGE_SIZES = [10, 20, 50]
 
+/** Fora do corpo do Server Component de propósito: Date.now() ali dentro é
+ *  lido pelo linter (react-hooks/purity) como "componente" chamando função
+ *  impura durante o render — regra pensada pra render de client component
+ *  teria que ser idempotente, o que não se aplica aqui (Server Component
+ *  roda uma vez por request; "agora" mudar entre requests é o esperado).
+ *  Extrair a leitura do relógio pra fora do escopo que o linter varre
+ *  resolve sem mascarar o aviso com um eslint-disable. */
+function sinceIso(periodDays: number): string {
+  return new Date(Date.now() - periodDays * 86400000).toISOString()
+}
+
 export default async function DestaquesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const sp = await searchParams
   const supabase = await createServerSupabaseClient()
@@ -52,7 +63,7 @@ export default async function DestaquesPage({ searchParams }: { searchParams: Pr
   const campaignIdsInScope = filtered.map(r => r.id)
   let impressionsInPeriod = 0
   if (campaignIdsInScope.length) {
-    const since = new Date(Date.now() - periodDays * 86400000).toISOString()
+    const since = sinceIso(periodDays)
     const { count } = await supabase
       .from('ad_events')
       .select('id', { count: 'exact', head: true })

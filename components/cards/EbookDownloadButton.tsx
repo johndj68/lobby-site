@@ -51,7 +51,7 @@ export default function EbookDownloadButton({ resource, isLoggedIn, isPurchased,
       <button
         type="button"
         onClick={() => onFreeDownload(resource)}
-        className="group/btn mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-[#005BFF] transition-all hover:text-[#7B2CFF]"
+        className="group/btn mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-[#0B1020] transition-all hover:text-[#168F9C]"
       >
         <Download size={14} className="transition-transform duration-300 group-hover/btn:translate-y-0.5" aria-hidden="true" />
         Baixar grátis
@@ -133,7 +133,7 @@ export default function EbookDownloadButton({ resource, isLoggedIn, isPurchased,
               type="button"
               onClick={handleRedeem}
               disabled={redeeming}
-              className="group/btn inline-flex items-center gap-1.5 text-sm font-bold text-[#7B2CFF] transition-all hover:text-[#6021D6] disabled:opacity-60"
+              className="group/btn inline-flex items-center gap-1.5 text-sm font-bold text-[#168F9C] transition-all hover:text-[#6021D6] disabled:opacity-60"
             >
               {/* Ícone alterna entre spinner (processando) e moeda (disponível) */}
               {redeeming ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Coins size={14} aria-hidden="true" />}
@@ -143,7 +143,7 @@ export default function EbookDownloadButton({ resource, isLoggedIn, isPurchased,
             // Saldo insuficiente: exibe aviso e link para comprar mais créditos
             <div className="text-xs text-[#5D6475]">
               Saldo insuficiente para comprar com créditos ({formatCredits(creditBalance)} disponíveis).{' '}
-              <Link href="/dashboard/creditos" className="font-semibold text-[#005BFF] hover:underline">Comprar créditos</Link>
+              <Link href="/dashboard/creditos" className="font-semibold text-[#0B1020] hover:underline">Comprar créditos</Link>
             </div>
           )
         )}

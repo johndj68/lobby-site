@@ -28,7 +28,7 @@ const CATEGORY_MAP: Record<string, Variant> = {
 /* ── Automação ───────────────────────────────────────────── */
 function AutomationCover() {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-[#7B2CFF] to-[#005BFF] p-4 flex flex-col justify-between">
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-[#168F9C] to-[#0B1020] p-4 flex flex-col justify-between">
       <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/[0.06]" aria-hidden="true" />
       <div className="absolute -left-4 bottom-4 h-16 w-16 rounded-full bg-white/[0.05]" aria-hidden="true" />
 
@@ -103,7 +103,7 @@ function SecurityCover() {
 function DataCover() {
   const bars = [40, 65, 50, 80, 55, 75]
   return (
-    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-[#0ea5e9] to-[#005BFF] p-4 flex flex-col justify-between">
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-[#0ea5e9] to-[#0B1020] p-4 flex flex-col justify-between">
       <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/[0.06]" aria-hidden="true" />
 
       <div>
@@ -135,7 +135,7 @@ function DataCover() {
 /* ── Software ────────────────────────────────────────────── */
 function SoftwareCover() {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-[#005BFF] via-[#4338ca] to-[#7B2CFF] p-4 flex flex-col justify-between">
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-[#0B1020] via-[#4338ca] to-[#168F9C] p-4 flex flex-col justify-between">
       <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/[0.06]" aria-hidden="true" />
 
       <div>
@@ -147,7 +147,7 @@ function SoftwareCover() {
 
       {/* Code block — tune strings here */}
       <div className="my-1 rounded-lg bg-black/20 px-3 py-2 font-mono text-[8px] leading-relaxed text-white/60">
-        <span className="text-[#00A3FF]/80">fn</span>{' '}
+        <span className="text-[#1C2440]/80">fn</span>{' '}
         <span className="text-white/80">build</span>() {'{'}<br />
         &nbsp; return <span className="text-white/60">true</span><br />
         {'}'}
@@ -164,7 +164,7 @@ function SoftwareCover() {
 /* ── Generic fallback ────────────────────────────────────── */
 function GenericCover({ category }: { category: string }) {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-[#005BFF] to-[#7B2CFF] p-4 flex flex-col justify-between">
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-[#0B1020] to-[#168F9C] p-4 flex flex-col justify-between">
       <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/[0.06]" aria-hidden="true" />
 
       <div>

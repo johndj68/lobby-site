@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rate-limit-redis'
+import { verifyAntiBotToken } from '@/lib/anti-bot/verify'
+import { antiBotRejectionResponse } from '@/lib/anti-bot/respond'
+import { logAntiBotEvent } from '@/lib/anti-bot/log'
 
 interface RegisterInput {
-  fullName:     string
-  email:        string
-  password:     string
-  companyName:  string
-  phone:        string
-  document:     string
-  interestArea: string
+  fullName:       string
+  email:          string
+  password:       string
+  companyName:    string
+  phone:          string
+  document:       string
+  interestArea:   string
+  turnstileToken?: string
 }
 
 function isValidCPF(cpf: string): boolean {
@@ -59,6 +63,22 @@ export async function POST(req: NextRequest) {
   const dayLimit = await checkRateLimit({ key: `register:ip:day:${ip}`, limit: 10, windowMs: 86_400_000 })
   const dayLimited = rateLimitResponse(dayLimit)
   if (dayLimited) return dayLimited
+
+  // Cadastro exige comprovante anti-bot válido antes de criar qualquer registro —
+  // verificado direto com a Cloudflare, nunca confiando em hostname/ação do cliente.
+  const remoteIp = ip === 'unknown' ? undefined : ip
+  const verifyResult = await verifyAntiBotToken({ token: body.turnstileToken, action: 'register', remoteIp })
+  if (verifyResult.outcome !== 'ok') {
+    logAntiBotEvent({
+      operation:      'register',
+      eventType:      verifyResult.outcome === 'unavailable' ? 'provider_unavailable' : 'verify_failed',
+      ip,
+      email:          body.email,
+      failureReason:  verifyResult.reason,
+    })
+    return antiBotRejectionResponse(verifyResult)
+  }
+  logAntiBotEvent({ operation: 'register', eventType: 'verify_passed', ip, email: body.email })
 
   const supabase = await createServerSupabaseClient()
   const { data, error: signUpError } = await supabase.auth.signUp({

@@ -4,23 +4,34 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, ArrowRight } from 'lucide-react'
 import Container from '@/components/layout/Container'
-import { colors } from '@/lib/design-tokens'
+import { colors, gradients } from '@/lib/design-tokens'
 
 interface PromotionApp {
   id: string
   promo_price: number
   original_price?: number
   discount_percentage?: number
-  application: Array<{
-    id: string
-    slug: string
-    name: string
-    category: string
-    logo_url?: string
-    preview_image_url?: string
-    price?: number
-    billing_period?: string
-  }>
+  application:
+    | {
+        id: string
+        slug: string
+        name: string
+        category: string
+        logo_url?: string
+        preview_image_url?: string
+        price?: number
+        billing_period?: string
+      }
+    | Array<{
+        id: string
+        slug: string
+        name: string
+        category: string
+        logo_url?: string
+        preview_image_url?: string
+        price?: number
+        billing_period?: string
+      }>
 }
 
 export default function PromotionsSection({
@@ -60,7 +71,7 @@ export default function PromotionsSection({
           {/* Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {promotions.slice(0, 4).map((promo) => {
-              const app = promo.application?.[0]
+              const app = Array.isArray(promo.application) ? promo.application[0] : promo.application
               if (!app) return null
               return (
                 <Link
@@ -152,7 +163,7 @@ export default function PromotionsSection({
                   {/* CTA */}
                   <button
                     className="w-full mt-4 px-4 py-2 rounded-full font-semibold text-white text-sm transition-all hover:shadow-md"
-                    style={{ backgroundColor: colors.primary }}
+                    style={{ background: gradients.primaryBold }}
                   >
                     Ver oferta
                   </button>

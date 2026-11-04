@@ -11,7 +11,7 @@ export default function DashboardLoading() {
         <div className="mb-6 h-3 w-80 rounded bg-[#E3E7F0]" />
         <div className="flex gap-2">
           <div className="h-8 w-32 rounded-xl bg-[#E3E7F0]" />
-          <div className="h-8 w-36 rounded-xl bg-[#005BFF]/20" />
+          <div className="h-8 w-36 rounded-xl bg-[#0B1020]/20" />
           <div className="h-8 w-32 rounded-xl bg-[#E3E7F0]" />
         </div>
       </div>

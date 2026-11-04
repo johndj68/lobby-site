@@ -68,9 +68,9 @@ function buildMetricCards(m: Metrics) {
       tag: m.downloads === 0 ? 'Nenhum ainda' : `${m.downloads} total`,
       cta: 'Ver histórico',
       href: '/dashboard/downloads',
-      color: '#005BFF',
-      gradFrom: '#005BFF',
-      gradTo: '#00A3FF',
+      color: '#0B1020',
+      gradFrom: '#0B1020',
+      gradTo: '#5CB1BA',
     },
     {
       icon: FolderKanban,
@@ -80,9 +80,9 @@ function buildMetricCards(m: Metrics) {
       tag: m.projects === 0 ? 'Nenhum ainda' : 'Ver detalhes',
       cta: 'Ver projetos',
       href: '/dashboard/projetos',
-      color: '#7B2CFF',
-      gradFrom: '#7B2CFF',
-      gradTo: '#005BFF',
+      color: '#168F9C',
+      gradFrom: '#168F9C',
+      gradTo: '#0B1020',
     },
     {
       icon: MessageSquarePlus,
@@ -92,9 +92,9 @@ function buildMetricCards(m: Metrics) {
       tag: m.contacts === 0 ? 'Tudo certo' : 'Pendente',
       cta: 'Nova solicitação',
       href: '/contato',
-      color: '#00A3FF',
-      gradFrom: '#00A3FF',
-      gradTo: '#005BFF',
+      color: '#5CB1BA',
+      gradFrom: '#5CB1BA',
+      gradTo: '#0B1020',
     },
     {
       icon: Crown,
@@ -104,9 +104,9 @@ function buildMetricCards(m: Metrics) {
       tag: 'Explorar',
       cta: 'Ver materiais',
       href: '/recursos',
-      color: '#7B2CFF',
-      gradFrom: '#005BFF',
-      gradTo: '#7B2CFF',
+      color: '#168F9C',
+      gradFrom: '#0B1020',
+      gradTo: '#168F9C',
     },
   ]
 }
@@ -204,16 +204,16 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
               {/* Gradientes decorativos de fundo — não interativos */}
               <div
                 className="pointer-events-none absolute inset-0 rounded-3xl"
-                style={{ background: 'radial-gradient(circle at 75% 30%,rgba(123,44,255,0.08) 0%,transparent 35%),radial-gradient(circle at 40% 110%,rgba(0,91,255,0.07) 0%,transparent 40%)' }}
+                style={{ background: 'radial-gradient(circle at 75% 30%,rgba(22,143,156,0.08) 0%,transparent 35%),radial-gradient(circle at 40% 110%,rgba(11,16,32,0.07) 0%,transparent 40%)' }}
                 aria-hidden="true"
               />
-              <div className="pointer-events-none absolute right-16 top-8 h-40 w-40 rounded-full bg-[#7B2CFF]/8 blur-3xl" aria-hidden="true" />
-              <div className="pointer-events-none absolute -left-10 bottom-0 h-32 w-32 rounded-full bg-[#005BFF]/6 blur-3xl" aria-hidden="true" />
+              <div className="pointer-events-none absolute right-16 top-8 h-40 w-40 rounded-full bg-[#168F9C]/8 blur-3xl" aria-hidden="true" />
+              <div className="pointer-events-none absolute -left-10 bottom-0 h-32 w-32 rounded-full bg-[#0B1020]/6 blur-3xl" aria-hidden="true" />
 
               <div className="relative z-10 grid gap-6 lg:grid-cols-[1fr_auto]">
                 {/* Coluna esquerda: saudação + ações rápidas */}
                 <div>
-                  <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[#005BFF]/20 bg-[#005BFF]/6 px-3 py-1 text-xs font-semibold text-[#005BFF]">
+                  <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[#0B1020]/20 bg-[#0B1020]/6 px-3 py-1 text-xs font-semibold text-[#0B1020]">
                     <span className="h-1.5 w-1.5 rounded-full bg-[#10B981]" aria-hidden="true" />
                     Central do cliente LOBBY
                   </span>
@@ -223,7 +223,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                   >
                     Olá, {firstName}
                   </h1>
-                  <p className="mb-1 text-sm font-semibold text-[#005BFF]">
+                  <p className="mb-1 text-sm font-semibold text-[#0B1020]">
                     Bem-vindo à sua central LOBBY.
                   </p>
                   <p className="mb-6 max-w-lg text-sm leading-relaxed text-[#5D6475]">
@@ -234,21 +234,21 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                   <div className="flex flex-wrap gap-2">
                     <Link
                       href="/recursos"
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3E7F0] bg-white px-4 py-2 text-xs font-semibold text-[#0B1020] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:shadow-md"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3E7F0] bg-white px-4 py-2 text-xs font-semibold text-[#0B1020] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:shadow-md"
                     >
                       <Download size={13} aria-hidden="true" />
                       Explorar materiais
                     </Link>
                     <Link
                       href="/contato"
-                      className="inline-flex items-center gap-1.5 rounded-xl lobby-gradient px-4 py-2 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(0,91,255,0.28)] transition-all hover:-translate-y-0.5 hover:opacity-90"
+                      className="inline-flex items-center gap-1.5 rounded-xl lobby-gradient px-4 py-2 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(11,16,32,0.28)] transition-all hover:-translate-y-0.5 hover:opacity-90"
                     >
                       <Plus size={13} aria-hidden="true" />
                       Solicitar solução
                     </Link>
                     <Link
                       href="/contato"
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3E7F0] bg-white px-4 py-2 text-xs font-semibold text-[#0B1020] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#7B2CFF]/30 hover:shadow-md"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#E3E7F0] bg-white px-4 py-2 text-xs font-semibold text-[#0B1020] shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#168F9C]/30 hover:shadow-md"
                     >
                       <HelpCircle size={13} aria-hidden="true" />
                       Falar com suporte
@@ -275,7 +275,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-[#5D6475]">Plano</span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#005BFF]/8 px-2 py-0.5 text-[10px] font-bold text-[#005BFF]">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#0B1020]/8 px-2 py-0.5 text-[10px] font-bold text-[#0B1020]">
                         <Crown size={9} aria-hidden="true" />
                         Cliente
                       </span>
@@ -295,7 +295,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.07 }}
                   role="listitem"
-                  className="group relative overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 shadow-[0_18px_60px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#005BFF]/30 hover:shadow-[0_24px_80px_rgba(0,91,255,0.12)]"
+                  className="group relative overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 shadow-[0_18px_60px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#0B1020]/30 hover:shadow-[0_24px_80px_rgba(11,16,32,0.12)]"
                 >
                   {/* Faixa colorida no topo do card — identidade visual do card */}
                   <div
@@ -369,7 +369,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                   </h2>
                   <Link
                     href="/dashboard/projetos"
-                    className="flex items-center gap-1 text-xs font-semibold text-[#005BFF] transition-all hover:gap-2"
+                    className="flex items-center gap-1 text-xs font-semibold text-[#0B1020] transition-all hover:gap-2"
                   >
                     Ver todos
                     <ArrowRight size={11} aria-hidden="true" />
@@ -387,7 +387,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                     </p>
                     <Link
                       href="/dashboard/projetos"
-                      className="mt-1 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-4 py-2 text-xs font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.22)] transition-all hover:-translate-y-0.5"
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-4 py-2 text-xs font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.22)] transition-all hover:-translate-y-0.5"
                     >
                       Solicitar projeto
                     </Link>
@@ -404,7 +404,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.4 + i * 0.07 }}
-                          className="group rounded-2xl border border-[#E3E7F0] p-4 transition-all hover:border-[#005BFF]/20 hover:bg-[#F7F8FC]/60"
+                          className="group rounded-2xl border border-[#E3E7F0] p-4 transition-all hover:border-[#0B1020]/20 hover:bg-[#F7F8FC]/60"
                         >
                           <div className="mb-3 flex items-start justify-between gap-2">
                             <p
@@ -428,7 +428,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                                 className="absolute left-0 top-0 h-full rounded-full transition-all duration-700"
                                 style={{
                                   width: `${project.progress}%`,
-                                  background: 'linear-gradient(to right, #005BFF, #7B2CFF)',
+                                  background: 'linear-gradient(to right, #0B1020, #168F9C)',
                                 }}
                               />
                             </div>
@@ -466,7 +466,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                         : 'Conteúdos recomendados'}
                     </h2>
                     {isPersonalized && profile?.interest_area && (
-                      <p className="mt-0.5 text-xs text-[#005BFF]">
+                      <p className="mt-0.5 text-xs text-[#0B1020]">
                         Baseado no seu interesse em{' '}
                         <span className="font-semibold">{profile.interest_area}</span>
                       </p>
@@ -474,7 +474,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                   </div>
                   <Link
                     href="/recursos"
-                    className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#005BFF] transition-all hover:gap-2"
+                    className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#0B1020] transition-all hover:gap-2"
                   >
                     Ver todos
                     <ArrowRight size={11} aria-hidden="true" />
@@ -489,7 +489,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.45 + i * 0.07 }}
-                      className="group overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white/90 shadow-[0_8px_40px_rgba(11,16,32,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-[#005BFF]/20 hover:shadow-[0_20px_60px_rgba(0,91,255,0.10)]"
+                      className="group overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white/90 shadow-[0_8px_40px_rgba(11,16,32,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-[#0B1020]/20 hover:shadow-[0_20px_60px_rgba(11,16,32,0.10)]"
                     >
                       {/* Capa visual do recurso com zoom no hover */}
                       <div className="relative h-28 w-full overflow-hidden">
@@ -500,7 +500,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
 
                       <div className="p-4">
                         {/* Badge de formato (PDF, E-book, Guia) */}
-                        <span className="mb-2 inline-block rounded-full bg-[#005BFF]/[0.08] px-2.5 py-0.5 text-[10px] font-semibold text-[#005BFF]">
+                        <span className="mb-2 inline-block rounded-full bg-[#0B1020]/[0.08] px-2.5 py-0.5 text-[10px] font-semibold text-[#0B1020]">
                           {res.badge}
                         </span>
 
@@ -529,7 +529,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
 
                         <Link
                           href="/recursos"
-                          className="flex items-center gap-1 text-xs font-bold text-[#005BFF] transition-all hover:gap-2"
+                          className="flex items-center gap-1 text-xs font-bold text-[#0B1020] transition-all hover:gap-2"
                         >
                           Baixar agora
                           <ArrowRight
@@ -555,13 +555,13 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
               className="relative overflow-hidden rounded-3xl border border-[#E3E7F0] bg-gradient-to-br from-[#F0F4FF] via-white to-[#EEF0FF] p-6 shadow-[0_18px_60px_rgba(11,16,32,0.06)] sm:p-8"
               aria-label="Diagnóstico gratuito"
             >
-              <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-[#7B2CFF]/6 blur-3xl" aria-hidden="true" />
-              <div className="pointer-events-none absolute -bottom-8 left-20 h-48 w-48 rounded-full bg-[#005BFF]/6 blur-3xl" aria-hidden="true" />
+              <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-[#168F9C]/6 blur-3xl" aria-hidden="true" />
+              <div className="pointer-events-none absolute -bottom-8 left-20 h-48 w-48 rounded-full bg-[#0B1020]/6 blur-3xl" aria-hidden="true" />
 
               <div className="relative z-10 flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-start gap-5">
                   {/* Ícone com gradiente lobby */}
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl lobby-gradient shadow-[0_8px_24px_rgba(0,91,255,0.30)]">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl lobby-gradient shadow-[0_8px_24px_rgba(11,16,32,0.30)]">
                     <Sparkles size={22} className="text-white" aria-hidden="true" />
                   </div>
                   <div>
@@ -588,7 +588,7 @@ export default function DashboardClient({ user, profile, metrics, projects }: Pr
 
                 <Link
                   href="/contato"
-                  className="shrink-0 inline-flex items-center gap-2 rounded-2xl lobby-gradient px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,91,255,0.28)] transition-all hover:-translate-y-0.5 hover:opacity-90 hover:shadow-[0_12px_32px_rgba(0,91,255,0.38)]"
+                  className="shrink-0 inline-flex items-center gap-2 rounded-2xl lobby-gradient px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(11,16,32,0.28)] transition-all hover:-translate-y-0.5 hover:opacity-90 hover:shadow-[0_12px_32px_rgba(11,16,32,0.38)]"
                 >
                   Solicitar diagnóstico gratuito
                   <ArrowRight size={15} aria-hidden="true" />

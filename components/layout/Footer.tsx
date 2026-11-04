@@ -45,12 +45,12 @@ export default function Footer() {
     {/* Linha decorativa com gradiente azul→roxo no topo do rodapé */}
     <div
       className="absolute inset-x-0 top-0 h-px opacity-[0.55]"
-      style={{ background: 'linear-gradient(to right, transparent, #005BFF, #7B2CFF, transparent)' }}
+      style={{ background: 'linear-gradient(to right, transparent, #0B1020, #168F9C, transparent)' }}
       aria-hidden="true"
     />
     {/* Blobs de fundo com blur: elementos decorativos sutis nos cantos */}
-    <div className="absolute -left-32 bottom-0 h-72 w-72 rounded-full bg-[#005BFF]/[0.04] blur-3xl" aria-hidden="true" />
-    <div className="absolute -right-32 top-0 h-72 w-72 rounded-full bg-[#7B2CFF]/[0.04] blur-3xl" aria-hidden="true" />
+    <div className="absolute -left-32 bottom-0 h-72 w-72 rounded-full bg-[#0B1020]/[0.04] blur-3xl" aria-hidden="true" />
+    <div className="absolute -right-32 top-0 h-72 w-72 rounded-full bg-[#168F9C]/[0.04] blur-3xl" aria-hidden="true" />
 
     {/* Conteúdo do rodapé — relative z-10 para ficar acima dos blobs */}
     <Container className="relative z-10">
@@ -61,12 +61,12 @@ export default function Footer() {
         <div className="sm:col-span-2 lg:col-span-2">
           {/* Logo com link para a home */}
           <Link href="/" className="inline-flex items-center group mb-3 -ml-5">
-            <div className="w-[132px] h-[52px] rounded-lg overflow-hidden flex items-center justify-center">
+            <div className="w-[160px] h-[63px] rounded-lg overflow-hidden flex items-center justify-center">
               <Image
-                src="/logowhite.svg"
+                src="/LOBBY-horizontal-transparente.svg"
                 alt="Logo Lobby"
-                width={264}
-                height={104}
+                width={320}
+                height={126}
                 className="w-full h-full object-contain"
                 priority
                 quality={100}
@@ -107,7 +107,7 @@ export default function Footer() {
                 href={href}
                 aria-label={label}
                 // Ao hover: fundo azul e ícone branco
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E3E7F0] bg-white text-[#5D6475] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF] hover:bg-[#005BFF] hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E3E7F0] bg-white text-[#5D6475] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020] hover:bg-[#0B1020] hover:text-white"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                   {svg}
@@ -138,7 +138,7 @@ export default function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-[#5D6475] hover:text-[#005BFF] transition-colors"
+                    className="text-sm text-[#5D6475] hover:text-[#0B1020] transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -160,19 +160,19 @@ export default function Footer() {
           <ul className="space-y-2.5">
             {/* E-mail de contato */}
             <li className="flex items-center gap-2 text-sm text-[#5D6475]">
-              <Mail size={14} className="text-[#005BFF] shrink-0" />
+              <Mail size={14} className="text-[#0B1020] shrink-0" />
               <span className="truncate">contato@lobby.com</span>
             </li>
 
             {/* Telefone */}
             <li className="flex items-center gap-2 text-sm text-[#5D6475]">
-              <Phone size={14} className="text-[#005BFF] shrink-0" />
+              <Phone size={14} className="text-[#0B1020] shrink-0" />
               <span>(11) 99999-9999</span>
             </li>
 
             {/* Localização */}
             <li className="flex items-start gap-2 text-sm text-[#5D6475]">
-              <MapPin size={14} className="text-[#005BFF] shrink-0 mt-0.5" />
+              <MapPin size={14} className="text-[#0B1020] shrink-0 mt-0.5" />
               <span>São Paulo, SP</span>
             </li>
           </ul>
@@ -189,14 +189,14 @@ export default function Footer() {
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
           <Link
             href="/sobre#privacidade"
-            className="text-xs text-[#5D6475] hover:text-[#005BFF] transition-colors"
+            className="text-xs text-[#5D6475] hover:text-[#0B1020] transition-colors"
           >
             Política de Privacidade
           </Link>
 
           <Link
             href="/sobre#termos"
-            className="text-xs text-[#5D6475] hover:text-[#005BFF] transition-colors"
+            className="text-xs text-[#5D6475] hover:text-[#0B1020] transition-colors"
           >
             Termos de Uso
           </Link>

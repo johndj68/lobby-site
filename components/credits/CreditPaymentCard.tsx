@@ -116,7 +116,7 @@ export default function CreditPaymentCard({ project, onPaid }: Props) {
               type="button"
               onClick={handlePay}
               disabled={paying}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-4 py-2.5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 disabled:opacity-60"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-4 py-2.5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 disabled:opacity-60"
             >
               {paying ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Wallet size={14} aria-hidden="true" />}
               {paying ? 'Processando...' : 'Usar créditos para pagar'}
@@ -125,7 +125,7 @@ export default function CreditPaymentCard({ project, onPaid }: Props) {
             /* Saldo insuficiente — exibe mensagem e link para comprar mais créditos */
             <div className="text-right text-xs text-[#92400E]">
               <p className="font-semibold">Você não possui créditos suficientes para pagar este projeto.</p>
-              <Link href="/dashboard/creditos" className="font-bold text-[#005BFF] hover:underline">Comprar mais créditos</Link>
+              <Link href="/dashboard/creditos" className="font-bold text-[#0B1020] hover:underline">Comprar mais créditos</Link>
             </div>
           )}
         </div>

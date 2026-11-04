@@ -9,10 +9,11 @@ import { toast } from 'sonner'
 // Ícones da interface
 import {
   Wallet, Plus, Download, TrendingUp, TrendingDown, BookOpen,
-  Briefcase, MapPin, Receipt, Users, Search, ChevronDown, Trash2, CheckCircle2,
+  Briefcase, MapPin, Receipt, Users, Search, ChevronDown, Trash2, CheckCircle2, AlertTriangle,
 } from 'lucide-react'
 // Layout padrão das páginas admin
 import AdminShell from '@/components/layout/AdminShell'
+import FinanceiroSubNav from '@/components/admin/finance/FinanceiroSubNav'
 // Modal de confirmação de exclusão
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
 // Cliente do Supabase para operações no banco
@@ -33,6 +34,10 @@ import FinanceTransactionTable, { FinanceTransactionEmptyState } from '@/compone
 import FinanceTransactionModal, {
   EMPTY_FINANCE_FORM, transactionToForm, type FinanceFormValues,
 } from '@/components/admin/finance/FinanceTransactionModal'
+import ConfirmEbookPaymentModal from '@/components/admin/finance/ConfirmEbookPaymentModal'
+import RefundFinanceTransactionModal from '@/components/admin/finance/RefundFinanceTransactionModal'
+import RefundEbookPurchaseModal, { type PaidEbookPurchase } from '@/components/admin/finance/RefundEbookPurchaseModal'
+import RefundAppPurchaseModal, { type PaidAppPurchase } from '@/components/admin/finance/RefundAppPurchaseModal'
 // Tipos globais para transações financeiras
 import type { FinancialTransaction, FinanceType, FinanceStatus, PaymentMethod } from '@/types'
 // Tipo para compras de e-books pendentes de confirmação
@@ -45,6 +50,8 @@ interface Props {
   profile:                  { full_name?: string } | null // Perfil do técnico logado
   initialTransactions:      FinancialTransaction[]       // Transações pré-carregadas no servidor
   initialPendingPurchases:  PendingEbookPurchase[]       // E-books aguardando confirmação de pagamento
+  initialPaidEbookPurchases: PaidEbookPurchase[]         // E-books já pagos — ação de reembolso
+  initialPaidAppPurchases: PaidAppPurchase[]        // Apps já pagos — ação de reembolso
 }
 
 // Opções de filtro de período para as transações
@@ -57,13 +64,23 @@ const PERIOD_OPTIONS: { value: FinanceFilters['period']; label: string }[] = [
   { value: 'todos', label: 'Todos' },
 ]
 
-export default function FinanceiroClient({ user, profile, initialTransactions, initialPendingPurchases }: Props) {
+export default function FinanceiroClient({ user, profile, initialTransactions, initialPendingPurchases, initialPaidEbookPurchases, initialPaidAppPurchases }: Props) {
   // Lista de transações exibida (atualizada otimisticamente)
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(initialTransactions)
   // E-books com pagamento pendente de confirmação manual
   const [pendingPurchases, setPendingPurchases] = useState<PendingEbookPurchase[]>(initialPendingPurchases)
-  // ID da compra de e-book em processo de confirmação (evita cliques duplos)
-  const [confirmingPurchase, setConfirmingPurchase] = useState<string | null>(null)
+  // E-books já pagos (crédito ou manual) — lista pra ação de reembolso
+  const [paidEbookPurchases, setPaidEbookPurchases] = useState<PaidEbookPurchase[]>(initialPaidEbookPurchases)
+  // E-book selecionado para reembolsar via modal (null = fechado)
+  const [refundingEbook, setRefundingEbook] = useState<PaidEbookPurchase | null>(null)
+  // Apps já pagos — lista pra ação de reembolso
+  const [paidAppPurchases, setPaidAppPurchases] = useState<PaidAppPurchase[]>(initialPaidAppPurchases)
+  // App selecionado para reembolsar via modal (null = fechado)
+  const [refundingApp, setRefundingApp] = useState<PaidAppPurchase | null>(null)
+  // Compra de e-book selecionada para confirmar via modal (null = fechado)
+  const [confirmingPurchase, setConfirmingPurchase] = useState<PendingEbookPurchase | null>(null)
+  // Transação selecionada para reembolsar via modal (null = fechado)
+  const [refundingTx, setRefundingTx] = useState<FinancialTransaction | null>(null)
   // Estado dos filtros ativos (período, tipo, status, forma de pagamento, busca)
   const [filters, setFilters] = useState<FinanceFilters>(DEFAULT_FINANCE_FILTERS)
   // ID da transação sendo editada (null = nova entrada)
@@ -82,6 +99,10 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
   const filtered = useMemo(() => filterFinanceTransactions(transactions, filters), [transactions, filters])
   // Métricas calculadas a partir das transações filtradas
   const metrics  = useMemo(() => calculateFinanceMetrics(filtered), [filtered])
+  // Apps pagos ainda com saldo reembolsável (exclui os totalmente
+  // reembolsados) — usado tanto na contagem do cabeçalho quanto na lista
+  // abaixo, pra nunca divergir entre os dois.
+  const visibleAppPurchases = useMemo(() => paidAppPurchases.filter(p => p.refunded_amount < p.amount), [paidAppPurchases])
   // Detecta se há algum filtro ativo (para exibir contador de resultados)
   const hasActiveFilters = filters.period !== 'todos' || filters.type !== 'todos' || filters.status !== 'todos'
     || filters.paymentMethod !== 'todos' || filters.search.trim() !== ''
@@ -182,51 +203,40 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
     toast.success('Entrada financeira excluída.')
   }
 
-  /* Confirmar pagamento de e-book pendente
-     Sem gateway real, o líder confirma manualmente aqui. Marca a compra
-     como paga (o que libera o download em /recursos via RLS) e lança a
-     entrada correspondente em financial_transactions. */
-  const confirmEbookPurchase = async (purchase: PendingEbookPurchase) => {
-    setConfirmingPurchase(purchase.id)
-    const sb = sbRef.current
-    const nowIso = new Date().toISOString()
-    const today  = nowIso.slice(0, 10)
+  /* Confirmar pagamento de e-book pendente — abre o modal que coleta
+     método/data/justificativa e chama a RPC confirm_ebook_purchase_manual
+     (atômica: marca a compra como paga, libera o download via RLS e lança
+     a entrada em financial_transactions numa única transação no banco —
+     nunca deixa a compra "paga" sem o lançamento correspondente). */
+  const openConfirmEbookPurchase = (purchase: PendingEbookPurchase) => setConfirmingPurchase(purchase)
 
-    // 1. Marca a compra como paga — libera acesso ao e-book via RLS
-    const { error: purchaseErr } = await sb
-      .from('ebook_purchases')
-      .update({ status: 'paid', paid_at: nowIso })
-      .eq('id', purchase.id)
-    if (purchaseErr) {
-      toast.error('Não foi possível confirmar o pagamento.')
-      setConfirmingPurchase(null)
-      return
-    }
+  const handleEbookConfirmed = (tx: FinancialTransaction, purchaseId: string) => {
+    setTransactions(prev => [tx, ...prev])
+    setPendingPurchases(prev => prev.filter(p => p.id !== purchaseId))
+    toast.success('Pagamento confirmado e lançado no financeiro.')
+  }
 
-    // 2. Lança entrada na tabela financeira para registrar a receita
-    const { data: txData, error: txErr } = await sb
-      .from('financial_transactions')
-      .insert({
-        type:                'ebook',
-        client_name:         purchase.buyer_name || purchase.buyer_email || null,
-        description:         `E-book: ${purchase.ebook_title}`,
-        amount:              purchase.amount,
-        status:              'pago',
-        sale_date:           today,
-        received_date:       today,
-        responsible_user_id: user.id,
-      })
-      .select('*').single()
-    if (txErr) {
-      // Pagamento confirmado mas lançamento falhou — orienta registro manual
-      toast.error('Pagamento confirmado, mas não foi possível lançar no financeiro. Registre manualmente.')
-    } else {
-      setTransactions(prev => [txData as FinancialTransaction, ...prev])
-      toast.success('Pagamento confirmado e lançado no financeiro.')
-    }
-    // Remove da lista de pendentes independente do resultado do lançamento
-    setPendingPurchases(prev => prev.filter(p => p.id !== purchase.id))
-    setConfirmingPurchase(null)
+  /* Chamado pelo modal de reembolso após a RPC confirmar — reflete
+     refunded_amount/status atualizados sem recarregar a página. */
+  const handleTxRefunded = (updated: FinancialTransaction) => {
+    setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t))
+    toast.success('Reembolso registrado.')
+  }
+
+  /* Chamado pelo modal de reembolso de e-book — a RPC já reverteu o
+     pagamento (crédito devolvido ou financial_transactions marcado) e
+     revogou o acesso; só tira da lista de "pagos" aqui. */
+  const handleEbookRefunded = (purchaseId: string) => {
+    setPaidEbookPurchases(prev => prev.filter(p => p.id !== purchaseId))
+    toast.success('E-book reembolsado e acesso revogado.')
+  }
+
+  /* Chamado pelo modal de reembolso de app depois que a rota confirmou o
+     Stripe + a RPC — reflete refunded_amount/refund_status atualizados
+     (estado 'processing' até o webhook confirmar de vez). */
+  const handleAppRefunded = (updated: PaidAppPurchase) => {
+    setPaidAppPurchases(prev => prev.map(p => p.id === updated.id ? updated : p))
+    toast.success('Reembolso solicitado — aguardando confirmação do Stripe.')
   }
 
   // Descrição da transação sendo excluída (para exibir no modal de confirmação)
@@ -235,6 +245,8 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
   return (
     <AdminShell user={user} profile={profile}>
       <div className="space-y-6">
+
+        <FinanceiroSubNav />
 
         {/* ── HEADER: título, botão exportar CSV e botão nova entrada ─── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
@@ -249,6 +261,12 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
+            {/* Disputas Stripe (congeladas automaticamente) — registro fica em tela própria */}
+            <a href="/admin/disputas"
+              className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/60 transition-all hover:border-white/20 hover:text-white">
+              <AlertTriangle size={15} aria-hidden="true" />
+              Disputas
+            </a>
             {/* Exporta as transações filtradas como arquivo CSV */}
             <button type="button" onClick={() => exportFinanceCSV(filtered)} disabled={filtered.length === 0}
               className="inline-flex items-center gap-1.5 rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/60 transition-all hover:border-white/20 hover:text-white disabled:opacity-40">
@@ -284,15 +302,75 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
                       {p.buyer_name || p.buyer_email || 'Comprador desconhecido'} · {formatCurrencyBRL(p.amount)}
                     </p>
                   </div>
-                  {/* Botão confirmar pagamento — libera e-book e lança no financeiro */}
+                  {/* Botão confirmar pagamento — abre modal (método/data/justificativa) e libera e-book + lança no financeiro via RPC atômica */}
                   <button
                     type="button"
-                    disabled={confirmingPurchase === p.id}
-                    onClick={() => confirmEbookPurchase(p)}
+                    onClick={() => openConfirmEbookPurchase(p)}
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#10B981]/12 px-3 py-1.5 text-xs font-bold text-[#34D399] transition-all hover:bg-[#10B981]/20 disabled:opacity-50"
                   >
                     <CheckCircle2 size={13} aria-hidden="true" />
-                    {confirmingPurchase === p.id ? 'Confirmando...' : 'Confirmar pagamento'}
+                    Confirmar pagamento
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* ── E-BOOKS VENDIDOS: lista compacta pra reembolso — cobre tanto compra
+             via crédito (nunca aparece na tabela de transações, seção 3 do
+             pedido original) quanto manual/BRL ── */}
+        {paidEbookPurchases.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
+            className="rounded-3xl border border-white/[0.08] bg-[#111827]/80 p-5"
+            aria-label="E-books vendidos"
+          >
+            <h2 className="mb-3 text-sm font-bold text-white/70">
+              E-books vendidos ({paidEbookPurchases.length})
+            </h2>
+            <div className="max-h-64 space-y-2 overflow-y-auto">
+              {paidEbookPurchases.map(p => (
+                <div key={p.id} className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{p.ebook_title}</p>
+                    <p className="truncate text-xs text-white/40">
+                      {p.buyer_name || p.buyer_email || 'Comprador desconhecido'} · {formatCurrencyBRL(p.amount)} · {p.payment_provider === 'credits' ? 'créditos' : 'manual'}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setRefundingEbook(p)}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 transition-all hover:bg-red-500/20">
+                    Reembolsar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* ── APPS VENDIDOS: lista compacta pra reembolso via Stripe (parcial ou total) ── */}
+        {visibleAppPurchases.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
+            className="rounded-3xl border border-white/[0.08] bg-[#111827]/80 p-5"
+            aria-label="Apps vendidos"
+          >
+            <h2 className="mb-3 text-sm font-bold text-white/70">
+              Apps vendidos ({visibleAppPurchases.length})
+            </h2>
+            <div className="max-h-64 space-y-2 overflow-y-auto">
+              {visibleAppPurchases.map(p => (
+                <div key={p.id} className="flex flex-col gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{p.application_name} — {p.plan_name}</p>
+                    <p className="truncate text-xs text-white/40">
+                      {p.buyer_name || p.buyer_email || 'Comprador desconhecido'} · {formatCurrencyBRL(p.amount)}
+                      {p.refunded_amount > 0 && <> · reembolsado: {formatCurrencyBRL(p.refunded_amount)}</>}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setRefundingApp(p)} disabled={p.refund_status === 'processing'}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-40">
+                    {p.refund_status === 'processing' ? 'Reembolso em andamento' : 'Reembolsar'}
                   </button>
                 </div>
               ))}
@@ -404,6 +482,7 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
               onMarkPaid={(t) => updateStatus(t, 'pago', { received_date: t.received_date ?? new Date().toISOString().slice(0, 10) })}
               onCancel={(t) => updateStatus(t, 'cancelado')}
               onDelete={(t) => setConfirmDel(t.id)}
+              onRefund={(t) => setRefundingTx(t)}
             />
           )}
         </section>
@@ -419,6 +498,34 @@ export default function FinanceiroClient({ user, profile, initialTransactions, i
         saving={saving}
         error={error}
         onSubmit={handleSubmit}
+      />
+
+      {/* ── MODAL: confirmação de recebimento manual de e-book ── */}
+      <ConfirmEbookPaymentModal
+        purchase={confirmingPurchase}
+        onClose={() => setConfirmingPurchase(null)}
+        onConfirmed={handleEbookConfirmed}
+      />
+
+      {/* ── MODAL: reembolso parcial/total de lançamento financeiro ── */}
+      <RefundFinanceTransactionModal
+        transaction={refundingTx}
+        onClose={() => setRefundingTx(null)}
+        onRefunded={handleTxRefunded}
+      />
+
+      {/* ── MODAL: reembolso de e-book (crédito ou manual, sempre total) ── */}
+      <RefundEbookPurchaseModal
+        purchase={refundingEbook}
+        onClose={() => setRefundingEbook(null)}
+        onRefunded={handleEbookRefunded}
+      />
+
+      {/* ── MODAL: reembolso de app (Stripe, parcial ou total) ── */}
+      <RefundAppPurchaseModal
+        purchase={refundingApp}
+        onClose={() => setRefundingApp(null)}
+        onRefunded={handleAppRefunded}
       />
 
       {/* ── MODAL: confirmação de exclusão permanente ── */}

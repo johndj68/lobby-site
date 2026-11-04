@@ -69,7 +69,7 @@ export default function RecentActivityCard({ contacts, leads, onViewArea }: Prop
                     <p className="text-[10px] text-white/35">{item.category ?? 'Geral'} • {timeAgo(item.createdAt)}</p>
                   </div>
                   {/* Badge "Novo" para destacar eventos recentes */}
-                  <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: `${colors.primary}/15`, color: colors.primaryLight }}>
+                  <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: 'rgba(96,165,250,0.15)', color: '#60A5FA' }}>
                     Novo
                   </span>
                 </div>

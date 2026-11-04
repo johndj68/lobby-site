@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Link as LinkIcon, Zap, FileText, Star, Check } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
@@ -79,9 +80,14 @@ export default function NovoAppClient({ user, profile }: NovoAppClientProps) {
       <header className="border-b bg-white" style={{ borderColor: colors.border }}>
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="text-lg font-bold" style={{ color: colors.primary }}>
-              LOBBY
-            </div>
+            <Image
+              src="/LOBBY-horizontal-transparente.svg"
+              alt="LOBBY"
+              width={252}
+              height={126}
+              className="h-16 w-auto object-contain"
+              priority
+            />
             <div style={{ backgroundColor: colors.border }} className="w-px h-6" />
             <span className="text-sm font-semibold" style={{ color: colors.text }}>
               PARCEIROS
@@ -261,7 +267,7 @@ export default function NovoAppClient({ user, profile }: NovoAppClientProps) {
                 className="w-full py-2 rounded-lg border font-semibold text-sm"
                 style={{ borderColor: colors.primary, color: colors.primary }}
               >
-                📋 Copiar prompt de configuração
+                Copiar prompt de configuração
               </button>
 
               <a href="#" style={{ color: colors.primary }} className="text-sm font-semibold hover:underline block">
@@ -365,13 +371,13 @@ export default function NovoAppClient({ user, profile }: NovoAppClientProps) {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg" style={{ backgroundColor: colors.backgroundAlt }}>
-                <p className="font-bold mb-1" style={{ color: colors.text }}>🔍 No marketplace</p>
+                <p className="font-bold mb-1" style={{ color: colors.text }}>No marketplace</p>
                 <p className="text-sm" style={{ color: colors.textSecondary }}>
                   Seu app aparecerá nas categorias e busca.
                 </p>
               </div>
               <div className="p-4 rounded-lg" style={{ backgroundColor: colors.backgroundAlt }}>
-                <p className="font-bold mb-1" style={{ color: colors.text }}>⭐ No carrossel de destaque</p>
+                <p className="font-bold mb-1" style={{ color: colors.text }}>No carrossel de destaque</p>
                 <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: colors.primary, color: 'white' }}>
                   Patrocinado
                 </span>

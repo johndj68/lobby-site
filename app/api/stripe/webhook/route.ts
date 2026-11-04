@@ -3,8 +3,7 @@ import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { captureException } from '@/lib/monitoring'
-import { sendEmail, buildCreditReceiptEmailHtml } from '@/lib/notifications'
-import { completeWebhookJob, retryWebhookJob } from '@/lib/webhook-queue'
+import { sendEmail, buildCreditReceiptEmailHtml, buildAppPurchaseReceiptEmailHtml, buildSubscriptionPaymentFailedEmailHtml, buildDisputeCreatedEmailHtml } from '@/lib/notifications'
 import { confirmReservationOrFlagConflict } from '@/lib/services/campaigns'
 import { logAppAdminEvent } from '@/lib/services/app-publish'
 
@@ -46,24 +45,60 @@ export async function POST(req: NextRequest) {
         await handleChargeRefunded(event.data.object as Stripe.Charge)
         break
 
+      case 'invoice.paid':
+        await handleInvoicePaid(event.data.object as Stripe.Invoice)
+        break
+
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
+        break
+
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+        break
+
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+        break
+
+      case 'charge.dispute.created':
+        await handleDisputeCreated(event.data.object as Stripe.Dispute)
+        break
+
+      case 'charge.dispute.closed':
+        await handleDisputeClosed(event.data.object as Stripe.Dispute)
+        break
+
       default:
         // Unhandled event type — acknowledge so Stripe doesn't retry
         break
     }
-
-    // Mark webhook as completed
-    await completeWebhookJob(event.id)
   } catch (err) {
     captureException(err, { event_type: event.type, event_id: event.id })
-    // Queue for retry instead of failing silently
-    await retryWebhookJob(event.id)
-    return NextResponse.json({ received: true, queued_for_retry: true }, { status: 200 })
+    // Não finge sucesso: devolve erro pra Stripe reentregar o evento com o
+    // retry nativo dele (backoff automático, visível no Dashboard, até
+    // vários dias). A fila própria que existia aqui (webhook_queue via
+    // lib/webhook-queue.ts) nunca era populada — enqueueWebhookJob não era
+    // chamado em lugar nenhum — e o cron de retry (/api/webhook-retry) só
+    // marcava o job como concluído sem reprocessar nada. Os handlers abaixo
+    // já são idempotentes (SELECT...FOR UPDATE + checagem de status antes de
+    // agir), então uma redelivery do Stripe nunca duplica crédito/lançamento.
+    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
   }
 
   return NextResponse.json({ received: true })
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // Assinatura não tem purchase_id pré-criado (diferente de crédito/
+  // campanha/app avulso) — não existe "pedido pending" antes do Stripe,
+  // porque o Customer+Subscription só passam a existir quando o checkout
+  // é concluído. A linha em `subscriptions` nasce aqui, não antes.
+  if (session.metadata?.kind === 'subscription') {
+    await handleSubscriptionCheckoutCompleted(session)
+    return
+  }
+
   const purchaseId = session.metadata?.purchase_id
   if (!purchaseId) {
     // Could be a different product — not a credit purchase
@@ -73,6 +108,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (session.metadata?.kind === 'campaign') {
     await handleCampaignCheckoutCompleted(session, purchaseId)
+    return
+  }
+
+  if (session.metadata?.kind === 'app_purchase') {
+    await handleAppPurchaseCheckoutCompleted(session, purchaseId)
     return
   }
 
@@ -183,6 +223,12 @@ async function handlePaymentFailed(intent: Stripe.PaymentIntent) {
     return
   }
 
+  if (intent.metadata?.kind === 'app_purchase') {
+    await admin.from('app_purchases').update({ status: 'failed' }).eq('id', purchaseId).eq('status', 'pending')
+    console.info('[stripe/webhook] App purchase payment failed:', purchaseId)
+    return
+  }
+
   await admin
     .from('credit_purchases')
     .update({ status: 'failed' })
@@ -252,25 +298,736 @@ async function handleCampaignCheckoutCompleted(session: Stripe.Checkout.Session,
   console.info('[stripe/webhook] Campaign purchase confirmed:', purchaseId, confirmed.ok ? 'ok' : 'capacity conflict')
 }
 
-/** Reembolso confirmado pelo provedor — só agora status vira "refunded"
- *  (nunca antes, seção 20). Redelivery é idempotente via .eq('refund_status'). */
+/**
+ * Confirmação de compra de app de parceiro/LOBBY. Idempotente (redelivery
+ * não duplica nem reenvia e-mail). Lança em financial_transactions só
+ * commission_amount — o valor que fica com a LOBBY, não o preço bruto
+ * pago pelo cliente (seção 17: não chamar venda bruta de receita própria;
+ * o resto, partner_amount, é dinheiro do parceiro, ainda não repassado —
+ * fica só em app_purchases até a peça 4 do roadmap existir).
+ *
+ * "Entrega" é sempre app_activation_config (link/instruções/e-mail de
+ * suporte) — nunca um código automático, porque app_activation_codes
+ * nunca foi ligado de verdade no sistema (ver comentário em
+ * lib/notifications.ts:buildAppPurchaseReceiptEmailHtml).
+ */
+async function handleAppPurchaseCheckoutCompleted(session: Stripe.Checkout.Session, purchaseId: string) {
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin.from('app_purchases').select('status').eq('id', purchaseId).single()
+  if (existing?.status === 'paid') {
+    console.info('[stripe/webhook] Redelivery of an already-confirmed app purchase — skipping:', purchaseId)
+    return
+  }
+
+  const { data: purchase, error } = await admin
+    .from('app_purchases')
+    .update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent?.id ?? null),
+    })
+    .eq('id', purchaseId)
+    .select('id, buyer_user_id, plan_id, application_name, plan_name, amount, commission_amount, currency')
+    .single()
+
+  if (error || !purchase) {
+    console.error('[stripe/webhook] failed to confirm app purchase:', error)
+    throw new Error(error?.message ?? 'app purchase not found')
+  }
+
+  await admin.from('financial_transactions').insert({
+    type: 'app',
+    client_id: purchase.buyer_user_id,
+    description: `App: ${purchase.application_name} (${purchase.plan_name})`,
+    amount: purchase.commission_amount,
+    status: 'pago',
+    sale_date: new Date().toISOString().slice(0, 10),
+    received_date: new Date().toISOString().slice(0, 10),
+    source_type: 'app_purchases',
+    source_id: purchase.id,
+  })
+
+  console.info('[stripe/webhook] App purchase confirmed:', purchaseId)
+
+  // Entrega de código é best-effort: estoque zerado não pode derrubar a
+  // confirmação de pagamento já feita acima (o dinheiro já foi cobrado).
+  // Fica sem código entregue — get_my_app_purchase_access devolve null e
+  // o comprador vê só link/instruções manuais, mesmo estado de antes
+  // desta função existir. Fica logado pra resolução manual.
+  let deliveredCode: string | null = null
+  const { data: delivery, error: deliveryErr } = await admin.rpc('deliver_activation_code', { p_app_purchase_id: purchaseId })
+  if (deliveryErr) {
+    if (deliveryErr.message?.includes('SEM_CODIGO_DISPONIVEL')) {
+      console.error('[stripe/webhook] Sem código de ativação disponível pro plano:', purchase.plan_id, 'compra:', purchaseId)
+    } else {
+      console.error('[stripe/webhook] deliver_activation_code RPC failed:', deliveryErr)
+    }
+  } else {
+    deliveredCode = delivery?.code ?? null
+  }
+
+  sendAppPurchaseReceiptEmail(purchase, admin, deliveredCode)
+    .catch(err => console.error('[stripe/webhook] App purchase receipt email error:', err))
+}
+
+interface AppPurchaseForEmail {
+  buyer_user_id:    string
+  plan_id:          string
+  application_name: string
+  plan_name:        string
+  amount:           number
+  currency:         string
+}
+
+async function sendAppPurchaseReceiptEmail(purchase: AppPurchaseForEmail, admin: SupabaseAdmin, deliveredCode: string | null) {
+  const [profileRes, planRes] = await Promise.all([
+    admin.from('profiles').select('full_name, email').eq('id', purchase.buyer_user_id).single(),
+    admin.from('app_plans').select('app_draft_id').eq('id', purchase.plan_id).single(),
+  ])
+
+  const email = profileRes.data?.email
+  if (!email) return
+
+  const appDraftId = planRes.data?.app_draft_id
+  const { data: activation } = appDraftId
+    ? await admin.from('app_activation_config').select('activation_link, support_email, instructions').eq('app_draft_id', appDraftId).maybeSingle()
+    : { data: null }
+
+  const firstName = profileRes.data?.full_name?.split(' ')[0] ?? 'Cliente'
+  const SITE_URL  = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const amountFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: purchase.currency }).format(Number(purchase.amount))
+  const instructions = activation?.instructions
+  const instructionsText = instructions && typeof instructions === 'object'
+    ? Object.values(instructions as Record<string, string>).filter(Boolean).join('\n')
+    : (typeof instructions === 'string' ? instructions : null)
+
+  const html = buildAppPurchaseReceiptEmailHtml({
+    recipientName:   firstName,
+    appName:         purchase.application_name,
+    planName:        purchase.plan_name,
+    amountFormatted,
+    dateFormatted:   new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }),
+    activationLink:  activation?.activation_link ?? null,
+    supportEmail:    activation?.support_email ?? null,
+    instructions:    instructionsText,
+    ctaUrl:          `${SITE_URL}/dashboard/minhas-compras`,
+    activationCode:  deliveredCode,
+  })
+
+  await sendEmail(email, `[LOBBY] Compra de ${purchase.application_name} confirmada`, html)
+}
+
+/** Reembolso confirmado pelo provedor — só agora o estado vira definitivo
+ *  (nunca antes, seção 20). Redelivery é idempotente. Tenta
+ *  campaign_purchases, depois credit_purchases, depois app_purchases
+ *  (mesmo branch triplo que handleCheckoutCompleted já usa pra distinguir
+ *  tipo de compra). */
 async function handleChargeRefunded(charge: Stripe.Charge) {
   const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
   if (!paymentIntentId) return
 
   const admin = createAdminClient()
-  const { data: purchase } = await admin
+
+  const { data: campaignPurchase } = await admin
     .from('campaign_purchases')
     .select('id, refund_status')
     .eq('stripe_payment_intent_id', paymentIntentId)
     .maybeSingle()
-  if (!purchase) return // não é uma cobrança de campanha
-  if (purchase.refund_status === 'refunded') return // redelivery — já processado
+  if (campaignPurchase) {
+    if (campaignPurchase.refund_status === 'refunded') return // redelivery — já processado
+    await admin
+      .from('campaign_purchases')
+      .update({ status: 'refunded', refund_status: 'refunded', refunded_at: new Date().toISOString() })
+      .eq('id', campaignPurchase.id)
+    console.info('[stripe/webhook] Campaign refund confirmed:', campaignPurchase.id)
+    return
+  }
+
+  const { data: creditPurchase } = await admin
+    .from('credit_purchases')
+    .select('id, amount_paid, refund_status')
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .maybeSingle()
+  if (creditPurchase) {
+    if (creditPurchase.refund_status === 'refunded') return // redelivery do reembolso total — já processado
+
+    // charge.amount_refunded é o TOTAL cumulativo já reembolsado dessa
+    // cobrança segundo o próprio Stripe (nunca o valor calculado
+    // localmente — seção 20). Só vira estado terminal 'refunded' quando
+    // cobre o valor pago; parcial confirmado volta refund_status pra null
+    // (destrava novos pedidos de reembolso parcial pra essa mesma compra).
+    const amountRefundedTotal = charge.amount_refunded / 100
+    const fullyRefunded = amountRefundedTotal >= Number(creditPurchase.amount_paid)
+
+    await admin
+      .from('credit_purchases')
+      .update({
+        refunded_amount: amountRefundedTotal,
+        refund_status: fullyRefunded ? 'refunded' : null,
+        refunded_at: fullyRefunded ? new Date().toISOString() : null,
+        ...(fullyRefunded ? { status: 'refunded' } : {}),
+      })
+      .eq('id', creditPurchase.id)
+
+    console.info('[stripe/webhook] Credit purchase refund confirmed:', creditPurchase.id, fullyRefunded ? 'total' : 'parcial')
+    return
+  }
+
+  // Reembolso de compra de app — mesmo padrão idempotente de
+  // credit_purchases acima. Janela de 15 dias (refund_app_purchase) e
+  // retenção de repasse de 16 dias garantem que isso nunca acontece
+  // depois de um repasse já confirmado (spec: 2026-09-30-app-purchase-
+  // refund-design.md) — sem necessidade de clawback.
+  //
+  // Diferente dos branches acima: aqui toda escrita checa error e lança
+  // (nunca finge sucesso — seção 20 do pedido original também cobre isso,
+  // e é o que garante que o retry nativo do Stripe reentrega o evento se
+  // algo falhar no banco em vez do webhook responder 200 pra uma falha).
+  const { data: appPurchase, error: appPurchaseSelectError } = await admin
+    .from('app_purchases')
+    .select('id, amount, commission_amount, refunded_amount, refund_status')
+    .eq('stripe_payment_intent_id', paymentIntentId)
+    .maybeSingle()
+  if (appPurchaseSelectError) {
+    throw new Error(`[stripe/webhook] failed to look up app_purchases for refund: ${appPurchaseSelectError.message}`)
+  }
+  if (appPurchase) {
+    if (appPurchase.refund_status === 'refunded') return // redelivery — já processado
+
+    const amountRefundedTotal = charge.amount_refunded / 100
+
+    // Redelivery fora de ordem: um evento mais antigo (ex: o primeiro de
+    // dois reembolsos parciais) reentregue depois de um mais recente já
+    // processado não pode reabrir saldo — amount_refunded é cumulativo,
+    // só avança o estado, nunca retrocede.
+    if (amountRefundedTotal < Number(appPurchase.refunded_amount)) {
+      console.warn('[stripe/webhook] Refund event older than current state — ignoring:', appPurchase.id, amountRefundedTotal, '<', appPurchase.refunded_amount)
+      return
+    }
+
+    const fullyRefunded = amountRefundedTotal >= Number(appPurchase.amount)
+
+    const { error: appPurchaseUpdateError } = await admin
+      .from('app_purchases')
+      .update({
+        refunded_amount: amountRefundedTotal,
+        refund_status: fullyRefunded ? 'refunded' : null,
+        refunded_at: new Date().toISOString(),
+        ...(fullyRefunded ? { status: 'refunded' } : {}),
+      })
+      .eq('id', appPurchase.id)
+    if (appPurchaseUpdateError) {
+      throw new Error(`[stripe/webhook] failed to update app_purchases refund state: ${appPurchaseUpdateError.message}`)
+    }
+
+    // financial_transactions guarda só a fatia de comissão da LOBBY (nunca
+    // o valor bruto — mesmo princípio de app_purchases/checkout). O
+    // reembolso é descontado na mesma proporção do valor bruto devolvido
+    // ao cliente, reaproveitando a coluna genérica refunded_amount já
+    // criada em 20260927170000_reembolso_parcial.sql.
+    const commissionRefunded = Math.round(
+      amountRefundedTotal * (Number(appPurchase.commission_amount) / Number(appPurchase.amount)) * 100
+    ) / 100
+
+    const { data: tx, error: txSelectError } = await admin
+      .from('financial_transactions')
+      .select('amount, status')
+      .eq('source_type', 'app_purchases')
+      .eq('source_id', appPurchase.id)
+      .maybeSingle()
+    if (txSelectError) {
+      throw new Error(`[stripe/webhook] failed to look up financial_transactions for app purchase refund: ${txSelectError.message}`)
+    }
+
+    if (tx) {
+      const { error: txUpdateError } = await admin
+        .from('financial_transactions')
+        .update({
+          refunded_amount: commissionRefunded,
+          status: commissionRefunded >= Number(tx.amount) ? 'reembolsado' : tx.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('source_type', 'app_purchases')
+        .eq('source_id', appPurchase.id)
+      if (txUpdateError) {
+        throw new Error(`[stripe/webhook] failed to update financial_transactions for app purchase refund: ${txUpdateError.message}`)
+      }
+    } else {
+      // Sinal de integridade: toda app_purchases paga deveria ter uma
+      // financial_transactions correspondente (lançada em
+      // handleAppPurchaseCheckoutCompleted). Não impede o reembolso em si
+      // (já confirmado no Stripe e em app_purchases acima), só fica
+      // visível pra investigação manual em vez de sumir sem rastro.
+      console.warn('[stripe/webhook] app purchase paid refund confirmed but no matching financial_transactions row found:', appPurchase.id)
+    }
+
+    console.info('[stripe/webhook] App purchase refund confirmed:', appPurchase.id, fullyRefunded ? 'total' : 'parcial')
+  }
+}
+
+/**
+ * Confirmação de início de assinatura (app_plan mensal/anual ou
+ * mensalidade). Cria a linha em `subscriptions` — não havia nenhuma
+ * criada antes (diferente dos outros checkouts). Idempotente por
+ * stripe_subscription_id.
+ *
+ * current_period_start/end vêm do SubscriptionItem, não da Subscription —
+ * essa versão da API do Stripe moveu esses campos pra lá (confirmado nos
+ * tipos do SDK instalado, node_modules/stripe/cjs/resources/
+ * SubscriptionItems.d.ts — Subscription.current_period_* não existe mais
+ * como campo do objeto, só como filtro de busca).
+ */
+async function handleSubscriptionCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const admin = createAdminClient()
+
+  const stripeSubscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
+  if (!stripeSubscriptionId) {
+    console.warn('[stripe/webhook] subscription checkout without subscription id:', session.id)
+    return
+  }
+
+  const { data: existing } = await admin.from('subscriptions').select('id').eq('stripe_subscription_id', stripeSubscriptionId).maybeSingle()
+  if (existing) {
+    console.info('[stripe/webhook] Redelivery of already-created subscription — skipping:', stripeSubscriptionId)
+    return
+  }
+
+  const md = session.metadata ?? {}
+  const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId)
+  const item = sub.items.data[0]
+  if (!item) {
+    console.error('[stripe/webhook] subscription without items:', stripeSubscriptionId)
+    return
+  }
+
+  const partnerId = md.partner_id || null
+  const commissionPercent = partnerId ? Number(md.commission_percent || '0') : 0
+  // Benefício de promoção, se houver (seção 9) — snapshot gravado aqui,
+  // na criação, e nunca mais tocado depois (nem se a promoção for
+  // cancelada/editada no admin ou no parceiro — o coupon já está anexado
+  // à Subscription na Stripe, estas colunas são só espelho local).
+  const promotionId = md.promotion_id || null
+  const promoDiscountType = md.promo_discount_type || null
+  const promoDiscountCycles = md.promo_discount_cycles ? Number(md.promo_discount_cycles) : null
+  const promoAmountOff = md.promo_amount_off ? Number(md.promo_amount_off) : null
+
+  await admin.from('subscriptions').insert({
+    stripe_subscription_id: stripeSubscriptionId,
+    product_type:           md.product_type,
+    app_plan_id:             md.app_plan_id || null,
+    client_project_id:       md.client_project_id || null,
+    user_id:                 md.user_id,
+    partner_id:               partnerId,
+    plan_name:                md.plan_name,
+    amount:                   (item.price.unit_amount ?? 0) / 100,
+    currency:                 (item.price.currency ?? 'brl').toUpperCase(),
+    billing_interval:         item.price.recurring?.interval === 'year' ? 'year' : 'month',
+    commission_percent:       commissionPercent,
+    status:                   sub.status,
+    current_period_start:     new Date(item.current_period_start * 1000).toISOString(),
+    current_period_end:       new Date(item.current_period_end * 1000).toISOString(),
+    cancel_at_period_end:     sub.cancel_at_period_end,
+    promotion_id:              promotionId,
+    promo_discount_type:        promoDiscountType,
+    promo_discount_cycles:       promoDiscountCycles,
+    promo_amount_off:             promoAmountOff,
+  })
+
+  console.info('[stripe/webhook] Subscription created:', stripeSubscriptionId)
+}
+
+/** Resolve o stripe_subscription_id de uma fatura — essa API do Stripe
+ *  não tem mais invoice.subscription direto, é invoice.parent.
+ *  subscription_details.subscription (confirmado no SDK instalado). */
+function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
+  if (invoice.parent?.type !== 'subscription_details') return null
+  const ref = invoice.parent.subscription_details?.subscription
+  return typeof ref === 'string' ? ref : (ref?.id ?? null)
+}
+
+/**
+ * Um ciclo de cobrança pago — a cada renovação, não só na primeira vez.
+ * Nunca conta o valor total previsto da assinatura de uma vez (seção 12).
+ * financial_transactions usa só commission_amount (receita própria da
+ * LOBBY), nunca o valor bruto — mesmo princípio de app_purchases/peça 3.
+ * partner_amount ainda não entra na fila de repasse (peça 4 só olha
+ * app_purchases hoje) — extensão pendente, não coberta aqui.
+ */
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  const stripeSubscriptionId = subscriptionIdFromInvoice(invoice)
+  if (!stripeSubscriptionId) return // fatura avulsa, não de assinatura — fora do nosso fluxo
+
+  const admin = createAdminClient()
+
+  const { data: existingInvoice } = await admin.from('subscription_invoices').select('id').eq('stripe_invoice_id', invoice.id).maybeSingle()
+  if (existingInvoice) {
+    console.info('[stripe/webhook] Redelivery of already-recorded invoice — skipping:', invoice.id)
+    return
+  }
+
+  const { data: subscription } = await admin
+    .from('subscriptions')
+    .select('id, commission_percent, partner_id, product_type, plan_name, user_id, status')
+    .eq('stripe_subscription_id', stripeSubscriptionId)
+    .maybeSingle()
+  if (!subscription) {
+    console.warn('[stripe/webhook] invoice.paid for unknown subscription:', stripeSubscriptionId)
+    return
+  }
+
+  const amountCents     = invoice.amount_paid
+  const commissionCents = subscription.partner_id ? Math.round((amountCents * subscription.commission_percent) / 100) : amountCents
+  const partnerCents    = amountCents - commissionCents
+
+  const { data: invoiceRow, error: invoiceError } = await admin
+    .from('subscription_invoices')
+    .insert({
+      subscription_id:    subscription.id,
+      stripe_invoice_id:   invoice.id ?? '',
+      amount:              amountCents / 100,
+      commission_percent:  subscription.partner_id ? subscription.commission_percent : 0,
+      commission_amount:   commissionCents / 100,
+      partner_amount:      partnerCents / 100,
+    })
+    .select('id')
+    .single()
+
+  if (invoiceError || !invoiceRow) {
+    console.error('[stripe/webhook] failed to record subscription invoice:', invoiceError)
+    throw new Error(invoiceError?.message ?? 'subscription invoice insert failed')
+  }
+
+  await admin.from('financial_transactions').insert({
+    type:            subscription.product_type === 'app_plan' ? 'app' : 'mensalidade',
+    client_id:       subscription.user_id,
+    description:     `Assinatura: ${subscription.plan_name}`,
+    amount:          commissionCents / 100,
+    status:          'pago',
+    sale_date:       new Date().toISOString().slice(0, 10),
+    received_date:   new Date().toISOString().slice(0, 10),
+    source_type:     'subscription_invoices',
+    source_id:       invoiceRow.id,
+  })
+
+  // Primeiro pagamento confirma a assinatura como ativa — não espera só o
+  // customer.subscription.updated (que também confirma, redundante e ok).
+  if (subscription.status === 'incomplete') {
+    await admin.from('subscriptions').update({ status: 'active' }).eq('id', subscription.id)
+  }
+
+  console.info('[stripe/webhook] Subscription invoice recorded:', invoice.id)
+}
+
+/** Cobrança falhou — não muda status aqui (customer.subscription.updated
+ *  é quem confirma o estado real, ex: 'past_due'); só avisa o cliente. */
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const stripeSubscriptionId = subscriptionIdFromInvoice(invoice)
+  if (!stripeSubscriptionId) return
+
+  const admin = createAdminClient()
+  const { data: subscription } = await admin
+    .from('subscriptions')
+    .select('id, user_id, plan_name')
+    .eq('stripe_subscription_id', stripeSubscriptionId)
+    .maybeSingle()
+  if (!subscription) return
+
+  const { data: profile } = await admin.from('profiles').select('full_name, email').eq('id', subscription.user_id).single()
+  if (!profile?.email) return
+
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const amountFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: (invoice.currency ?? 'brl').toUpperCase() }).format(invoice.amount_due / 100)
+
+  const html = buildSubscriptionPaymentFailedEmailHtml({
+    recipientName:   profile.full_name?.split(' ')[0] ?? 'Cliente',
+    planName:        subscription.plan_name,
+    amountFormatted,
+    ctaUrl:          `${SITE_URL}/dashboard/assinaturas`,
+  })
+
+  await sendEmail(profile.email, `[LOBBY] Falha na cobrança da assinatura ${subscription.plan_name}`, html)
+    .catch(err => console.error('[stripe/webhook] payment failed email error:', err))
+
+  console.info('[stripe/webhook] Subscription payment failed notified:', stripeSubscriptionId)
+}
+
+/** Sincroniza status/período/cancelamento — fonte de verdade única do
+ *  estado real da assinatura (nunca definido do lado de cá além da
+ *  criação inicial, seção 20). */
+async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
+  const admin = createAdminClient()
+  const item = sub.items.data[0]
 
   await admin
-    .from('campaign_purchases')
-    .update({ status: 'refunded', refund_status: 'refunded', refunded_at: new Date().toISOString() })
-    .eq('id', purchase.id)
+    .from('subscriptions')
+    .update({
+      status:                sub.status,
+      current_period_start: item ? new Date(item.current_period_start * 1000).toISOString() : null,
+      current_period_end:   item ? new Date(item.current_period_end * 1000).toISOString() : null,
+      cancel_at_period_end: sub.cancel_at_period_end,
+      canceled_at:          sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+    })
+    .eq('stripe_subscription_id', sub.id)
+}
 
-  console.info('[stripe/webhook] Campaign refund confirmed:', purchase.id)
+async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
+  const admin = createAdminClient()
+  await admin
+    .from('subscriptions')
+    .update({ status: 'canceled', canceled_at: new Date().toISOString() })
+    .eq('stripe_subscription_id', sub.id)
+  console.info('[stripe/webhook] Subscription canceled:', sub.id)
+}
+
+// Marca também usada pra reconhecer, no dispute.closed, que foi ESTA
+// automação que pausou a campanha — não desfaz uma pausa manual que já
+// existia antes da disputa por outro motivo.
+const DISPUTE_PAUSE_REASON = 'Disputa Stripe aberta automaticamente'
+
+/**
+ * charge.dispute.created — decisão do usuário: além de registrar e
+ * notificar o líder, congela automaticamente o que a cobrança disputada
+ * liberou. ebook_purchases nunca entra aqui: e-book só é pago via
+ * crédito ou manual, nunca tem payment_intent Stripe próprio.
+ *
+ * Assinatura (subscription_invoices) não guarda payment_intent_id
+ * direto — a cobrança de uma invoice não expõe isso como campo simples
+ * nesta versão da API (confirmado em node_modules/stripe/cjs/resources/
+ * Invoices.d.ts: sem campo `payment_intent`/`charge` na Invoice, só um
+ * relacionamento via invoice_payments). Por isso, quando não bate com
+ * nenhuma das 3 tabelas com stripe_payment_intent_id direto, busca o
+ * invoice pelo payment_intent via stripe.invoicePayments.list.
+ */
+async function handleDisputeCreated(dispute: Stripe.Dispute) {
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin.from('payment_disputes').select('id').eq('stripe_dispute_id', dispute.id).maybeSingle()
+  if (existing) {
+    console.info('[stripe/webhook] Redelivery of already-recorded dispute — skipping:', dispute.id)
+    return
+  }
+
+  const paymentIntentId = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : dispute.payment_intent?.id
+  const amount   = dispute.amount / 100
+  const currency = dispute.currency.toUpperCase()
+
+  let sourceType: 'credit_purchases' | 'app_purchases' | 'campaign_purchases' | 'subscription_invoices' | null = null
+  let sourceId:   string | null = null
+  let heldAmount: number | null = null
+
+  if (paymentIntentId) {
+    const { data: campaignPurchase } = await admin.from('campaign_purchases').select('id, campaign_id').eq('stripe_payment_intent_id', paymentIntentId).maybeSingle()
+    if (campaignPurchase) {
+      sourceType = 'campaign_purchases'
+      sourceId   = campaignPurchase.id
+      await admin.from('campaign_purchases').update({ status: 'disputed' }).eq('id', campaignPurchase.id)
+      await admin
+        .from('sponsored_campaigns')
+        .update({ paused_at: new Date().toISOString(), paused_by: null, paused_reason: DISPUTE_PAUSE_REASON })
+        .eq('id', campaignPurchase.campaign_id)
+        .is('paused_at', null)
+        .is('cancelled_at', null)
+    } else {
+      const { data: creditPurchase } = await admin.from('credit_purchases').select('id').eq('stripe_payment_intent_id', paymentIntentId).maybeSingle()
+      if (creditPurchase) {
+        sourceType = 'credit_purchases'
+        sourceId   = creditPurchase.id
+        const { data: held } = await admin.rpc('freeze_credit_purchase_for_dispute', { p_purchase_id: creditPurchase.id })
+        heldAmount = held ?? 0
+      } else {
+        const { data: appPurchase } = await admin.from('app_purchases').select('id').eq('stripe_payment_intent_id', paymentIntentId).maybeSingle()
+        if (appPurchase) {
+          sourceType = 'app_purchases'
+          sourceId   = appPurchase.id
+          await admin.from('app_purchases').update({ status: 'disputed' }).eq('id', appPurchase.id)
+        } else {
+          const invoicePayments = await stripe.invoicePayments.list({ payment: { type: 'payment_intent', payment_intent: paymentIntentId }, limit: 1 })
+          const invoiceRef = invoicePayments.data[0]?.invoice
+          const invoiceId  = typeof invoiceRef === 'string' ? invoiceRef : invoiceRef?.id
+          if (invoiceId) {
+            const { data: subInvoice } = await admin.from('subscription_invoices').select('id, subscription_id').eq('stripe_invoice_id', invoiceId).maybeSingle()
+            if (subInvoice) {
+              sourceType = 'subscription_invoices'
+              sourceId   = subInvoice.id
+              await admin.from('subscriptions').update({ disputed: true }).eq('id', subInvoice.subscription_id)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (!sourceType) {
+    console.error('[stripe/webhook] Dispute created but no matching purchase found:', dispute.id, paymentIntentId)
+  }
+
+  await admin.from('payment_disputes').insert({
+    stripe_dispute_id:        dispute.id,
+    stripe_payment_intent_id: paymentIntentId ?? null,
+    source_type:              sourceType,
+    source_id:                sourceId,
+    amount,
+    currency,
+    reason:                   dispute.reason,
+    status:                   dispute.status,
+    held_amount:              heldAmount,
+    opened_at:                new Date(dispute.created * 1000).toISOString(),
+  })
+
+  console.info('[stripe/webhook] Dispute recorded and frozen:', dispute.id, sourceType, sourceId)
+
+  const { data: leaders } = await admin.from('profiles').select('email').eq('role', 'technician').eq('is_leader', true)
+  const leaderEmails = (leaders ?? []).map(l => l.email as string | null).filter((e): e is string => Boolean(e))
+  if (leaderEmails.length === 0) return
+
+  const html = buildDisputeCreatedEmailHtml({
+    amountFormatted: new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount),
+    reason:          dispute.reason,
+    sourceType,
+    ctaUrl:          `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/admin/disputas`,
+  })
+  await Promise.all(leaderEmails.map(email => sendEmail(email, '[LOBBY] Disputa Stripe aberta', html)))
+}
+
+/** charge.dispute.closed — 'won' desfaz o congelamento (dinheiro voltou
+ *  pra LOBBY); qualquer outro status terminal (lost, warning_closed)
+ *  mantém o congelamento pra sempre — decisão manual do líder a partir
+ *  daqui, o sistema não reverte sozinho quando a LOBBY perdeu a disputa. */
+async function handleDisputeClosed(dispute: Stripe.Dispute) {
+  const admin = createAdminClient()
+
+  const { data: record } = await admin.from('payment_disputes').select('*').eq('stripe_dispute_id', dispute.id).maybeSingle()
+  if (!record) {
+    console.error('[stripe/webhook] dispute.closed for unknown dispute:', dispute.id)
+    return
+  }
+  if (record.closed_at) {
+    console.info('[stripe/webhook] Redelivery of already-closed dispute — skipping:', dispute.id)
+    return
+  }
+
+  await admin.from('payment_disputes').update({ status: dispute.status, closed_at: new Date().toISOString() }).eq('id', record.id)
+
+  if (dispute.status !== 'won') {
+    console.info('[stripe/webhook] Dispute closed as', dispute.status, '— congelamento permanente:', dispute.id)
+
+    // Disputa perdida é chargeback definitivo — o dinheiro não volta pra
+    // LOBBY. O lançamento em financial_transactions (comissão própria,
+    // nunca o valor bruto — mesmo princípio usado no reembolso via
+    // charge.refunded) precisa refletir isso, senão a receita reportada
+    // fica superestimada pra sempre numa venda que na prática nunca foi
+    // paga de verdade. campaign_purchases nunca lança em
+    // financial_transactions (handleCampaignCheckoutCompleted não grava
+    // ledger) e subscription_invoices fica fora — mesmo limite de escopo
+    // do reembolso via charge.refunded (um ciclo disputado não é a
+    // assinatura inteira, que continua ativa).
+    if ((record.source_type === 'credit_purchases' || record.source_type === 'app_purchases') && record.source_id) {
+      const { data: tx, error: txSelectError } = await admin
+        .from('financial_transactions')
+        .select('amount, status')
+        .eq('source_type', record.source_type)
+        .eq('source_id', record.source_id)
+        .maybeSingle()
+      if (txSelectError) {
+        throw new Error(`[stripe/webhook] failed to look up financial_transactions for lost dispute: ${txSelectError.message}`)
+      }
+      if (tx && tx.status === 'pago') {
+        const { error: txUpdateError } = await admin
+          .from('financial_transactions')
+          .update({ refunded_amount: tx.amount, status: 'reembolsado', updated_at: new Date().toISOString() })
+          .eq('source_type', record.source_type)
+          .eq('source_id', record.source_id)
+        if (txUpdateError) {
+          throw new Error(`[stripe/webhook] failed to write down financial_transactions for lost dispute: ${txUpdateError.message}`)
+        }
+        console.info('[stripe/webhook] Lost dispute wrote down financial_transactions ledger:', record.source_type, record.source_id)
+      } else if (!tx) {
+        // Mesmo sinal de integridade do branch de reembolso de app acima —
+        // toda venda paga desses dois source_type deveria ter lançamento
+        // correspondente.
+        console.warn('[stripe/webhook] lost dispute confirmed but no matching financial_transactions row found:', record.source_type, record.source_id)
+      }
+
+      // Reserva de disputa (só app_purchases — spec: 2026-09-30-partner-
+      // dispute-reserve-design.md). Reserva ainda não liberada é absorvida
+      // automaticamente (parceiro nunca recebe essa fatia). O que já foi
+      // pago ANTES da disputa chegar (fatia principal e/ou reserva, se já
+      // tinha passado dos 120 dias) não tem como ser recuperado
+      // automaticamente — sem API de débito bancário no sistema — só fica
+      // sinalizado pro líder cobrar manualmente.
+      if (record.source_type === 'app_purchases') {
+        const { data: appPurchase, error: appPurchaseSelectError } = await admin
+          .from('app_purchases')
+          .select('reserve_status')
+          .eq('id', record.source_id)
+          .maybeSingle()
+        if (appPurchaseSelectError) {
+          throw new Error(`[stripe/webhook] failed to look up app_purchases reserve for lost dispute: ${appPurchaseSelectError.message}`)
+        }
+
+        if (appPurchase?.reserve_status === 'held') {
+          const { error: reserveUpdateError } = await admin
+            .from('app_purchases')
+            .update({ reserve_status: 'clawed_back' })
+            .eq('id', record.source_id)
+            .eq('reserve_status', 'held')
+          if (reserveUpdateError) {
+            throw new Error(`[stripe/webhook] failed to claw back reserve for lost dispute: ${reserveUpdateError.message}`)
+          }
+          console.info('[stripe/webhook] Lost dispute clawed back unreleased reserve:', record.source_id)
+        }
+
+        // Embed simples + filtro em JS — mesmo padrão já usado em
+        // app/admin/marketplace/repasses/page.tsx pra achar itens cobertos
+        // por repasse confirmado (nunca .eq() direto numa coluna da tabela
+        // aninhada, isso não é filtro suportado pelo supabase-js aqui).
+        const { data: paidItems, error: paidItemsError } = await admin
+          .from('partner_payout_items')
+          .select('amount, partner_payouts(status)')
+          .eq('app_purchase_id', record.source_id)
+        if (paidItemsError) {
+          throw new Error(`[stripe/webhook] failed to sum paid partner_payout_items for lost dispute: ${paidItemsError.message}`)
+        }
+
+        const alreadyPaidTotal = (paidItems ?? []).reduce((sum: number, row: { amount: number; partner_payouts: { status: string } | { status: string }[] | null }) => {
+          const po = Array.isArray(row.partner_payouts) ? row.partner_payouts[0] : row.partner_payouts
+          return po?.status === 'confirmado' ? sum + Number(row.amount) : sum
+        }, 0)
+        if (alreadyPaidTotal > 0) {
+          const { error: clawbackUpdateError } = await admin
+            .from('payment_disputes')
+            .update({ partner_clawback_amount: alreadyPaidTotal })
+            .eq('id', record.id)
+          if (clawbackUpdateError) {
+            throw new Error(`[stripe/webhook] failed to record partner_clawback_amount: ${clawbackUpdateError.message}`)
+          }
+          console.warn('[stripe/webhook] Lost dispute requires manual partner clawback:', record.source_id, alreadyPaidTotal)
+        }
+      }
+    }
+    return
+  }
+
+  if (record.source_type === 'credit_purchases' && record.source_id) {
+    await admin.rpc('unfreeze_credit_purchase_for_dispute', { p_purchase_id: record.source_id, p_held_amount: record.held_amount })
+  } else if (record.source_type === 'app_purchases' && record.source_id) {
+    await admin.from('app_purchases').update({ status: 'paid' }).eq('id', record.source_id).eq('status', 'disputed')
+  } else if (record.source_type === 'campaign_purchases' && record.source_id) {
+    const { data: cp } = await admin.from('campaign_purchases').select('campaign_id').eq('id', record.source_id).single()
+    await admin.from('campaign_purchases').update({ status: 'paid' }).eq('id', record.source_id).eq('status', 'disputed')
+    if (cp) {
+      await admin
+        .from('sponsored_campaigns')
+        .update({ paused_at: null, paused_by: null, paused_reason: null })
+        .eq('id', cp.campaign_id)
+        .eq('paused_reason', DISPUTE_PAUSE_REASON)
+    }
+  } else if (record.source_type === 'subscription_invoices' && record.source_id) {
+    const { data: si } = await admin.from('subscription_invoices').select('subscription_id').eq('id', record.source_id).single()
+    if (si) await admin.from('subscriptions').update({ disputed: false }).eq('id', si.subscription_id)
+  }
+
+  console.info('[stripe/webhook] Dispute won, unfrozen:', dispute.id, record.source_type, record.source_id)
 }

@@ -57,6 +57,7 @@ export async function POST(
     reason: null,
     previousStatus: latest.review_status,
     newStatus: 'em_revisao',
+    creativeId: latest.id,
   })
 
   return NextResponse.json({ ok: true })

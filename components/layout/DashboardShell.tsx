@@ -10,7 +10,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Download, FolderKanban, MessageSquarePlus,
   User, LogOut, Bell, Menu, X, Plus,
-  ChevronDown, HelpCircle, Sparkles, ArrowRight, MessageCircle, Coins, History,
+  ChevronDown, HelpCircle, Sparkles, ArrowRight, MessageCircle, Coins, History, LayoutGrid, ShoppingBag, RefreshCw, Wallet,
 } from 'lucide-react'
 // Cliente Supabase: autenticação e acesso ao banco de dados em tempo real
 import { createClient } from '@/lib/supabase'
@@ -32,6 +32,10 @@ const navItems = [
   { icon: LayoutDashboard,   label: 'Dashboard',         href: '/dashboard'            },
   { icon: Download,          label: 'Meus downloads',    href: '/dashboard/downloads'  },
   { icon: FolderKanban,      label: 'Projetos',          href: '/dashboard/projetos'   },
+  { icon: LayoutGrid,        label: 'Meus apps',         href: '/dashboard/meus-app', matchPrefix: true },
+  { icon: Wallet,            label: 'Vendas e financeiro', href: '/dashboard/financeiro', matchPrefix: true },
+  { icon: ShoppingBag,       label: 'Minhas compras',    href: '/dashboard/minhas-compras' },
+  { icon: RefreshCw,         label: 'Assinaturas',       href: '/dashboard/assinaturas' },
   { icon: History,           label: 'Histórico',         href: '/dashboard/historico'  },
   { icon: Coins,             label: 'Meus créditos',     href: '/dashboard/creditos'   },
   { icon: MessageCircle,     label: 'Mensagens',         href: '/dashboard/mensagens'  },
@@ -152,11 +156,11 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
         <div className="border-b border-[#E3E7F0] px-6 py-5">
           <Link href="/" onClick={() => setSidebarOpen(false)}>
             <Image
-              src="/logowhite.svg"
+              src="/LOBBY-horizontal-transparente.svg"
               alt="LOBBY"
-              width={176}
-              height={88}
-              className="h-[56px] w-auto object-contain"
+              width={252}
+              height={126}
+              className="h-[80px] w-auto object-contain"
               priority
             />
           </Link>
@@ -167,9 +171,12 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
           <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-[#5D6475]">Menu</p>
           <div className="space-y-0.5">
             {/* Renderiza cada item de navegação */}
-            {navItems.map(({ icon: Icon, label, href }) => {
-              // Compara a rota atual com o href para destacar o item ativo
-              const isActive = pathname === href
+            {navItems.map(({ icon: Icon, label, href, matchPrefix }) => {
+              // Compara a rota atual com o href para destacar o item ativo.
+              // matchPrefix: item cobre uma área com sub-rotas (ex.: Meus
+              // apps também ativo em /dashboard/meus-app/[id]) em vez de só
+              // a rota exata.
+              const isActive = matchPrefix ? pathname.startsWith(href) : pathname === href
               return (
                 <Link
                   key={label}
@@ -178,14 +185,14 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
                   aria-current={isActive ? 'page' : undefined} // acessibilidade
                   className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                     isActive
-                      ? 'bg-[#005BFF]/8 text-[#005BFF]'
+                      ? 'bg-[#0B1020]/8 text-[#0B1020]'
                       : 'text-[#5D6475] hover:bg-[#F7F8FC] hover:text-[#0B1020]'
                   }`}
                 >
                   {/* Barra azul vertical à esquerda indica o item ativo */}
                   {isActive && (
                     <span
-                      className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#005BFF]"
+                      className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#0B1020]"
                       aria-hidden="true"
                     />
                   )}
@@ -203,9 +210,9 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
           </div>
 
           {/* Card de diagnóstico gratuito — CTA para o cliente solicitar análise */}
-          <div className="mt-6 rounded-2xl border border-[#005BFF]/15 bg-gradient-to-br from-[#F0F4FF] to-[#EEF0FF] p-4">
+          <div className="mt-6 rounded-2xl border border-[#0B1020]/15 bg-gradient-to-br from-[#F0F4FF] to-[#EEF0FF] p-4">
             <div className="mb-1.5 flex items-center gap-1.5">
-              <Sparkles size={12} className="text-[#005BFF]" aria-hidden="true" />
+              <Sparkles size={12} className="text-[#0B1020]" aria-hidden="true" />
               <p className="text-xs font-bold text-[#0B1020]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                 Diagnóstico gratuito ✨
               </p>
@@ -215,7 +222,7 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
             </p>
             <Link
               href="/contato"
-              className="inline-flex items-center gap-1 text-xs font-bold text-[#005BFF] transition-all duration-150 hover:gap-2"
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#0B1020] transition-all duration-150 hover:gap-2"
             >
               Solicitar agora <ArrowRight size={11} aria-hidden="true" />
             </Link>
@@ -230,7 +237,7 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
             <p className="mt-0.5 text-[11px] text-[#5D6475]">Fale com nosso time de especialistas.</p>
             <Link
               href="/contato"
-              className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#7B2CFF] transition-all duration-150 hover:gap-2"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#168F9C] transition-all duration-150 hover:gap-2"
             >
               Abrir chat <ArrowRight size={10} aria-hidden="true" />
             </Link>
@@ -292,7 +299,7 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
             {/* Botão de nova solicitação — oculto em telas muito pequenas */}
             <Link
               href="/contato"
-              className="hidden items-center gap-1.5 rounded-xl border border-[#005BFF] px-3 py-1.5 text-xs font-semibold text-[#005BFF] transition-all hover:bg-[#005BFF] hover:text-white sm:flex"
+              className="hidden items-center gap-1.5 rounded-xl border border-[#0B1020] px-3 py-1.5 text-xs font-semibold text-[#0B1020] transition-all hover:bg-[#0B1020] hover:text-white sm:flex"
             >
               <Plus size={13} aria-hidden="true" />
               Nova solicitação
@@ -317,7 +324,7 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
             <div className="flex items-center gap-2 border-l border-[#E3E7F0] pl-2 sm:pl-3">
               <div className="relative shrink-0">
                 {/* Círculo com inicial do nome — gradiente azul LOBBY */}
-                <div className="flex h-8 w-8 items-center justify-center rounded-full lobby-gradient text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,91,255,0.30)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full lobby-gradient text-xs font-bold text-white shadow-[0_2px_8px_rgba(11,16,32,0.30)]">
                   {firstName.charAt(0).toUpperCase()}
                 </div>
                 {/* Indicador de status online (bolinha verde) */}
@@ -346,10 +353,10 @@ export default function DashboardShell({ user, profile, children }: DashboardShe
           <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
             <p className="text-xs text-[#5D6475]">© 2025 LOBBY. Todos os direitos reservados.</p>
             <div className="flex gap-4">
-              <Link href="/sobre#privacidade" className="text-xs text-[#5D6475] transition-colors hover:text-[#005BFF]">
+              <Link href="/sobre#privacidade" className="text-xs text-[#5D6475] transition-colors hover:text-[#0B1020]">
                 Política de Privacidade
               </Link>
-              <Link href="/sobre#termos" className="text-xs text-[#5D6475] transition-colors hover:text-[#005BFF]">
+              <Link href="/sobre#termos" className="text-xs text-[#5D6475] transition-colors hover:text-[#0B1020]">
                 Termos de Uso
               </Link>
             </div>

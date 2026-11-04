@@ -131,7 +131,7 @@ export default function ContactForm() {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center gap-5">
         <div
-          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-[0_12px_40px_rgba(0,91,255,0.28)]"
+          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-[0_12px_40px_rgba(11,16,32,0.28)]"
           style={{ background: gradients.primaryBold }}
         >
           <CheckCircle size={28} />
@@ -149,7 +149,7 @@ export default function ContactForm() {
         </div>
         <button
           onClick={() => setSuccess(false)}
-          className="text-sm font-semibold transition-colors hover:text-[#7B2CFF]"
+          className="text-sm font-semibold transition-colors hover:text-[#168F9C]"
           style={{ color: colors.primary }}
         >
           Enviar outra mensagem
@@ -292,7 +292,7 @@ export default function ContactForm() {
                         borderColor: 'transparent',
                         background: gradients.primaryBold,
                         color: 'white',
-                        boxShadow: '0_6px_18px_rgba(0,91,255,0.22)',
+                        boxShadow: '0_6px_18px_rgba(11,16,32,0.22)',
                       }
                     : {
                         borderColor: colors.border,
@@ -350,7 +350,7 @@ export default function ContactForm() {
       <button
         type="submit"
         disabled={loading}
-        className="group inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+        className="group inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         style={{ background: gradients.primaryBold }}
       >
         {loading ? (

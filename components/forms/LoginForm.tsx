@@ -7,6 +7,8 @@ import { Eye, EyeOff, Loader2, Mail, Lock, ArrowRight, ShieldCheck } from 'lucid
 import { Checkbox } from '@/components/ui/checkbox'
 import FormInput from './FormInput'
 import { colors, gradients } from '@/lib/design-tokens'
+import { env } from '@/env'
+import TurnstileChallenge, { type ChallengeStatus } from '@/components/anti-bot/TurnstileChallenge'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -16,28 +18,67 @@ export default function LoginForm() {
   const [remember, setRemember]   = useState(true)
   const [form, setForm]           = useState({ email: '', password: '' })
 
-  /* ── Login via rota server-side (rate-limited) ─────────────────── */
+  // Desafio adaptativo (seção 3): só aparece depois que o servidor responde
+  // BOT_CHALLENGE_REQUIRED — a maioria dos logins nunca vê este widget. Resolver o
+  // desafio não envia o formulário sozinho; a pessoa confirma o login manualmente.
+  const [showChallenge, setShowChallenge]     = useState(false)
+  const [turnstileToken, setTurnstileToken]   = useState<string | null>(null)
+  const [challengeStatus, setChallengeStatus] = useState<ChallengeStatus>('loading')
+  const [resetSignal, setResetSignal]         = useState(0)
+
+  // Reenvio de confirmação de e-mail — oferecido inline quando o login falha porque
+  // o e-mail ainda não foi confirmado (nunca antes disso: só chega aqui com senha
+  // correta, então não revela existência de conta a quem não a conhece).
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [resendToken, setResendToken]             = useState<string | null>(null)
+  const [resendStatus, setResendStatus]           = useState<ChallengeStatus>('loading')
+  const [resendSent, setResendSent]               = useState(false)
+  const [resendLoading, setResendLoading]         = useState(false)
+
+  /* ── Login via rota server-side (rate-limited + anti-bot adaptativo) ──── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.email || !form.password) {
       setError('Preencha e-mail e senha.')
       return
     }
+    if (showChallenge && challengeStatus !== 'verified') {
+      setError('Conclua a verificação de segurança antes de continuar.')
+      return
+    }
 
     setLoading(true)
     setError('')
+    setNeedsConfirmation(false)
 
     try {
       const res = await fetch('/api/auth/login', {
         method:      'POST',
         headers:     { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body:        JSON.stringify({ email: form.email, password: form.password }),
+        body:        JSON.stringify({
+          email:    form.email,
+          password: form.password,
+          ...(showChallenge && turnstileToken ? { turnstileToken } : {}),
+        }),
       })
       const data = await res.json().catch(() => ({}))
 
+      if (data.code === 'BOT_CHALLENGE_REQUIRED' || data.code === 'BOT_CHALLENGE_UNAVAILABLE') {
+        setError(data.error ?? 'Erro ao entrar. Tente novamente.')
+        setTurnstileToken(null)
+        if (showChallenge) setResetSignal(s => s + 1)
+        setShowChallenge(true)
+        return
+      }
+
       if (res.status === 429) {
         setError('Muitas tentativas. Aguarde um minuto e tente novamente.')
+        return
+      }
+      if (data.code === 'EMAIL_NOT_CONFIRMED') {
+        setError(data.error ?? 'Confirme seu e-mail antes de entrar.')
+        setNeedsConfirmation(true)
         return
       }
       // 403 = bloqueio intencional (conta de técnico tentando entrar aqui) — mensagem própria, segura de exibir
@@ -62,6 +103,27 @@ export default function LoginForm() {
       setError('Erro ao entrar. Tente novamente.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResendConfirmation = async () => {
+    if (resendStatus !== 'verified' || !resendToken) return
+    setResendLoading(true)
+    try {
+      await fetch('/api/auth/resend-confirmation', {
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body:        JSON.stringify({ email: form.email, turnstileToken: resendToken }),
+      })
+      // Resposta sempre genérica no servidor (anti-enumeração) — a UI também não
+      // diferencia "enviado" de "conta não existe"/"já confirmada".
+      setResendSent(true)
+    } catch {
+      // Falha de rede aqui não deve travar a pessoa — mesma mensagem genérica.
+      setResendSent(true)
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -134,12 +196,25 @@ export default function LoginForm() {
         </div>
         <Link
           href="/recuperar-senha"
-          className="text-sm font-semibold transition-colors hover:text-[#7B2CFF]"
+          className="text-sm font-semibold transition-colors hover:text-[#168F9C]"
           style={{ color: colors.primary }}
         >
           Esqueci minha senha
         </Link>
       </div>
+
+      {/* Desafio adaptativo — só aparece depois que o servidor pede (BOT_CHALLENGE_REQUIRED) */}
+      {showChallenge && env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+        <div className="mt-4">
+          <TurnstileChallenge
+            siteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+            action="login"
+            onStatusChange={setChallengeStatus}
+            onToken={setTurnstileToken}
+            resetSignal={resetSignal}
+          />
+        </div>
+      )}
 
       {/* Error message */}
       {error && (
@@ -148,11 +223,46 @@ export default function LoginForm() {
         </p>
       )}
 
+      {/* Reenvio de confirmação de e-mail — exige seu próprio comprovante anti-bot,
+          separado do de login (ações diferentes, comprovantes não são intercambiáveis). */}
+      {needsConfirmation && (
+        <div className="mt-3 rounded-2xl border p-4" style={{ borderColor: colors.border, backgroundColor: colors.backgroundAlt }}>
+          {resendSent ? (
+            <p className="text-sm" style={{ color: colors.textSecondary }}>
+              Se for necessário, enviamos um novo e-mail de confirmação.
+            </p>
+          ) : (
+            <>
+              <p className="mb-3 text-sm" style={{ color: colors.textSecondary }}>
+                Não recebeu o e-mail de confirmação?
+              </p>
+              {env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+                <TurnstileChallenge
+                  siteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                  action="resend_confirmation"
+                  onStatusChange={setResendStatus}
+                  onToken={setResendToken}
+                />
+              )}
+              <button
+                type="button"
+                onClick={handleResendConfirmation}
+                disabled={resendLoading || resendStatus !== 'verified'}
+                className="mt-3 text-sm font-semibold disabled:opacity-50"
+                style={{ color: colors.primary }}
+              >
+                {resendLoading ? 'Enviando...' : 'Reenviar e-mail de confirmação'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Submit button */}
       <button
         type="submit"
-        disabled={loading}
-        className="group mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+        disabled={loading || (showChallenge && challengeStatus !== 'verified')}
+        className="group mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         style={{ background: gradients.primaryBold }}
       >
         {loading ? (
@@ -214,7 +324,7 @@ export default function LoginForm() {
         Ainda não tem conta?{' '}
         <Link
           href="/cadastro"
-          className="font-semibold transition-colors hover:text-[#7B2CFF]"
+          className="font-semibold transition-colors hover:text-[#168F9C]"
           style={{ color: colors.primary }}
         >
           Criar conta

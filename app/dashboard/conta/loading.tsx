@@ -13,7 +13,7 @@ export default function ContaLoading() {
             <div className="h-10 w-full rounded-xl bg-[#E3E7F0]" />
           </div>
         ))}
-        <div className="h-10 w-32 rounded-xl bg-[#005BFF]/20" />
+        <div className="h-10 w-32 rounded-xl bg-[#0B1020]/20" />
       </div>
     </div>
   )

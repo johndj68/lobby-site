@@ -44,8 +44,8 @@ const HERO_BENEFITS = [
  */
 // Métricas de social proof exibidas abaixo do visual do hero (desktop)
 const HERO_METRICS = [
-  { icon: Library,  value: '6+',   label: 'Materiais', color: '#005BFF', colorBg: 'rgba(0,91,255,0.10)'   },
-  { icon: Gift,     value: '100%', label: 'Gratuitos',  color: '#7B2CFF', colorBg: 'rgba(123,44,255,0.10)' },
+  { icon: Library,  value: '6+',   label: 'Materiais', color: '#0B1020', colorBg: 'rgba(11,16,32,0.10)'   },
+  { icon: Gift,     value: '100%', label: 'Gratuitos',  color: '#168F9C', colorBg: 'rgba(22,143,156,0.10)' },
   { icon: Download, value: '+1k',  label: 'Downloads',  color: '#16A34A', colorBg: 'rgba(22,163,74,0.10)'  },
 ]
 
@@ -63,7 +63,7 @@ const FLOATING_MATERIALS = [
   },
   {
     label: 'Guia', title: 'Automação PMEs',
-    color: '#7B2CFF', colorBg: 'rgba(123,44,255,0.10)', icon: Bot,
+    color: '#168F9C', colorBg: 'rgba(22,143,156,0.10)', icon: Bot,
     pos: 'absolute right-4 top-14', delay: '2.5s', // delay escalonado para animação não-simultânea
   },
   {
@@ -224,11 +224,11 @@ export default function RecursosPage() {
       <section className="relative overflow-hidden bg-[#F7F8FC] py-20 lg:py-28">
         {/* Decoração de fundo: gradientes + grid de pontos + blobs desfocados */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(0,91,255,0.08),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(123,44,255,0.14),transparent_36%),radial-gradient(circle_at_55%_95%,rgba(0,163,255,0.10),transparent_42%)]" />
-          <div className="absolute inset-0 opacity-[0.28] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
-          <div className="absolute -left-40 top-20 h-[480px] w-[480px] rounded-full bg-[#00A3FF]/[0.08] blur-3xl" />
-          <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#7B2CFF]/[0.12] blur-3xl" />
-          <div className="absolute right-0 -bottom-40 h-[420px] w-[700px] rounded-full bg-[#005BFF]/[0.07] blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(11,16,32,0.08),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(22,143,156,0.14),transparent_36%),radial-gradient(circle_at_55%_95%,rgba(28,36,64,0.10),transparent_42%)]" />
+          <div className="absolute inset-0 opacity-[0.28] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute -left-40 top-20 h-[480px] w-[480px] rounded-full bg-[#1C2440]/[0.08] blur-3xl" />
+          <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#168F9C]/[0.12] blur-3xl" />
+          <div className="absolute right-0 -bottom-40 h-[420px] w-[700px] rounded-full bg-[#0B1020]/[0.07] blur-3xl" />
         </div>
 
         <Container className="relative z-10">
@@ -242,7 +242,7 @@ export default function RecursosPage() {
               transition={{ duration: 0.5 }}
             >
               {/* Badge — tune: text, icon, colors */}
-              <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#005BFF]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#005BFF] shadow-sm backdrop-blur">
+              <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#0B1020]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#0B1020] shadow-sm backdrop-blur">
                 <Gift size={13} aria-hidden="true" />
                 Recursos gratuitos
               </span>
@@ -256,7 +256,7 @@ export default function RecursosPage() {
                 {/* Palavra "tecnologia" em gradiente azul→roxo */}
                 <span
                   style={{
-                    background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                    background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -268,7 +268,7 @@ export default function RecursosPage() {
                 {/* Palavra "negócios" em gradiente roxo→azul (invertido) */}
                 <span
                   style={{
-                    background: 'linear-gradient(135deg, #7B2CFF, #005BFF)',
+                    background: 'linear-gradient(135deg, #168F9C, #0B1020)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -288,7 +288,7 @@ export default function RecursosPage() {
                 {/* CTA primário: scroll suave até a grade de recursos */}
                 <Link
                   href="#resources-section"
-                  className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)]"
+                  className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)]"
                 >
                   <Download size={16} aria-hidden="true" />
                   Todos os materiais são gratuitos
@@ -296,7 +296,7 @@ export default function RecursosPage() {
                 {/* CTA secundário: mesmo destino, estilo outline */}
                 <Link
                   href="#resources-section"
-                  className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white/85 px-7 py-4 text-sm font-bold text-[#0B1020] shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+                  className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white/85 px-7 py-4 text-sm font-bold text-[#0B1020] shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:text-[#0B1020]"
                 >
                   Ver todos os materiais
                   <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
@@ -313,10 +313,10 @@ export default function RecursosPage() {
                   >
                     <div
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                      style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.10), rgba(123,44,255,0.10))' }}
+                      style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.10), rgba(22,143,156,0.10))' }}
                       aria-hidden="true"
                     >
-                      <Icon size={16} style={{ color: '#005BFF' }} />
+                      <Icon size={16} style={{ color: '#0B1020' }} />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-[#0B1020]">{title}</p>
@@ -340,22 +340,22 @@ export default function RecursosPage() {
                    Tune FLOATING_MATERIALS array above for content         */}
               <div className="relative mx-auto hidden h-[440px] max-w-[500px] lg:block">
                 {/* Anel orbital externo — estático */}
-                <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#005BFF]/[0.09]" />
+                <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#0B1020]/[0.09]" />
                 {/* Anel orbital interno — rotação lenta (28s) para efeito de movimento */}
                 <div
-                  className="absolute left-1/2 top-1/2 h-[310px] w-[310px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-[#7B2CFF]/[0.18] animate-spin"
+                  className="absolute left-1/2 top-1/2 h-[310px] w-[310px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-[#168F9C]/[0.18] animate-spin"
                   style={{ animationDuration: '28s' }}
                 />
                 {/* Brilho central pulsante para dar profundidade */}
                 <div
-                  className="absolute left-1/2 top-1/2 h-[180px] w-[180px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#005BFF]/[0.06] blur-2xl animate-pulse motion-reduce:animate-none"
+                  className="absolute left-1/2 top-1/2 h-[180px] w-[180px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0B1020]/[0.06] blur-2xl animate-pulse motion-reduce:animate-none"
                   style={{ animationDuration: '6s' }}
                 />
 
                 {/* Card principal ao centro — representa a biblioteca de recursos */}
                 <div
-                  className="absolute left-1/2 top-1/2 z-20 flex h-[220px] w-[160px] -translate-x-1/2 -translate-y-1/2 rotate-3 flex-col justify-between rounded-[2rem] p-5 text-white shadow-[0_30px_90px_rgba(0,91,255,0.35)]"
-                  style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+                  className="absolute left-1/2 top-1/2 z-20 flex h-[220px] w-[160px] -translate-x-1/2 -translate-y-1/2 rotate-3 flex-col justify-between rounded-[2rem] p-5 text-white shadow-[0_30px_90px_rgba(11,16,32,0.35)]"
+                  style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
                 >
                   <div>
                     <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
@@ -372,7 +372,7 @@ export default function RecursosPage() {
                   <p
                     className="text-base font-bold leading-none"
                     style={{
-                      background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                      background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                       backgroundClip: 'text',
@@ -391,7 +391,7 @@ export default function RecursosPage() {
                       className="animate-[slow-float_10s_ease-in-out_infinite] motion-reduce:animate-none"
                       style={{ animationDelay: delay }}
                     >
-                      <div className="w-44 rounded-2xl border border-[#E3E7F0] bg-white/90 p-3 shadow-lg backdrop-blur transition-all duration-300 hover:border-[#005BFF]/20 hover:shadow-xl">
+                      <div className="w-44 rounded-2xl border border-[#E3E7F0] bg-white/90 p-3 shadow-lg backdrop-blur transition-all duration-300 hover:border-[#0B1020]/20 hover:shadow-xl">
                         <div className="flex items-center gap-2.5">
                           <div
                             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
@@ -474,8 +474,8 @@ export default function RecursosPage() {
         className="relative overflow-hidden bg-[#F7F8FC] pb-20 pt-10"
       >
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(123,44,255,0.05),transparent_40%),radial-gradient(circle_at_20%_80%,rgba(0,91,255,0.05),transparent_40%)]" />
-          <div className="absolute inset-0 opacity-[0.16] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(22,143,156,0.05),transparent_40%),radial-gradient(circle_at_20%_80%,rgba(11,16,32,0.05),transparent_40%)]" />
+          <div className="absolute inset-0 opacity-[0.16] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
         </div>
 
         <Container className="relative z-10">
@@ -500,9 +500,9 @@ export default function RecursosPage() {
                       className={
                         isActive
                           // Botão ativo: gradiente + sombra
-                          ? 'inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-4 py-2 text-sm font-bold text-white shadow-[0_6px_20px_rgba(0,91,255,0.22)] transition-all duration-300'
+                          ? 'inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-4 py-2 text-sm font-bold text-white shadow-[0_6px_20px_rgba(11,16,32,0.22)] transition-all duration-300'
                           // Botão inativo: borda cinza, hover azul
-                          : 'group inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-4 py-2 text-sm font-medium text-[#5D6475] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:bg-[#005BFF]/[0.04] hover:text-[#005BFF]'
+                          : 'group inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-4 py-2 text-sm font-medium text-[#5D6475] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:bg-[#0B1020]/[0.04] hover:text-[#0B1020]'
                       }
                     >
                       <Icon size={14} aria-hidden="true" />
@@ -559,10 +559,10 @@ export default function RecursosPage() {
               <div className="flex items-center gap-4">
                 <div
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-                  style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.10), rgba(123,44,255,0.10))' }}
+                  style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.10), rgba(22,143,156,0.10))' }}
                   aria-hidden="true"
                 >
-                  <Rocket size={20} style={{ color: '#005BFF' }} />
+                  <Rocket size={20} style={{ color: '#0B1020' }} />
                 </div>
                 <div>
                   <h3
@@ -579,14 +579,14 @@ export default function RecursosPage() {
               <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
                 <Link
                   href="/contato"
-                  className="group inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_30px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(123,44,255,0.28)]"
+                  className="group inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_30px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(22,143,156,0.28)]"
                 >
                   Falar com especialista
                   <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
                 </Link>
                 <Link
                   href="#"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-6 py-3.5 text-sm font-bold text-[#0B1020] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-6 py-3.5 text-sm font-bold text-[#0B1020] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:text-[#0B1020]"
                 >
                   Ver todos os materiais
                 </Link>

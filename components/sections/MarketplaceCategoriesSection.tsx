@@ -14,8 +14,10 @@ export default function MarketplaceCategoriesSection({ categories }: { categorie
     <section className="py-16 lg:py-20 bg-white">
       <Container>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map(({ id, name, slug, icon }) => {
+          {categories.map(({ id, name, slug, icon }, index) => {
             const Icon = (icon && CATEGORY_ICON_MAP[icon]) || DEFAULT_CATEGORY_ICON
+            // Alterna preto/petróleo entre os cards — mesma variação usada nos cards de Soluções
+            const accent = index % 2 === 0 ? colors.primary : colors.secondaryLight
             return (
               <Link
                 key={id}
@@ -25,9 +27,9 @@ export default function MarketplaceCategoriesSection({ categories }: { categorie
               >
                 <div
                   className="p-3 rounded-full mb-3 group-hover:scale-110 transition-transform"
-                  style={{ backgroundColor: `${colors.primary}15` }}
+                  style={{ backgroundColor: `${accent}15` }}
                 >
-                  <Icon size={24} style={{ color: colors.primary }} />
+                  <Icon size={24} style={{ color: accent }} />
                 </div>
                 <h3 className="font-semibold text-sm" style={{ color: colors.text }}>
                   {name}

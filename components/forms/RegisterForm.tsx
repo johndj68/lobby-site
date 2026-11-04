@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import FormInput from './FormInput'
 import { colors } from '@/lib/design-tokens'
+import { env } from '@/env'
+import TurnstileChallenge, { type ChallengeStatus } from '@/components/anti-bot/TurnstileChallenge'
 
 /* Opções de área de interesse exibidas como chips selecionáveis no formulário */
 const interestOptions = ['Software', 'Automação', 'Dados', 'Cibersegurança']
@@ -66,6 +68,13 @@ export default function RegisterForm() {
     companyName: '', phone: '', document: '', interestArea: '',
   })
 
+  // Comprovante anti-bot (Cloudflare Turnstile) — exigido no servidor antes de criar
+  // qualquer registro (seção 3 do pedido). resetSignal força o widget a renderizar um
+  // novo desafio quando o backend rejeita o comprovante anterior (expirado/duplicado).
+  const [turnstileToken, setTurnstileToken]   = useState<string | null>(null)
+  const [challengeStatus, setChallengeStatus] = useState<ChallengeStatus>('loading')
+  const [resetSignal, setResetSignal]         = useState(0)
+
   /**
    * Valida os campos obrigatórios e envia o cadastro ao Supabase.
    * Ordem de validação:
@@ -90,6 +99,11 @@ export default function RegisterForm() {
       return
     }
 
+    if (challengeStatus !== 'verified' || !turnstileToken) {
+      setError('Conclua a verificação de segurança antes de continuar.')
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -98,12 +112,19 @@ export default function RegisterForm() {
         method:      'POST',
         headers:     { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body:        JSON.stringify(form),
+        body:        JSON.stringify({ ...form, turnstileToken }),
       })
       const data = await res.json().catch(() => ({}))
 
       if (res.status === 429) {
         setError('Muitas tentativas. Tente novamente em alguns minutos.')
+        return
+      }
+      if (data.code === 'BOT_CHALLENGE_REQUIRED' || data.code === 'BOT_CHALLENGE_UNAVAILABLE') {
+        setError(data.error ?? 'Erro ao criar conta.')
+        setTurnstileToken(null)
+        // Um comprovante usado/rejeitado não pode ser reenviado — força novo desafio.
+        if (data.code === 'BOT_CHALLENGE_REQUIRED') setResetSignal(s => s + 1)
         return
       }
       if (!res.ok) {
@@ -268,8 +289,8 @@ export default function RegisterForm() {
               // Destaca visualmente a opção selecionada com borda e fundo azul
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                 form.interestArea === opt
-                  ? 'border-[#005BFF] bg-[#005BFF]/5 text-[#005BFF]'
-                  : 'border-[#E3E7F0] text-[#5D6475] hover:border-[#005BFF]/40'
+                  ? 'border-[#0B1020] bg-[#0B1020]/5 text-[#0B1020]'
+                  : 'border-[#E3E7F0] text-[#5D6475] hover:border-[#0B1020]/40'
               }`}
             >
               {opt}
@@ -284,23 +305,42 @@ export default function RegisterForm() {
           id="terms"
           checked={accepted}
           onCheckedChange={v => setAccepted(!!v)}
-          className="mt-0.5 border-[#E3E7F0] data-[state=checked]:bg-[#005BFF] data-[state=checked]:border-[#005BFF]"
+          className="mt-0.5 border-[#E3E7F0] data-[state=checked]:bg-[#0B1020] data-[state=checked]:border-[#0B1020]"
         />
         <label htmlFor="terms" className="text-xs text-[#5D6475] leading-relaxed cursor-pointer">
           Li e aceito a{' '}
-          <Link href="/sobre#privacidade" className="text-[#005BFF] hover:underline">Política de Privacidade</Link>
+          <Link href="/sobre#privacidade" className="text-[#0B1020] hover:underline">Política de Privacidade</Link>
           {' '}e os{' '}
-          <Link href="/sobre#termos" className="text-[#005BFF] hover:underline">Termos de Uso</Link>.
+          <Link href="/sobre#termos" className="text-[#0B1020] hover:underline">Termos de Uso</Link>.
         </label>
       </div>
+
+      {/* Verificação de segurança (Cloudflare Turnstile) — exigida pelo servidor antes
+          de criar a conta. Tema escuro fixo mesmo em formulário de fundo claro, conforme
+          identidade visual definida para o widget. */}
+      {env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ? (
+        <TurnstileChallenge
+          siteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+          action="register"
+          onStatusChange={setChallengeStatus}
+          onToken={setTurnstileToken}
+          resetSignal={resetSignal}
+        />
+      ) : (
+        <p className="text-xs font-medium text-amber-600">
+          Security verification is temporarily unavailable. Please try again shortly.
+        </p>
+      )}
 
       {/* Exibe mensagem de erro de validação ou da API */}
       {error && <p role="alert" className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
-      {/* Botão de submissão — desabilitado e com spinner enquanto carrega */}
+      {/* Botão de submissão — desabilitado enquanto carrega ou até a verificação de
+          segurança ser concluída */}
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || challengeStatus !== 'verified'}
+        aria-disabled={loading || challengeStatus !== 'verified'}
         className="w-full py-3.5 lobby-gradient text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
       >
         {loading ? <><Loader2 size={16} className="animate-spin" />Criando conta...</> : 'Criar conta'}
@@ -309,7 +349,7 @@ export default function RegisterForm() {
       {/* Link para login — exibido para quem já possui conta */}
       <p className="text-sm text-center text-[#5D6475]">
         Já tem conta?{' '}
-        <Link href="/login" className="font-semibold text-[#005BFF] hover:underline">Entrar</Link>
+        <Link href="/login" className="font-semibold text-[#0B1020] hover:underline">Entrar</Link>
       </p>
     </form>
   )

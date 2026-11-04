@@ -42,3 +42,6 @@ supabase/.temp/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# subagent-driven-development scratch workspace (ledgers, briefs, review packages)
+.superpowers/

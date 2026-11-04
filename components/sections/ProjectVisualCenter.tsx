@@ -221,7 +221,7 @@ export default function ProjectVisualCenter({ value, onChange }: Props) {
   const cardBase = 'cursor-pointer rounded-xl border p-3 text-left transition-colors'
   // Estilo condicional: azul quando ativo, neutro quando inativo
   const cardActive = (active: boolean) => active
-    ? 'border-[#005BFF]/50 bg-[#005BFF]/[0.08]'
+    ? 'border-[#0B1020]/50 bg-[#0B1020]/[0.08]'
     : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.14]'
 
   /* Badge de visibilidade — exibido em cada card de item.
@@ -275,7 +275,7 @@ export default function ProjectVisualCenter({ value, onChange }: Props) {
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
         {summary.map(s => (
           <button key={s.key} type="button" onClick={() => setTab(s.key)}
-            className={`rounded-xl border p-2.5 text-left transition-colors ${tab === s.key ? 'border-[#005BFF]/50 bg-[#005BFF]/[0.08]' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.14]'}`}>
+            className={`rounded-xl border p-2.5 text-left transition-colors ${tab === s.key ? 'border-[#0B1020]/50 bg-[#0B1020]/[0.08]' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.14]'}`}>
             <s.icon size={14} className="text-white/40" aria-hidden="true" />
             <p className="mt-1.5 text-lg font-bold text-white">{s.count}</p>
             <p className="text-[10px] text-white/40">{s.label}</p>
@@ -291,7 +291,7 @@ export default function ProjectVisualCenter({ value, onChange }: Props) {
               className={`relative flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-bold transition-colors ${tab === t.key ? 'text-white' : 'text-white/35 hover:text-white/60'}`}>
               <t.icon size={13} aria-hidden="true" />{t.label}
               {/* Indicador de aba ativa — linha gradiente na base */}
-              {tab === t.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-[#005BFF] to-[#7B2CFF]" />}
+              {tab === t.key && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-[#0B1020] to-[#168F9C]" />}
             </button>
           ))}
         </div>
@@ -386,7 +386,7 @@ export default function ProjectVisualCenter({ value, onChange }: Props) {
                   return (
                     <button key={s.id} type="button" onClick={() => select('flow', s.id)}
                       className={`${cardBase} ${cardActive(selectedId === s.id)} flex w-full items-center gap-3`}>
-                      <Icon size={16} className="shrink-0 text-[#7B2CFF]" aria-hidden="true" />
+                      <Icon size={16} className="shrink-0 text-[#168F9C]" aria-hidden="true" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-semibold text-white">{s.title || 'Sem título'}</p>
                         <p className="truncate text-[10px] text-white/35">{s.description || 'Sem descrição'}</p>

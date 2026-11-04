@@ -90,15 +90,15 @@ export default async function ProjectDetailPage({ params }: Props) {
       <section className="relative overflow-hidden bg-[#F7F8FC] py-16 lg:py-20">
         {/* Decoração de fundo: gradientes radiais + grid de pontos */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(0,91,255,0.07),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(123,44,255,0.08),transparent_38%)]" />
-          <div className="absolute inset-0 opacity-[0.18] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(11,16,32,0.07),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(22,143,156,0.08),transparent_38%)]" />
+          <div className="absolute inset-0 opacity-[0.18] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
         </div>
 
         <Container className="relative z-10">
           {/* Link de volta para a listagem de projetos */}
           <Link
             href="/projetos"
-            className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-[#5D6475] transition-colors hover:text-[#005BFF]"
+            className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-[#5D6475] transition-colors hover:text-[#0B1020]"
           >
             <ArrowLeft size={15} aria-hidden="true" />
             Voltar aos projetos
@@ -149,7 +149,7 @@ export default async function ProjectDetailPage({ params }: Props) {
 
               {/* Destaque de impacto — ex: "Redução de 40% no tempo de processo" */}
               {project.impact && (
-                <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-[#005BFF]/15 bg-[#005BFF]/[0.07] px-4 py-2.5 text-sm font-bold text-[#005BFF]">
+                <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-[#0B1020]/15 bg-[#0B1020]/[0.07] px-4 py-2.5 text-sm font-bold text-[#0B1020]">
                   <TrendingUp size={15} aria-hidden="true" />
                   {project.impact}
                 </div>
@@ -190,7 +190,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                       ? `/contato?mensagem=${encodeURIComponent(`Tenho interesse no projeto "${project.title}". Pode me passar mais detalhes sobre valores e prazo?`)}`
                       : '/contato'
                   }
-                  className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(0,91,255,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(123,44,255,0.28)]"
+                  className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] px-7 py-4 text-sm font-bold text-white shadow-[0_18px_40px_rgba(11,16,32,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(22,143,156,0.28)]"
                 >
                   {project.isPaid ? 'Comprar este projeto' : 'Quero algo parecido'}
                   <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
@@ -198,7 +198,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                 {/* CTA secundário: sempre direciona para /contato */}
                 <Link
                   href="/contato"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-7 py-4 text-sm font-bold text-[#0B1020] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30 hover:text-[#005BFF]"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white px-7 py-4 text-sm font-bold text-[#0B1020] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30 hover:text-[#0B1020]"
                 >
                   Falar com especialista
                 </Link>
@@ -222,14 +222,14 @@ export default async function ProjectDetailPage({ params }: Props) {
                   <Link
                     key={p.id}
                     href={`/projetos/${p.slug}`}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-[#E3E7F0] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#005BFF]/25 hover:shadow-md"
+                    className="group flex flex-col overflow-hidden rounded-2xl border border-[#E3E7F0] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#0B1020]/25 hover:shadow-md"
                   >
                     {/* Miniatura do mockup do projeto relacionado */}
                     <div className="relative h-36 overflow-hidden">
                       <ProjectMockup slug={p.slug} category={p.category as string} />
                     </div>
                     <div className="p-4">
-                      <p className="text-sm font-bold text-[#0B1020] group-hover:text-[#005BFF] transition-colors" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                      <p className="text-sm font-bold text-[#0B1020] group-hover:text-[#0B1020] transition-colors" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                         {p.title}
                       </p>
                       {/* line-clamp-2 corta a descrição em 2 linhas para manter altura uniforme */}

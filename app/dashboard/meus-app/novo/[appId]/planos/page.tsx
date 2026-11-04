@@ -1,50 +1,64 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireClientSession } from '@/lib/services/profile'
-import { notFound } from 'next/navigation'
+import { getStepCompletion } from '@/lib/services/app-draft-steps'
+import PlanosClient, { type PendingRequest } from './PlanosClient'
 
-export const metadata: Metadata = {
-  title: 'Planos e Ofertas | LOBBY',
-  description: 'Configure os planos do seu aplicativo',
-}
+export const metadata: Metadata = { title: 'Oferta e planos | LOBBY', robots: { index: false, follow: false } }
 
-interface PageProps {
-  params: Promise<{ appId: string }>
-}
-
-export default async function PlanosPage({ params }: PageProps) {
+export default async function PlanosPage({ params }: { params: Promise<{ appId: string }> }) {
   const { appId } = await params
   const supabase = await createServerSupabaseClient()
-  const { user, profile } = await requireClientSession(supabase)
+  await requireClientSession(supabase)
 
-  // Load draft to verify ownership
-  const { data: draft, error } = await supabase
-    .from('app_drafts')
-    .select('*')
-    .eq('id', appId)
-    .eq('created_by', user.id)
-    .single()
+  // RLS (dono ou app_team_members) decide o acesso.
+  const { data: draft, error } = await supabase.from('app_drafts').select('*').eq('id', appId).single()
+  if (error || !draft) notFound()
 
-  if (error || !draft) {
-    notFound()
+  const [{ data: plans }, completion] = await Promise.all([
+    supabase.from('app_plans').select('*').eq('app_draft_id', appId).order('display_order', { ascending: true }),
+    getStepCompletion(supabase, draft),
+  ])
+
+  const planIds = (plans ?? []).map(p => p.id)
+  const { data: priceRequests, error: priceRequestsError } = planIds.length
+    ? await supabase
+        .from('plan_price_change_requests')
+        .select('id, app_plan_id, status, current_price, requested_price, current_billing_period, requested_billing_period, review_notes')
+        .in('app_plan_id', planIds)
+        .order('created_at', { ascending: false })
+    : { data: [] as never[], error: null }
+
+  // Pedido mais recente de cada plano (já veio ordenado desc) — só
+  // pendente/rejeitado viram badge; aprovado já está refletido no
+  // price/billing_period atual do plano, não precisa de badge.
+  const seenPlanIds = new Set<string>()
+  const pendingByPlan: Record<string, PendingRequest> = {}
+  for (const r of priceRequests ?? []) {
+    if (seenPlanIds.has(r.app_plan_id)) continue
+    seenPlanIds.add(r.app_plan_id)
+    if (r.status === 'pendente' || r.status === 'rejeitado') {
+      pendingByPlan[r.app_plan_id] = {
+        id: r.id, status: r.status as 'pendente' | 'rejeitado',
+        current_price: r.current_price, requested_price: r.requested_price,
+        current_billing_period: r.current_billing_period, requested_billing_period: r.requested_billing_period,
+        review_notes: r.review_notes,
+      }
+    }
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="p-8">
-        <h1 className="text-3xl font-bold mb-4">Planos e Ofertas (Etapa 3)</h1>
-        <p className="text-gray-600 mb-6">Configure os planos de preço para seu aplicativo.</p>
-
-        <div className="bg-white rounded-lg p-8 border border-gray-200">
-          <p className="text-gray-600 mb-4">Etapa 3 em desenvolvimento. Por enquanto, você pode voltar para editar o aplicativo.</p>
-          <a
-            href={`/dashboard/meus-app/novo/${appId}/editar`}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            ← Voltar ao editor
-          </a>
-        </div>
-      </div>
-    </div>
+    <PlanosClient
+      appId={appId}
+      appName={draft.name || 'Aplicativo sem nome'}
+      initialPlans={(plans ?? []).map(p => ({
+        id: p.id, name: p.name, currency: p.currency || 'BRL', price: p.price, billing_period: p.billing_period,
+        features: p.features ?? [], users_limit: p.users_limit, support_level: p.support_level,
+      }))}
+      initialPendingByPlan={pendingByPlan}
+      pendingByPlanError={!!priceRequestsError}
+      completion={{ 1: completion.step1, 2: completion.step2, 3: completion.step3 }}
+    />
   )
 }

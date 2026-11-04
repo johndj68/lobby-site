@@ -50,6 +50,23 @@ create table if not exists public.profiles (
   created_at    timestamptz default now()
 );
 
+-- Bug de replay descoberto em 2026-09-27 (auditoria do financeiro): as
+-- policies abaixo (technician_read_profiles, technician_assign_client) e as
+-- de contacts/downloads/lobby_projects mais adiante já referenciam
+-- profiles.role, mas essa coluna só era criada em 20260702130000 — uma
+-- migration DEPOIS desta. Nunca deu erro em produção porque ela não foi
+-- criada via replay dessas migrations do zero (o schema real já tinha
+-- role/is_leader antes desse ponto — ver nota em 20260702130000), mas
+-- travava qualquer `supabase db reset`/ambiente novo construído do zero.
+-- Duplica aqui o mesmo `add column if not exists` de 20260702130000 —
+-- idempotente, então rodar de novo lá não quebra nada; só garante que a
+-- coluna existe antes de qualquer policy que a use, também nesta migration.
+alter table public.profiles
+  add column if not exists role      text not null default 'client',
+  add column if not exists phone     text,
+  add column if not exists document  text,
+  add column if not exists is_leader boolean default false;
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "own_profile_select" on public.profiles;

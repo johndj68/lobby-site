@@ -9,41 +9,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
 import { MARKETPLACE_COLORS, derivePublicationStatus, type PublicationStatus } from '@/lib/marketplace'
 import { partnerDisplayName } from '@/lib/partners'
+// Rótulos puros ficam em campaign-labels.ts (sem import de lib/stripe) —
+// importados e reexportados aqui pra quem já importa deste arquivo
+// continuar igual. NUNCA importar valor (não-tipo) deste módulo a partir de
+// um componente client: o `stripe` acima roda `new Stripe(...)` na carga do
+// módulo — use campaign-labels.ts direto nesse caso.
+import { getCreativeReviewBadge, getPaymentBadge, type CampaignStatusBadge, type CreativeReviewStatus, type PurchaseStatus } from './campaign-labels'
+export { getCreativeReviewBadge, getPaymentBadge, type CampaignStatusBadge, type CreativeReviewStatus, type PurchaseStatus, type PaymentBadgeKey } from './campaign-labels'
 
-export type CreativeReviewStatus = 'rascunho' | 'em_revisao' | 'ajustes_solicitados' | 'aprovado' | 'rejeitado'
 export type ReservationStatus = 'held' | 'confirmed' | 'released'
-export type PurchaseStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'isento'
-
-export interface CampaignStatusBadge {
-  key: string
-  label: string
-  color: string
-}
-
-const REVIEW_LABEL: Record<CreativeReviewStatus, CampaignStatusBadge> = {
-  rascunho: { key: 'rascunho', label: 'Rascunho', color: MARKETPLACE_COLORS.textSecondary },
-  em_revisao: { key: 'em_revisao', label: 'Em revisão', color: MARKETPLACE_COLORS.warning },
-  ajustes_solicitados: { key: 'ajustes_solicitados', label: 'Ajustes solicitados', color: MARKETPLACE_COLORS.warning },
-  aprovado: { key: 'aprovado', label: 'Aprovado', color: MARKETPLACE_COLORS.success },
-  rejeitado: { key: 'rejeitado', label: 'Rejeitado', color: MARKETPLACE_COLORS.error },
-}
-
-export function getCreativeReviewBadge(status: CreativeReviewStatus): CampaignStatusBadge {
-  return REVIEW_LABEL[status] ?? REVIEW_LABEL.rascunho
-}
-
-export type PaymentBadgeKey = 'pendente' | 'pago' | 'isento' | 'falhou' | 'reembolsado' | 'sem_pagamento'
-
-export function getPaymentBadge(purchase: { status: PurchaseStatus; kind: string } | null): CampaignStatusBadge {
-  if (!purchase) return { key: 'sem_pagamento', label: 'Sem cobrança', color: MARKETPLACE_COLORS.textSecondary }
-  switch (purchase.status) {
-    case 'paid': return { key: 'pago', label: 'Pago', color: MARKETPLACE_COLORS.success }
-    case 'isento': return { key: 'isento', label: 'Isento', color: MARKETPLACE_COLORS.primary }
-    case 'failed': return { key: 'falhou', label: 'Falhou', color: MARKETPLACE_COLORS.error }
-    case 'refunded': return { key: 'reembolsado', label: 'Reembolsado', color: MARKETPLACE_COLORS.textSecondary }
-    default: return { key: 'pendente', label: 'Aguardando pagamento', color: MARKETPLACE_COLORS.warning }
-  }
-}
 
 export type EligibilityKey =
   | 'em_exibicao'
@@ -88,11 +62,19 @@ export function computeCampaignEligibility(input: EligibilityInput): Eligibility
   const start = new Date(input.startsAt).getTime()
   const end = new Date(input.endsAt).getTime()
 
-  if (input.cancelledAt) {
-    return { key: 'cancelada', label: 'Cancelada', color: MARKETPLACE_COLORS.textSecondary, reasons: ['Campanha cancelada.'] }
-  }
-  if (input.pausedAt) {
-    return { key: 'pausada', label: 'Pausada', color: MARKETPLACE_COLORS.warning, reasons: ['Pausada manualmente pelo time LOBBY.'] }
+  // Cancelada/pausada são impedimentos definitivos por si só, mas nunca são
+  // a ÚNICA causa real quando o app também está suspenso/despublicado (ou
+  // outro impedimento do mesmo nível já existe) — reportar só a primeira
+  // sugeriria que resolver aquela sozinha bastaria (seção 6). O par
+  // cancelada+app suspenso do exemplo da spec é exatamente este caso.
+  if (input.cancelledAt || input.pausedAt) {
+    const reasons = [input.cancelledAt ? 'Campanha cancelada.' : 'Pausada manualmente pelo time LOBBY.']
+    if (!input.appPublished || input.appSuspended) reasons.push(input.appSuspended ? 'Aplicativo suspenso.' : 'Aplicativo ainda não publicado.')
+    if (input.partnerBlocked) reasons.push('Parceiro responsável está com novos cadastros bloqueados.')
+    if (!input.spaceActive) reasons.push('Espaço de exibição indisponível para veiculação no momento.')
+    return input.cancelledAt
+      ? { key: 'cancelada', label: 'Cancelada', color: MARKETPLACE_COLORS.textSecondary, reasons }
+      : { key: 'pausada', label: 'Pausada', color: MARKETPLACE_COLORS.warning, reasons }
   }
 
   const pending: string[] = []

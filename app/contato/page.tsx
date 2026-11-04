@@ -85,13 +85,13 @@ export default function ContatoPage() {
       ──────────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[#F7F8FC] py-20 lg:py-28">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(0,91,255,0.08),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(123,44,255,0.14),transparent_36%),radial-gradient(circle_at_55%_95%,rgba(0,163,255,0.10),transparent_42%)]" />
-          <div className="absolute inset-0 opacity-[0.26] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
-          <div className="absolute -left-40 top-20 h-[480px] w-[480px] rounded-full bg-[#00A3FF]/[0.08] blur-3xl" />
-          <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#7B2CFF]/[0.12] blur-3xl" />
-          <div className="absolute right-0 -bottom-40 h-[420px] w-[700px] rounded-full bg-[#005BFF]/[0.07] blur-3xl" />
-          <div className="absolute -right-[120px] top-20 hidden h-[520px] w-[520px] rounded-full border border-[#005BFF]/[0.08] lg:block" />
-          <div className="absolute -right-[60px] top-32 hidden h-[380px] w-[380px] rounded-full border border-dashed border-[#7B2CFF]/[0.14] lg:block" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(11,16,32,0.08),transparent_32%),radial-gradient(circle_at_85%_30%,rgba(22,143,156,0.14),transparent_36%),radial-gradient(circle_at_55%_95%,rgba(28,36,64,0.10),transparent_42%)]" />
+          <div className="absolute inset-0 opacity-[0.26] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute -left-40 top-20 h-[480px] w-[480px] rounded-full bg-[#1C2440]/[0.08] blur-3xl" />
+          <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#168F9C]/[0.12] blur-3xl" />
+          <div className="absolute right-0 -bottom-40 h-[420px] w-[700px] rounded-full bg-[#0B1020]/[0.07] blur-3xl" />
+          <div className="absolute -right-[120px] top-20 hidden h-[520px] w-[520px] rounded-full border border-[#0B1020]/[0.08] lg:block" />
+          <div className="absolute -right-[60px] top-32 hidden h-[380px] w-[380px] rounded-full border border-dashed border-[#168F9C]/[0.14] lg:block" />
         </div>
 
         <Container className="relative z-10">
@@ -99,7 +99,7 @@ export default function ContatoPage() {
           {/* ── Hero ──────────────────────────────────────────────────── */}
           <div className="mx-auto max-w-4xl text-center">
             {/* Badge — tune: icon, text, colors */}
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#005BFF]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#005BFF] shadow-sm backdrop-blur">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#0B1020]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#0B1020] shadow-sm backdrop-blur">
               <MessageCircle size={13} aria-hidden="true" />
               Fale com um especialista
             </span>
@@ -112,7 +112,7 @@ export default function ContatoPage() {
               Vamos transformar tecnologia em{' '}
               <span
                 style={{
-                  background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                  background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -146,7 +146,7 @@ export default function ContatoPage() {
                   Fale com a{' '}
                   <span
                     style={{
-                      background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                      background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                       backgroundClip: 'text',
@@ -164,11 +164,11 @@ export default function ContatoPage() {
                   {contactInfo.map(({ icon: Icon, label, value, href }) => (
                     <div
                       key={label}
-                      className="group flex items-center gap-4 rounded-2xl border border-[#E3E7F0] bg-white/85 p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/25 hover:shadow-md"
+                      className="group flex items-center gap-4 rounded-2xl border border-[#E3E7F0] bg-white/85 p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/25 hover:shadow-md"
                     >
                       <div
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_20px_rgba(0,91,255,0.20)]"
-                        style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_20px_rgba(11,16,32,0.20)]"
+                        style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
                         aria-hidden="true"
                       >
                         <Icon size={18} />
@@ -180,7 +180,7 @@ export default function ContatoPage() {
                             href={href}
                             target={href.startsWith('http') ? '_blank' : undefined}
                             rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                            className="mt-0.5 block text-sm font-bold text-[#0B1020] transition-colors hover:text-[#005BFF]"
+                            className="mt-0.5 block text-sm font-bold text-[#0B1020] transition-colors hover:text-[#0B1020]"
                             style={{ fontFamily: 'Space Grotesk, sans-serif' }}
                           >
                             {value}
@@ -194,18 +194,18 @@ export default function ContatoPage() {
                 </div>
 
                 {/* Diagnostic card — tune: gradient opacity, benefits */}
-                <div className="mt-6 rounded-3xl border border-[#005BFF]/15 p-5" style={{ background: 'linear-gradient(135deg, rgba(0,91,255,0.05), rgba(123,44,255,0.05))' }}>
+                <div className="mt-6 rounded-3xl border border-[#0B1020]/15 p-5" style={{ background: 'linear-gradient(135deg, rgba(11,16,32,0.05), rgba(22,143,156,0.05))' }}>
                   <div className="flex items-start gap-4">
                     <div
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_20px_rgba(0,91,255,0.20)]"
-                      style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-[0_8px_20px_rgba(11,16,32,0.20)]"
+                      style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
                       aria-hidden="true"
                     >
                       <BarChart3 size={18} />
                     </div>
                     <div>
                       <h3
-                        className="text-sm font-bold text-[#005BFF]"
+                        className="text-sm font-bold text-[#0B1020]"
                         style={{ fontFamily: 'Space Grotesk, sans-serif' }}
                       >
                         Diagnóstico gratuito
@@ -218,10 +218,10 @@ export default function ContatoPage() {
                           <li key={b} className="flex items-center gap-2 text-xs text-[#5D6475]">
                             <span
                               className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
-                              style={{ background: 'rgba(0,91,255,0.10)' }}
+                              style={{ background: 'rgba(11,16,32,0.10)' }}
                               aria-hidden="true"
                             >
-                              <Check size={10} style={{ color: '#005BFF' }} strokeWidth={2.5} />
+                              <Check size={10} style={{ color: '#0B1020' }} strokeWidth={2.5} />
                             </span>
                             {b}
                           </li>
@@ -316,19 +316,19 @@ export default function ContatoPage() {
               {/* Connector line — desktop only */}
               <div
                 className="absolute left-[16.5%] right-[16.5%] top-[2.25rem] hidden h-px md:block"
-                style={{ background: 'linear-gradient(to right, transparent, rgba(0,91,255,0.35), rgba(123,44,255,0.45), rgba(0,91,255,0.35), transparent)' }}
+                style={{ background: 'linear-gradient(to right, transparent, rgba(11,16,32,0.35), rgba(22,143,156,0.45), rgba(11,16,32,0.35), transparent)' }}
                 aria-hidden="true"
               />
 
               {nextSteps.map(({ n, title, desc }) => (
                 <div
                   key={n}
-                  className="group flex flex-col items-center rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 text-center shadow-[0_8px_40px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#005BFF]/20 hover:shadow-[0_16px_60px_rgba(0,91,255,0.10)]"
+                  className="group flex flex-col items-center rounded-3xl border border-[#E3E7F0] bg-white/90 p-6 text-center shadow-[0_8px_40px_rgba(11,16,32,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#0B1020]/20 hover:shadow-[0_16px_60px_rgba(11,16,32,0.10)]"
                 >
                   {/* Number circle */}
                   <div
                     className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg transition-transform duration-300 group-hover:scale-105"
-                    style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+                    style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
                   >
                     {n}
                   </div>

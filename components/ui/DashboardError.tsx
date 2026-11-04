@@ -27,7 +27,7 @@ export default function DashboardError({ error, reset, title = 'Algo deu errado'
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           <button
             onClick={reset}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#005BFF] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#0047CC]"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0B1020] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#0047CC]"
           >
             <RotateCcw className="h-4 w-4" />
             Tentar novamente

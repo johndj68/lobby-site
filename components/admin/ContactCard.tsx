@@ -255,7 +255,7 @@ export default function ContactCard({ contact, index, expanded, onToggle, onStat
             {/* Botão para expandir/recolher a mensagem do contato */}
             <button type="button" onClick={onToggle}
               className="inline-flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-bold transition-all"
-              style={{ borderColor: `${colors.primary}/35`, color: colors.primaryLight, background: `${colors.primary}/12` }}>
+              style={{ borderColor: 'rgba(96,165,250,0.35)', color: '#60A5FA', background: 'rgba(96,165,250,0.12)' }}>
               <Eye size={13} aria-hidden="true" />
               {expanded ? 'Fechar' : 'Ver mensagem'}
             </button>

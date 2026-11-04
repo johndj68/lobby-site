@@ -72,7 +72,7 @@ export default function AdminLoginForm() {
             placeholder="tecnico@lobby.com"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.06] pl-10 pr-4 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-300 focus:border-[#005BFF]/50 focus:bg-white/[0.08] focus:ring-4 focus:ring-[#005BFF]/15"
+            className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.06] pl-10 pr-4 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-300 focus:border-[#0B1020]/50 focus:bg-white/[0.08] focus:ring-4 focus:ring-[#0B1020]/15"
             required
           />
         </div>
@@ -92,7 +92,7 @@ export default function AdminLoginForm() {
             placeholder="Sua senha de acesso"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
-            className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.06] pl-10 pr-11 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-300 focus:border-[#005BFF]/50 focus:bg-white/[0.08] focus:ring-4 focus:ring-[#005BFF]/15"
+            className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.06] pl-10 pr-11 text-sm text-white placeholder:text-white/25 outline-none transition-all duration-300 focus:border-[#0B1020]/50 focus:bg-white/[0.08] focus:ring-4 focus:ring-[#0B1020]/15"
             required
           />
           <button
@@ -115,7 +115,7 @@ export default function AdminLoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="group mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#005BFF] to-[#7B2CFF] text-sm font-bold text-white shadow-[0_12px_30px_rgba(0,91,255,0.30)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(0,91,255,0.40)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="group mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0B1020] to-[#168F9C] text-sm font-bold text-white shadow-[0_12px_30px_rgba(11,16,32,0.30)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_50px_rgba(11,16,32,0.40)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? (
           <><Loader2 size={16} className="animate-spin" />Autenticando...</>

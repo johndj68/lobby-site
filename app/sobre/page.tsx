@@ -45,11 +45,11 @@ const essence = [
       'Gerar valor mensurável para o negócio',
       'Atuar com ética, responsabilidade e excelência',
     ],
-    color: '#005BFF',
-    colorBg: 'rgba(0,91,255,0.10)',
-    topGrad: 'from-[#005BFF] to-[#00A3FF]',
-    hoverBorder: 'hover:border-[#005BFF]/25',
-    hoverShadow: 'hover:shadow-[0_24px_80px_rgba(0,91,255,0.12)]',
+    color: '#0B1020',
+    colorBg: 'rgba(11,16,32,0.10)',
+    topGrad: 'from-[#0B1020] to-[#1C2440]',
+    hoverBorder: 'hover:border-[#0B1020]/25',
+    hoverShadow: 'hover:shadow-[0_24px_80px_rgba(11,16,32,0.12)]',
   },
   {
     icon: Eye,
@@ -60,11 +60,11 @@ const essence = [
       'Expandir impacto e transformar mercados',
       'Construir o futuro com propósito',
     ],
-    color: '#7B2CFF',
-    colorBg: 'rgba(123,44,255,0.10)',
-    topGrad: 'from-[#7B2CFF] to-[#005BFF]',
-    hoverBorder: 'hover:border-[#7B2CFF]/25',
-    hoverShadow: 'hover:shadow-[0_24px_80px_rgba(123,44,255,0.12)]',
+    color: '#168F9C',
+    colorBg: 'rgba(22,143,156,0.10)',
+    topGrad: 'from-[#168F9C] to-[#0B1020]',
+    hoverBorder: 'hover:border-[#168F9C]/25',
+    hoverShadow: 'hover:shadow-[0_24px_80px_rgba(22,143,156,0.12)]',
   },
   {
     icon: Diamond,
@@ -77,11 +77,11 @@ const essence = [
       'Segurança e privacidade como prioridade',
       'Colaboração e respeito às pessoas',
     ],
-    color: '#00A3FF',
-    colorBg: 'rgba(0,163,255,0.10)',
-    topGrad: 'from-[#00A3FF] to-[#7B2CFF]',
-    hoverBorder: 'hover:border-[#00A3FF]/25',
-    hoverShadow: 'hover:shadow-[0_24px_80px_rgba(0,163,255,0.12)]',
+    color: '#168F9C',
+    colorBg: 'rgba(92,177,186,0.10)',
+    topGrad: 'from-[#5CB1BA] to-[#168F9C]',
+    hoverBorder: 'hover:border-[#168F9C]/25',
+    hoverShadow: 'hover:shadow-[0_24px_80px_rgba(22,143,156,0.12)]',
   },
 ]
 
@@ -94,7 +94,7 @@ const FLOATING_CARDS = [
     title: 'Software',
     desc: 'Soluções inteligentes',
     icon: Code2,
-    color: '#005BFF', colorBg: 'rgba(0,91,255,0.10)',
+    color: '#0B1020', colorBg: 'rgba(11,16,32,0.10)',
     pos: 'absolute left-2 top-8',
     delay: '0s',
   },
@@ -102,7 +102,7 @@ const FLOATING_CARDS = [
     title: 'Automação',
     desc: 'Eficiência que escala',
     icon: Settings2,
-    color: '#7B2CFF', colorBg: 'rgba(123,44,255,0.10)',
+    color: '#168F9C', colorBg: 'rgba(22,143,156,0.10)',
     pos: 'absolute right-2 top-8',
     delay: '2.5s',
   },
@@ -129,8 +129,8 @@ const FLOATING_CARDS = [
  * Tune: value, label, color, colorBg, icon per metric.
  */
 const METRICS = [
-  { icon: Rocket,    value: '+120', label: 'projetos entregues',      color: '#005BFF', colorBg: 'rgba(0,91,255,0.10)'   },
-  { icon: Building2, value: '+80',  label: 'empresas parceiras',      color: '#7B2CFF', colorBg: 'rgba(123,44,255,0.10)' },
+  { icon: Rocket,    value: '+120', label: 'projetos entregues',      color: '#0B1020', colorBg: 'rgba(11,16,32,0.10)'   },
+  { icon: Building2, value: '+80',  label: 'empresas parceiras',      color: '#168F9C', colorBg: 'rgba(22,143,156,0.10)' },
   { icon: Star,      value: '98%',  label: 'satisfação dos clientes', color: '#16A34A', colorBg: 'rgba(22,163,74,0.10)'  },
   { icon: Layers,    value: '4',    label: 'áreas de atuação',        color: '#F97316', colorBg: 'rgba(249,115,22,0.10)' },
 ]
@@ -158,8 +158,8 @@ const policies = [
     title: 'Política de privacidade',
     description: 'Como coletamos, usamos e protegemos as informações pessoais em conformidade com a LGPD.',
     icon: Lock,
-    color: '#005BFF', colorBg: 'rgba(0,91,255,0.10)',
-    hoverClass: 'hover:border-[#005BFF]/25 hover:shadow-[0_20px_60px_rgba(0,91,255,0.10)]',
+    color: '#0B1020', colorBg: 'rgba(11,16,32,0.10)',
+    hoverClass: 'hover:border-[#0B1020]/25 hover:shadow-[0_20px_60px_rgba(11,16,32,0.10)]',
     items: [
       'Coleta mínima e responsável de informações.',
       'Uso transparente dos dados pessoais.',
@@ -171,8 +171,8 @@ const policies = [
     title: 'Política de segurança',
     description: 'Medidas técnicas e organizacionais para proteger sistemas, acessos e informações contra ameaças.',
     icon: Shield,
-    color: '#7B2CFF', colorBg: 'rgba(123,44,255,0.10)',
-    hoverClass: 'hover:border-[#7B2CFF]/25 hover:shadow-[0_20px_60px_rgba(123,44,255,0.10)]',
+    color: '#168F9C', colorBg: 'rgba(22,143,156,0.10)',
+    hoverClass: 'hover:border-[#168F9C]/25 hover:shadow-[0_20px_60px_rgba(22,143,156,0.10)]',
     items: [
       'Confidencialidade, integridade e disponibilidade garantidas.',
       'Avaliações periódicas de risco e vulnerabilidade.',
@@ -212,8 +212,8 @@ const policies = [
  * Tune: icon, title, desc, color, colorBg per commitment.
  */
 const COMMITMENTS = [
-  { icon: ShieldCheck, title: 'Transparência',          desc: 'Agimos com clareza em todas as nossas relações.',              color: '#005BFF', colorBg: 'rgba(0,91,255,0.10)'   },
-  { icon: Lock,        title: 'Segurança de dados',     desc: 'Protegemos informações com as melhores práticas do mercado.', color: '#7B2CFF', colorBg: 'rgba(123,44,255,0.10)' },
+  { icon: ShieldCheck, title: 'Transparência',          desc: 'Agimos com clareza em todas as nossas relações.',              color: '#0B1020', colorBg: 'rgba(11,16,32,0.10)'   },
+  { icon: Lock,        title: 'Segurança de dados',     desc: 'Protegemos informações com as melhores práticas do mercado.', color: '#168F9C', colorBg: 'rgba(22,143,156,0.10)' },
   { icon: BadgeCheck,  title: 'Qualidade nas entregas', desc: 'Padrões elevados para gerar resultados consistentes.',         color: '#16A34A', colorBg: 'rgba(22,163,74,0.10)'  },
   { icon: Headphones,  title: 'Atendimento responsável',desc: 'Suporte ágil, humano e focado na sua experiência.',            color: '#F97316', colorBg: 'rgba(249,115,22,0.10)' },
 ]
@@ -231,15 +231,15 @@ export default function SobrePage() {
       <section className="relative overflow-hidden bg-[#F7F8FC] py-20 lg:py-28">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           {/* Radial gradient zones */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(0,91,255,0.08),transparent_32%),radial-gradient(circle_at_85%_35%,rgba(123,44,255,0.14),transparent_38%),radial-gradient(circle_at_60%_95%,rgba(0,163,255,0.10),transparent_42%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(11,16,32,0.08),transparent_32%),radial-gradient(circle_at_85%_35%,rgba(22,143,156,0.14),transparent_38%),radial-gradient(circle_at_60%_95%,rgba(28,36,64,0.10),transparent_42%)]" />
           {/* Dot grid */}
-          <div className="absolute inset-0 opacity-[0.28] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute inset-0 opacity-[0.28] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.16)_1px,transparent_0)] bg-[size:28px_28px]" />
           {/* Reading mask — keeps text side clean */}
           <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-[#F7F8FC] via-[#F7F8FC]/90 to-transparent lg:w-[56%]" />
           {/* Blur blobs */}
-          <div className="absolute -left-40 top-20 h-[460px] w-[460px] rounded-full bg-[#00A3FF]/[0.08] blur-3xl" />
-          <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#7B2CFF]/[0.12] blur-3xl" />
-          <div className="absolute right-20 -bottom-40 h-[500px] w-[500px] rounded-full bg-[#005BFF]/[0.08] blur-3xl" />
+          <div className="absolute -left-40 top-20 h-[460px] w-[460px] rounded-full bg-[#1C2440]/[0.08] blur-3xl" />
+          <div className="absolute -right-40 top-10 h-[560px] w-[560px] rounded-full bg-[#168F9C]/[0.12] blur-3xl" />
+          <div className="absolute right-20 -bottom-40 h-[500px] w-[500px] rounded-full bg-[#0B1020]/[0.08] blur-3xl" />
         </div>
 
         <Container className="relative z-10">
@@ -252,7 +252,7 @@ export default function SobrePage() {
               transition={{ duration: 0.5 }}
             >
               {/* Badge */}
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#005BFF]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#005BFF] shadow-sm backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#0B1020]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#0B1020] shadow-sm backdrop-blur">
                 <Sparkles size={13} aria-hidden="true" />
                 Sobre a LOBBY
               </span>
@@ -265,7 +265,7 @@ export default function SobrePage() {
                 Tecnologia com{' '}
                 <span
                   style={{
-                    background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                    background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -287,9 +287,9 @@ export default function SobrePage() {
                 {CHIPS.map(({ icon: Icon, label }) => (
                   <span
                     key={label}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white/80 px-4 py-2 text-sm font-semibold text-[#0B1020] shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#005BFF]/30"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-[#E3E7F0] bg-white/80 px-4 py-2 text-sm font-semibold text-[#0B1020] shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-[#0B1020]/30"
                   >
-                    <Icon size={15} style={{ color: '#005BFF' }} aria-hidden="true" />
+                    <Icon size={15} style={{ color: '#0B1020' }} aria-hidden="true" />
                     {label}
                   </span>
                 ))}
@@ -335,26 +335,26 @@ export default function SobrePage() {
                    Tune: container h/w | ring sizes | central card size | FLOATING_CARDS array */}
               <div className="relative mx-auto hidden h-[520px] max-w-[520px] lg:block">
                 {/* Orbital rings */}
-                <div className="absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#005BFF]/[0.09]" />
+                <div className="absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#0B1020]/[0.09]" />
                 <div
-                  className="absolute left-1/2 top-1/2 h-[350px] w-[350px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-[#7B2CFF]/[0.20] animate-spin"
+                  className="absolute left-1/2 top-1/2 h-[350px] w-[350px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-[#168F9C]/[0.20] animate-spin"
                   style={{ animationDuration: '30s' }}
                 />
                 {/* Inner glow */}
                 <div
-                  className="absolute left-1/2 top-1/2 h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7B2CFF]/[0.07] blur-2xl animate-pulse motion-reduce:animate-none"
+                  className="absolute left-1/2 top-1/2 h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#168F9C]/[0.07] blur-2xl animate-pulse motion-reduce:animate-none"
                   style={{ animationDuration: '7s' }}
                 />
 
-                {/* Central card — logohome.png, same pattern as HomeHero */}
+                {/* Central card — LOBBY-light-transparente.svg, same pattern as HomeHero */}
                 <div className="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-                  <div className="flex h-40 w-40 items-center justify-center overflow-hidden rounded-3xl border border-[#E3E7F0] bg-white shadow-[0_30px_80px_rgba(0,91,255,0.20)]">
+                  <div className="relative flex h-44 w-44 items-center justify-center rounded-3xl border border-[#E3E7F0] bg-white shadow-[0_30px_80px_rgba(11,16,32,0.20)]">
                     <Image
-                      src="/logohome.png"
+                      src="/LOBBY-light-transparente.svg"
                       alt="LOBBY"
-                      width={320}
-                      height={320}
-                      className="h-full w-full object-contain p-3"
+                      width={352}
+                      height={352}
+                      className="h-64 w-64 max-w-none translate-y-4 object-contain"
                       priority
                       quality={100}
                     />
@@ -369,7 +369,7 @@ export default function SobrePage() {
                       className="animate-[slow-float_10s_ease-in-out_infinite] motion-reduce:animate-none"
                       style={{ animationDelay: delay }}
                     >
-                      <div className="w-40 rounded-2xl border border-[#E3E7F0] bg-white/90 p-3.5 shadow-lg backdrop-blur transition-all duration-300 hover:border-[#005BFF]/20 hover:shadow-xl">
+                      <div className="w-40 rounded-2xl border border-[#E3E7F0] bg-white/90 p-3.5 shadow-lg backdrop-blur transition-all duration-300 hover:border-[#0B1020]/20 hover:shadow-xl">
                         <div className="flex items-center gap-2.5">
                           <div
                             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
@@ -421,8 +421,8 @@ export default function SobrePage() {
       <section className="relative overflow-hidden bg-[#F7F8FC] py-20 lg:py-24">
         {/* Subtle background */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(0,91,255,0.06),transparent_40%),radial-gradient(circle_at_80%_30%,rgba(123,44,255,0.07),transparent_38%)]" />
-          <div className="absolute inset-0 opacity-[0.18] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(11,16,32,0.06),transparent_40%),radial-gradient(circle_at_80%_30%,rgba(22,143,156,0.07),transparent_38%)]" />
+          <div className="absolute inset-0 opacity-[0.18] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
         </div>
 
         <Container className="relative z-10">
@@ -503,13 +503,13 @@ export default function SobrePage() {
       ─────────────────────────────────────────────────────────────── */}
       <section id="privacidade" className="relative overflow-hidden bg-[#F7F8FC] py-20 lg:py-24">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(0,91,255,0.07),transparent_32%),radial-gradient(circle_at_85%_35%,rgba(123,44,255,0.10),transparent_38%)]" />
-          <div className="absolute inset-0 opacity-[0.20] bg-[radial-gradient(circle_at_1px_1px,rgba(0,91,255,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
-          <div className="absolute -left-40 top-20 h-[420px] w-[420px] rounded-full bg-[#00A3FF]/[0.07] blur-3xl" />
-          <div className="absolute -right-40 bottom-0 h-[500px] w-[500px] rounded-full bg-[#7B2CFF]/[0.09] blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(11,16,32,0.07),transparent_32%),radial-gradient(circle_at_85%_35%,rgba(22,143,156,0.10),transparent_38%)]" />
+          <div className="absolute inset-0 opacity-[0.20] bg-[radial-gradient(circle_at_1px_1px,rgba(11,16,32,0.14)_1px,transparent_0)] bg-[size:28px_28px]" />
+          <div className="absolute -left-40 top-20 h-[420px] w-[420px] rounded-full bg-[#1C2440]/[0.07] blur-3xl" />
+          <div className="absolute -right-40 bottom-0 h-[500px] w-[500px] rounded-full bg-[#168F9C]/[0.09] blur-3xl" />
           {/* Orbital decoration — desktop only, tune sizes and border opacity */}
-          <div className="absolute -right-[120px] top-20 hidden h-[520px] w-[520px] rounded-full border border-[#005BFF]/[0.07] lg:block" />
-          <div className="absolute -right-[60px] top-32 hidden h-[380px] w-[380px] rounded-full border border-dashed border-[#7B2CFF]/[0.12] lg:block" />
+          <div className="absolute -right-[120px] top-20 hidden h-[520px] w-[520px] rounded-full border border-[#0B1020]/[0.07] lg:block" />
+          <div className="absolute -right-[60px] top-32 hidden h-[380px] w-[380px] rounded-full border border-dashed border-[#168F9C]/[0.12] lg:block" />
         </div>
 
         <Container className="relative z-10">
@@ -523,7 +523,7 @@ export default function SobrePage() {
               transition={{ duration: 0.5 }}
             >
               {/* Badge */}
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#005BFF]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#005BFF] shadow-sm backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#0B1020]/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#0B1020] shadow-sm backdrop-blur">
                 <ShieldCheck size={13} aria-hidden="true" />
                 Governança e confiança
               </span>
@@ -536,7 +536,7 @@ export default function SobrePage() {
                 Nossas{' '}
                 <span
                   style={{
-                    background: 'linear-gradient(135deg, #005BFF, #7B2CFF)',
+                    background: 'linear-gradient(135deg, #0B1020, #168F9C)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -578,7 +578,7 @@ export default function SobrePage() {
               {/* LGPD note */}
               <div className="mt-8 border-t border-[#E3E7F0] pt-5">
                 <div className="flex items-start gap-3 text-sm text-[#5D6475]">
-                  <Shield size={17} className="mt-0.5 shrink-0 text-[#005BFF]" aria-hidden="true" />
+                  <Shield size={17} className="mt-0.5 shrink-0 text-[#0B1020]" aria-hidden="true" />
                   <p>Compromisso com a LGPD e as melhores práticas de segurança da informação.</p>
                 </div>
               </div>
@@ -626,8 +626,8 @@ export default function SobrePage() {
                     <AccordionContent>
                       <div className="px-6 pb-6">
                         <div
-                          className="rounded-2xl border border-[#005BFF]/10 px-5 py-4"
-                          style={{ background: 'rgba(0,91,255,0.04)' }}
+                          className="rounded-2xl border border-[#0B1020]/10 px-5 py-4"
+                          style={{ background: 'rgba(11,16,32,0.04)' }}
                         >
                           <ul className="space-y-2.5">
                             {items.map((item) => (
@@ -657,7 +657,7 @@ export default function SobrePage() {
       {/* ── Termos de uso ────────────────────────────────────────────── */}
       <section id="termos" className="relative overflow-hidden bg-white py-20 lg:py-24">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(0,91,255,0.05),transparent_35%),radial-gradient(circle_at_15%_80%,rgba(123,44,255,0.07),transparent_38%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(11,16,32,0.05),transparent_35%),radial-gradient(circle_at_15%_80%,rgba(22,143,156,0.07),transparent_38%)]" />
         </div>
         <Container className="relative z-10">
           <motion.div
@@ -667,7 +667,7 @@ export default function SobrePage() {
             transition={{ duration: 0.5 }}
             className="mb-12 max-w-2xl"
           >
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#005BFF]/15 bg-[#F0F4FF] px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#005BFF]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#0B1020]/15 bg-[#F0F4FF] px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#0B1020]">
               <FileText size={13} aria-hidden="true" />
               Termos de uso
             </span>
@@ -676,7 +676,7 @@ export default function SobrePage() {
               style={{ fontFamily: 'Space Grotesk, sans-serif' }}
             >
               Condições de uso dos{' '}
-              <span style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              <span style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                 serviços LOBBY
               </span>
             </h2>
@@ -691,13 +691,13 @@ export default function SobrePage() {
                 icon: Check,
                 title: 'Uso dos serviços',
                 body: 'Os serviços da LOBBY são destinados a empresas e profissionais. O uso indevido, redistribuição não autorizada ou engenharia reversa dos sistemas entregues é proibido.',
-                color: '#005BFF', bg: 'rgba(0,91,255,0.08)',
+                color: '#0B1020', bg: 'rgba(11,16,32,0.08)',
               },
               {
                 icon: BadgeCheck,
                 title: 'Propriedade intelectual',
                 body: 'Todo o código, design e materiais produzidos pela LOBBY são protegidos por direitos autorais. A propriedade dos entregáveis é transferida ao cliente após a quitação integral do projeto.',
-                color: '#7B2CFF', bg: 'rgba(123,44,255,0.08)',
+                color: '#168F9C', bg: 'rgba(22,143,156,0.08)',
               },
               {
                 icon: Shield,
@@ -715,7 +715,7 @@ export default function SobrePage() {
                 icon: Settings2,
                 title: 'Modificações e rescisão',
                 body: 'A LOBBY pode atualizar estes termos a qualquer momento, com aviso prévio de 15 dias. A rescisão contratual segue as condições previstas no contrato de serviço assinado entre as partes.',
-                color: '#00A3FF', bg: 'rgba(0,163,255,0.08)',
+                color: '#1C2440', bg: 'rgba(28,36,64,0.08)',
               },
               {
                 icon: Layers,
@@ -730,7 +730,7 @@ export default function SobrePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.07, duration: 0.4 }}
-                className="rounded-2xl border border-[#E3E7F0] bg-[#F7F8FC]/60 p-6 transition-all hover:border-[#005BFF]/20 hover:shadow-[0_8px_32px_rgba(0,91,255,0.07)]"
+                className="rounded-2xl border border-[#E3E7F0] bg-[#F7F8FC]/60 p-6 transition-all hover:border-[#0B1020]/20 hover:shadow-[0_8px_32px_rgba(11,16,32,0.07)]"
               >
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: bg }}>
                   <Icon size={20} style={{ color }} aria-hidden="true" />
@@ -751,7 +751,7 @@ export default function SobrePage() {
             className="mt-10 text-center text-xs text-[#5D6475]"
           >
             Dúvidas sobre os termos?{' '}
-            <Link href="/contato" className="font-semibold text-[#005BFF] transition-colors hover:text-[#7B2CFF]">
+            <Link href="/contato" className="font-semibold text-[#0B1020] transition-colors hover:text-[#168F9C]">
               Entre em contato
             </Link>
             {' '}— respondemos em até 1 dia útil. Última atualização: janeiro de 2025.
@@ -774,8 +774,8 @@ export default function SobrePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="relative overflow-hidden rounded-[2rem] p-8 text-white shadow-[0_24px_80px_rgba(0,91,255,0.22)] md:p-12"
-            style={{ background: 'linear-gradient(135deg, #005BFF, #7B2CFF)' }}
+            className="relative overflow-hidden rounded-[2rem] p-8 text-white shadow-[0_24px_80px_rgba(11,16,32,0.22)] md:p-12"
+            style={{ background: 'linear-gradient(135deg, #0B1020, #168F9C)' }}
           >
             {/* White dot grid */}
             <div
@@ -784,7 +784,7 @@ export default function SobrePage() {
             />
             {/* Blur blobs */}
             <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/[0.08] blur-2xl" aria-hidden="true" />
-            <div className="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-[#00A3FF]/[0.14] blur-2xl" aria-hidden="true" />
+            <div className="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-[#1C2440]/[0.14] blur-2xl" aria-hidden="true" />
             {/* Orbital rings — desktop only */}
             <div className="absolute right-16 top-1/2 hidden h-64 w-64 -translate-y-1/2 rounded-full border border-white/[0.14] lg:block" aria-hidden="true" />
             <div className="absolute right-28 top-1/2 hidden h-44 w-44 -translate-y-1/2 rounded-full border border-dashed border-white/[0.18] lg:block" aria-hidden="true" />
@@ -826,7 +826,7 @@ export default function SobrePage() {
               <div className="flex flex-col items-center gap-3">
                 <Link
                   href="/contato"
-                  className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-bold text-[#005BFF] shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl whitespace-nowrap"
+                  className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-7 py-4 text-sm font-bold text-[#0B1020] shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl whitespace-nowrap"
                 >
                   Falar com especialista
                   <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
