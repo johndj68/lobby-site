@@ -20,7 +20,7 @@ import {
 import { formatCurrencyBRL } from '@/lib/finance'
 
 interface Person { id: string; full_name: string | null; email: string | null }
-interface CampaignRow {
+export interface CampaignRow {
   id: string
   title: string | null
   starts_at: string
@@ -73,6 +73,9 @@ export default function MarketplaceClient({
 }: Props) {
   const router = useRouter()
   const pathname = usePathname()
+  // Momento fixo pro render atual — evita reler Date.now() por item ao
+  // calcular quais campanhas estão "live" no map abaixo.
+  const [campaignsNow] = useState(() => Date.now())
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'todos' | 'publicado' | 'aprovado' | 'aguardando_analise' | 'ajustes_solicitados' | 'rejeitado' | 'rascunho'>('todos')
   const [customFrom, setCustomFrom] = useState(from ?? '')
@@ -531,8 +534,7 @@ export default function MarketplaceClient({
             ) : (
               <ul className="space-y-3">
                 {campaigns.map(c => {
-                  const now = Date.now()
-                  const live = c.is_active && c.is_approved && now >= new Date(c.starts_at).getTime() && now <= new Date(c.ends_at).getTime()
+                  const live = c.is_active && c.is_approved && campaignsNow >= new Date(c.starts_at).getTime() && campaignsNow <= new Date(c.ends_at).getTime()
                   return (
                     <li key={c.id} className="rounded-xl border p-3" style={{ borderColor: C.border }}>
                       <div className="mb-1 flex items-center justify-between gap-2">

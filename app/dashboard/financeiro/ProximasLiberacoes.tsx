@@ -43,7 +43,7 @@ export default function ProximasLiberacoes({ rows, loading, error, permissionDen
         </div>
       ) : permissionDenied ? (
         <p className="text-xs" style={{ color: colors.textSecondary }}>
-          Esta seção exige a permissão "Financeiro — Repasses e extrato", concedida separadamente pelo dono.
+          Esta seção exige a permissão &quot;Financeiro — Repasses e extrato&quot;, concedida separadamente pelo dono.
         </p>
       ) : error ? (
         <div className="flex items-center gap-2 text-xs" style={{ color: colors.text }}>

@@ -100,6 +100,7 @@ export default function AccountForm({ user, profile, isPartner }: Props) {
   const [payoutLoading, setPayoutLoading] = useState(false)
   useEffect(() => {
     if (!isPartner) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: liga loading antes do fetch async, padrão estável do projeto
     setPayoutLoading(true)
     const supabase = createClient()
     ;(async () => {

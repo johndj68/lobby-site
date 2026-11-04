@@ -28,8 +28,32 @@ export interface ReviewChecklistItem {
   editTab?: string
 }
 
+export interface ReviewDraftInput {
+  name?: string | null
+  short_description?: string | null
+  full_description?: string | null
+  category_id?: string | null
+  website_url?: string | null
+  logo_url?: string | null
+  media_gallery?: unknown[] | null
+  features?: unknown[] | null
+  history?: unknown
+  trust_signals?: unknown
+  faq?: unknown
+}
+
+export interface ReviewPlanInput {
+  name?: string | null
+  price?: number | null
+}
+
+export interface ReviewActivationConfig {
+  activation_link?: string | null
+  support_email?: string | null
+}
+
 export interface ReviewResult {
-  app: any
+  app: ReviewDraftInput
   items: ReviewChecklistItem[]
   blockers: number
   warnings: number
@@ -37,7 +61,7 @@ export interface ReviewResult {
   isTeamOptional: boolean
 }
 
-export function validateBasicInfo(draft: any): ReviewChecklistItem {
+export function validateBasicInfo(draft: ReviewDraftInput): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!draft.name?.trim()) {
@@ -111,7 +135,7 @@ export function validateBasicInfo(draft: any): ReviewChecklistItem {
   }
 }
 
-export function validateMedia(draft: any): ReviewChecklistItem {
+export function validateMedia(draft: ReviewDraftInput): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!draft.logo_url?.trim()) {
@@ -152,7 +176,7 @@ export function validateMedia(draft: any): ReviewChecklistItem {
   }
 }
 
-export function validateFeatures(draft: any): ReviewChecklistItem {
+export function validateFeatures(draft: ReviewDraftInput): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!draft.features || (Array.isArray(draft.features) && draft.features.length === 0)) {
@@ -180,7 +204,7 @@ export function validateFeatures(draft: any): ReviewChecklistItem {
   }
 }
 
-export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
+export function validateOfferAndPlans(plans: ReviewPlanInput[]): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!plans || plans.length === 0) {
@@ -227,7 +251,7 @@ export function validateOfferAndPlans(plans: any[]): ReviewChecklistItem {
   }
 }
 
-export function validateActivation(config: any, plans: any[]): ReviewChecklistItem {
+export function validateActivation(config: ReviewActivationConfig | null | undefined, plans: ReviewPlanInput[]): ReviewChecklistItem {
   const issues: ReviewIssue[] = []
 
   if (!config?.activation_link?.trim()) {
@@ -263,7 +287,7 @@ export function validateActivation(config: any, plans: any[]): ReviewChecklistIt
   }
 }
 
-export function validateOptionalSection(data: any, name: string, icon: string, id: string): ReviewChecklistItem {
+export function validateOptionalSection(data: unknown, name: string, icon: string, id: string): ReviewChecklistItem {
   const hasData = data && (typeof data === 'string' ? data.trim().length > 0 : Array.isArray(data) ? data.length > 0 : Object.keys(data || {}).length > 0)
 
   return {
@@ -278,7 +302,13 @@ export function validateOptionalSection(data: any, name: string, icon: string, i
   }
 }
 
-export function calculateReview(draft: any, plans: any[], config: any, teamMembers: any, teamInvitations: any): ReviewResult {
+export function calculateReview(
+  draft: ReviewDraftInput,
+  plans: ReviewPlanInput[],
+  config: ReviewActivationConfig | null | undefined,
+  teamMembers: unknown[] | null | undefined,
+  teamInvitations: unknown[] | null | undefined,
+): ReviewResult {
   const items = [
     validateBasicInfo(draft),
     validateMedia(draft),

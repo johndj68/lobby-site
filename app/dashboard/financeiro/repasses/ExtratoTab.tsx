@@ -88,6 +88,7 @@ export default function ExtratoTab({ partnerId, apps, filters, onFiltersChange }
     setHasLoaded(true)
   }, [partnerId, filters])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: load() liga loading de forma sincrona, padrao estavel do projeto
   useEffect(() => { load() }, [load])
 
   const isFiltered = !!(filters.app || filters.tipo || filters.de || filters.ate)

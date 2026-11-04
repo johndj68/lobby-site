@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { requireTechnicianSession } from '@/lib/services/profile'
 import { periodRange, type PeriodKey, type AppDraftRow, type SubmissionRow, type PlanRow } from '@/lib/marketplace'
-import MarketplaceClient from './MarketplaceClient'
+import MarketplaceClient, { type CampaignRow } from './MarketplaceClient'
 
 const VALID_PERIODS: PeriodKey[] = ['hoje', '7d', '30d', 'mes', 'custom']
 
@@ -71,7 +71,7 @@ export default async function MarketplacePage({
       drafts={(drafts ?? []) as AppDraftRow[]}
       submissions={(submissions ?? []) as SubmissionRow[]}
       plans={(plans ?? []) as PlanRow[]}
-      campaigns={(campaigns ?? []) as any}
+      campaigns={(campaigns ?? []) as unknown as CampaignRow[]}
       people={people ?? []}
       loadErrors={{
         drafts: !!draftsError,

@@ -196,6 +196,7 @@ export default function VisaoGeralClient({ partnerId, apps, emptyStateCta }: Pro
     setHasLoaded(true)
   }, [range, applicationId, partnerId, granularidade, apps, preset, customFrom, customTo])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: load() liga loading de forma sincrona, padrao estavel do projeto
   useEffect(() => { load() }, [load])
 
   const periodoCards = [

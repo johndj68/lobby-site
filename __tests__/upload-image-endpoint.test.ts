@@ -10,9 +10,15 @@ vi.mock('@/lib/rate-limit-redis', () => ({
   getClientIp: vi.fn().mockReturnValue('192.168.1.1'),
 }))
 
+interface MockSupabase {
+  auth: { getUser: ReturnType<typeof vi.fn> }
+  from: ReturnType<typeof vi.fn>
+  storage: { from: ReturnType<typeof vi.fn> }
+}
+
 let POST: (req: Request) => Promise<Response>
-let mockSupabase: any
-let mockCheckRateLimit: any
+let mockSupabase: MockSupabase
+let mockCheckRateLimit: ReturnType<typeof vi.fn>
 
 beforeAll(async () => {
   mockSupabase = {
@@ -42,8 +48,8 @@ beforeAll(async () => {
   vi.mocked(createServerSupabaseClient).mockResolvedValue(mockSupabase)
   vi.mocked(checkRateLimit).mockImplementation(mockCheckRateLimit)
 
-  const module = await import('@/app/api/upload/image/route')
-  POST = module.POST
+  const routeModule = await import('@/app/api/upload/image/route')
+  POST = routeModule.POST
 })
 
 async function createTestImage(width: number, height: number): Promise<Buffer> {
@@ -65,7 +71,7 @@ function createMockRequest(body: FormData, headers: Record<string, string> = {})
     headers: new Map([
       ...Object.entries(headers),
       ['x-forwarded-for', '192.168.1.1'],
-    ]) as any,
+    ]) as unknown as Headers,
   } as Request
 }
 

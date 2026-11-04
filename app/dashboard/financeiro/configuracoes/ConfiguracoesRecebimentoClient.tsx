@@ -89,6 +89,7 @@ export default function ConfiguracoesRecebimentoClient({ partnerId }: Props) {
     setHasLoaded(true)
   }, [partnerId])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: load() liga loading de forma sincrona, padrao estavel do projeto
   useEffect(() => { load() }, [load])
 
   const situacao = resolveSituacao(destination)

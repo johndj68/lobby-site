@@ -36,11 +36,13 @@ export default function RefundAppPurchaseModal({ purchase, onClose, onRefunded }
   const [reason, setReason] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
+  // Momento fixo pro render atual — evita reler Date.now() a cada render do modal.
+  const [now] = useState(() => Date.now())
 
   if (!purchase) return null
 
   const remaining = purchase.amount - purchase.refunded_amount
-  const daysSincePaid = (Date.now() - new Date(purchase.paid_at).getTime()) / 86400_000
+  const daysSincePaid = (now - new Date(purchase.paid_at).getTime()) / 86400_000
   const withinWindow = daysSincePaid <= purchase.refund_window_days
 
   const reset = () => { setAmount(''); setReason(''); setError('') }

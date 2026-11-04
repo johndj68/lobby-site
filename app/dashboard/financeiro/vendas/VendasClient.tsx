@@ -170,6 +170,7 @@ export default function VendasClient({ soldApps, partnerId, emptyStateCta }: Pro
   // precisa recarregar a cada troca de outro filtro).
   const [plans, setPlans] = useState<PlanOption[]>([])
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- guarda de parâmetro ausente, síncrono de propósito
     if (!filters.app) { setPlans([]); return }
     let cancelled = false
     const supabase = createClient()
@@ -226,6 +227,7 @@ export default function VendasClient({ soldApps, partnerId, emptyStateCta }: Pro
     setHasLoaded(true)
   }, [filters.app, filters.plan, filters.pagamento, filters.repasse, filters.busca, filters.ordenar, filters.page, filters.periodo, filters.de, filters.ate, range, partnerId])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: load() liga loading de forma sincrona, padrao estavel do projeto
   useEffect(() => { load() }, [load])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))

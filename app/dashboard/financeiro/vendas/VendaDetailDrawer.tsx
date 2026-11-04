@@ -124,6 +124,7 @@ export default function VendaDetailDrawer({ saleId, partnerId, onClose }: Props)
   const [retryTick, setRetryTick] = useState(0)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- guarda de parâmetro ausente, síncrono de propósito
     if (!saleId) { setDetail(null); return }
     let cancelled = false
     setLoading(true)

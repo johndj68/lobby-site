@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     // Get reviewer info for each
     const submissionsWithReviewer = await Promise.all(
-      (submissions || []).map(async (sub: any) => {
+      (submissions || []).map(async (sub) => {
         let reviewer = null
         if (sub.reviewer_id) {
           const { data: rev } = await supabase

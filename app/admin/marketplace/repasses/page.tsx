@@ -117,6 +117,7 @@ export default async function RepassesPage() {
   // partner-dispute-reserve-design.md).
   for (const p of purchases ?? []) {
     if (!p.paid_at || p.reserve_status !== 'held' || !p.reserve_amount || p.reserve_amount <= 0) continue
+    // eslint-disable-next-line react-hooks/purity -- Server Component, roda uma vez por request, sem re-render
     const reserveEligible = Date.now() - new Date(p.paid_at).getTime() >= p.reserve_window_days * 86400_000
     if (!reserveEligible) continue // ainda dentro dos 120 dias — não aparece na fila nem como "retido" (reserva não tem indicador visual de retido nesta leva, só aparece quando fica elegível)
 

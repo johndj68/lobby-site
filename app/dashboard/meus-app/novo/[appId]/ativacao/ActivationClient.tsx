@@ -1,15 +1,33 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Copy, Plus, Trash2, Edit2, Upload, Loader2 } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
 import BackButton from '@/components/ui/BackButton'
 
+interface ActivationDraft {
+  id: string
+  name?: string | null
+}
+
+interface ActivationPlan {
+  id: string
+  name?: string | null
+}
+
+interface ActivationConfig {
+  activation_method?: string
+  activation_link?: string | null
+  support_email?: string | null
+  instructions?: (string | { text?: string })[]
+  [key: string]: unknown
+}
+
 interface ActivationClientProps {
-  draft: any
-  config: any
-  plans: any[]
+  draft: ActivationDraft
+  config: ActivationConfig | null
+  plans: ActivationPlan[]
   batches: Batch[]
 }
 
@@ -28,7 +46,10 @@ interface Batch {
  *  confirmar (commit-codes), pra parceiro nunca gravar sem ver o resumo. */
 interface PlanUploadState {
   status: 'idle' | 'previewing' | 'preview' | 'committing' | 'error'
-  preview?: { summary: any; codes: string[] }
+  preview?: {
+    summary: { valid_codes: number; duplicates: number; already_existing: number; invalid_lines: number }
+    codes: string[]
+  }
   error?: string
 }
 
@@ -44,8 +65,8 @@ export default function ActivationClient({ draft, config, plans, batches }: Acti
   const [uploadByPlan, setUploadByPlan] = useState<Record<string, PlanUploadState>>({})
   const activationMethod = formData.activation_method || 'manual'
 
-  const handleFieldChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }))
+  const handleFieldChange = (field: string, value: unknown) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
     setSaved(false)
   }
 
@@ -80,8 +101,8 @@ export default function ActivationClient({ draft, config, plans, batches }: Acti
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Falha ao ler o arquivo')
       setUploadByPlan((prev) => ({ ...prev, [planId]: { status: 'preview', preview: { summary: data.summary, codes: data.codes } } }))
-    } catch (err: any) {
-      setUploadByPlan((prev) => ({ ...prev, [planId]: { status: 'error', error: err.message || 'Falha ao ler o arquivo' } }))
+    } catch (err) {
+      setUploadByPlan((prev) => ({ ...prev, [planId]: { status: 'error', error: err instanceof Error ? err.message : 'Falha ao ler o arquivo' } }))
     }
   }
 
@@ -102,8 +123,8 @@ export default function ActivationClient({ draft, config, plans, batches }: Acti
         ...prev,
       ])
       setUploadByPlan((prev) => ({ ...prev, [planId]: { status: 'idle' } }))
-    } catch (err: any) {
-      setUploadByPlan((prev) => ({ ...prev, [planId]: { ...state, status: 'error', error: err.message || 'Falha ao salvar os códigos' } }))
+    } catch (err) {
+      setUploadByPlan((prev) => ({ ...prev, [planId]: { ...state, status: 'error', error: err instanceof Error ? err.message : 'Falha ao salvar os códigos' } }))
     }
   }
 
@@ -233,7 +254,7 @@ export default function ActivationClient({ draft, config, plans, batches }: Acti
               {plans.length === 0 && (
                 <p style={{ color: colors.textSecondary }}>Nenhum plano cadastrado ainda.</p>
               )}
-              {plans.map((plan: any) => {
+              {plans.map((plan) => {
                 const planBatches = batchList.filter((b) => b.plan_id === plan.id)
                 const totalAvailable = planBatches.reduce((sum, b) => sum + b.available, 0)
                 const totalDelivered = planBatches.reduce((sum, b) => sum + b.delivered, 0)
@@ -431,10 +452,10 @@ export default function ActivationClient({ draft, config, plans, batches }: Acti
                   {instructions.length === 0 ? (
                     <p style={{ color: colors.textSecondary }}>Nenhuma instrução adicionada</p>
                   ) : (
-                    instructions.map((inst: any, i: number) => (
+                    instructions.map((inst, i: number) => (
                       <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded">
                         <span className="font-bold" style={{ color: colors.primary }}>{i + 1}</span>
-                        <span className="flex-1" style={{ color: colors.text }}>{inst.text || inst}</span>
+                        <span className="flex-1" style={{ color: colors.text }}>{typeof inst === 'string' ? inst : (inst.text ?? '')}</span>
                         <button className="p-1 hover:bg-gray-200 rounded"><Edit2 size={16} /></button>
                         <button className="p-1 hover:bg-red-200 rounded text-red-600"><Trash2 size={16} /></button>
                       </div>
@@ -486,8 +507,8 @@ export default function ActivationClient({ draft, config, plans, batches }: Acti
                 <div className="border-t pt-3" style={{ borderColor: colors.border }}>
                   <p className="text-xs font-semibold mb-2" style={{ color: colors.text }}>Como ativar</p>
                   <ol className="text-xs space-y-1" style={{ color: colors.textSecondary }}>
-                    {instructions.map((inst: any, i: number) => (
-                      <li key={i}>{i + 1}. {inst.text || inst}</li>
+                    {instructions.map((inst, i: number) => (
+                      <li key={i}>{i + 1}. {typeof inst === 'string' ? inst : (inst.text ?? '')}</li>
                     ))}
                   </ol>
                 </div>

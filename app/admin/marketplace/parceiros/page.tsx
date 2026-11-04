@@ -104,6 +104,7 @@ export default async function ParceirosPage({ searchParams }: { searchParams: Pr
   if (sp.publicados === '0') filtered = filtered.filter(r => r.appsPublished === 0)
   if (sp.cadastro && sp.cadastro !== 'todos') {
     const days = sp.cadastro === '7d' ? 7 : sp.cadastro === '30d' ? 30 : sp.cadastro === '90d' ? 90 : null
+    // eslint-disable-next-line react-hooks/purity -- Server Component, roda uma vez por request, sem re-render
     if (days) { const cutoff = Date.now() - days * 86400000; filtered = filtered.filter(r => new Date(r.createdAt).getTime() >= cutoff) }
   }
 

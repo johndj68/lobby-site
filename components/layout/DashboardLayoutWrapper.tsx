@@ -2,11 +2,12 @@
 
 import { usePathname } from 'next/navigation'
 import DashboardShell from './DashboardShell'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface DashboardLayoutWrapperProps {
   children: React.ReactNode
-  user: any
-  profile: any
+  user: SupabaseUser
+  profile: { full_name?: string; company_name?: string } | null
 }
 
 export default function DashboardLayoutWrapper({ children, user, profile }: DashboardLayoutWrapperProps) {

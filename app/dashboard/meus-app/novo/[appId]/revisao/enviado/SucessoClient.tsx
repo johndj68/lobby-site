@@ -6,8 +6,8 @@ import { colors } from '@/lib/design-tokens'
 import { SUBMISSION_STATUS_LABELS } from '@/lib/marketplace'
 
 interface SucessoClientProps {
-  draft: any
-  submission: any
+  draft: { id: string; name?: string | null }
+  submission: { id: string; submitted_at: string; status: string }
 }
 
 export default function SucessoClient({ draft, submission }: SucessoClientProps) {

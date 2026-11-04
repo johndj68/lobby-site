@@ -3,13 +3,45 @@
 import { colors } from '@/lib/design-tokens'
 import { Image as ImageIcon, Play, Package2 } from 'lucide-react'
 
+interface PreviewMedia {
+  type: string
+  url: string
+}
+
+interface PreviewFeature {
+  title?: string
+}
+
+interface PreviewTrustSignal {
+  url: string
+  title?: string
+}
+
+export interface PreviewData {
+  name?: string
+  category?: string
+  logo_url?: string
+  short_description?: string
+  callout?: string
+  differentiator?: string
+  benefit_one?: string
+  benefit_two?: string
+  media_gallery?: PreviewMedia[]
+  video_url?: string
+  features?: PreviewFeature[]
+  integrations?: string[]
+  target_audience?: string
+  languages?: string[]
+  trust_signals?: PreviewTrustSignal[]
+}
+
 interface ProductPreviewProps {
-  data: any
+  data: PreviewData
 }
 
 export default function ProductPreview({ data }: ProductPreviewProps) {
-  const mainImage = data?.media_gallery?.find((m: any) => m.type === 'main')
-  const screenshots = data?.media_gallery?.filter((m: any) => m.type === 'screenshot') || []
+  const mainImage = data?.media_gallery?.find((m) => m.type === 'main')
+  const screenshots = data?.media_gallery?.filter((m) => m.type === 'screenshot') || []
 
   return (
     <div className="space-y-5 text-sm">
@@ -135,7 +167,7 @@ export default function ProductPreview({ data }: ProductPreviewProps) {
             Capturas
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {screenshots.slice(0, 4).map((img: any, i: number) => (
+            {screenshots.slice(0, 4).map((img, i: number) => (
               <img
                 key={i}
                 src={img.url}
@@ -148,13 +180,13 @@ export default function ProductPreview({ data }: ProductPreviewProps) {
       )}
 
       {/* Features */}
-      {data?.features?.length > 0 && (
+      {(data?.features?.length ?? 0) > 0 && (
         <div>
           <p className="text-xs font-semibold mb-2" style={{ color: colors.text }}>
             Funcionalidades principais
           </p>
           <div className="space-y-1">
-            {data.features.slice(0, 3).map((f: any, i: number) => (
+            {(data.features ?? []).slice(0, 3).map((f, i: number) => (
               <div key={i} className="text-xs" style={{ color: colors.textSecondary }}>
                 • {f.title || 'Funcionalidade'}
               </div>
@@ -164,13 +196,13 @@ export default function ProductPreview({ data }: ProductPreviewProps) {
       )}
 
       {/* Integrations */}
-      {data?.integrations?.length > 0 && (
+      {(data?.integrations?.length ?? 0) > 0 && (
         <div>
           <p className="text-xs font-semibold mb-2" style={{ color: colors.text }}>
             Integrações
           </p>
           <div className="flex flex-wrap gap-1">
-            {data.integrations.slice(0, 5).map((int: string, i: number) => (
+            {(data.integrations ?? []).slice(0, 5).map((int: string, i: number) => (
               <span
                 key={i}
                 className="px-2 py-1 rounded-full text-xs"
@@ -196,25 +228,25 @@ export default function ProductPreview({ data }: ProductPreviewProps) {
       )}
 
       {/* Languages */}
-      {data?.languages?.length > 0 && (
+      {(data?.languages?.length ?? 0) > 0 && (
         <div>
           <p className="text-xs font-semibold mb-1" style={{ color: colors.text }}>
             Idiomas
           </p>
           <p className="text-xs" style={{ color: colors.textSecondary }}>
-            {data.languages.join(', ')}
+            {(data.languages ?? []).join(', ')}
           </p>
         </div>
       )}
 
       {/* Trust signals */}
-      {data?.trust_signals?.length > 0 && (
+      {(data?.trust_signals?.length ?? 0) > 0 && (
         <div>
           <p className="text-xs font-semibold mb-2" style={{ color: colors.text }}>
             Sobre
           </p>
           <div className="space-y-1">
-            {data.trust_signals.slice(0, 3).map((signal: any, i: number) => (
+            {(data.trust_signals ?? []).slice(0, 3).map((signal, i: number) => (
               <a
                 key={i}
                 href={signal.url}

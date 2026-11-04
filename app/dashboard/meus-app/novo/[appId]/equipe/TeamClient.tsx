@@ -2,12 +2,31 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Copy, Plus, Trash2, Edit2, RotateCcw } from 'lucide-react'
+import { ChevronRight, Trash2, RotateCcw } from 'lucide-react'
 import { colors } from '@/lib/design-tokens'
 import BackButton from '@/components/ui/BackButton'
 
 interface TeamClientProps {
-  draft: any
+  draft: { id: string; name?: string | null }
+}
+
+interface TeamInvitation {
+  id: string
+  invited_name: string
+  invited_email: string
+  permissions: string[]
+  status: string
+}
+
+interface TeamMember {
+  id: string
+  permissions: string[]
+}
+
+interface TeamMembersData {
+  owner: { name: string }
+  invitations: TeamInvitation[]
+  members: TeamMember[]
 }
 
 const PERMISSIONS = [
@@ -29,13 +48,8 @@ export default function TeamClient({ draft }: TeamClientProps) {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
-  const [members, setMembers] = useState<any>(null)
+  const [members, setMembers] = useState<TeamMembersData | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // Load members
-  useEffect(() => {
-    loadMembers()
-  }, [])
 
   const loadMembers = async () => {
     try {
@@ -49,6 +63,13 @@ export default function TeamClient({ draft }: TeamClientProps) {
       setLoading(false)
     }
   }
+
+  // Load members
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount: loadMembers() liga loading de forma síncrona, padrão estável do projeto
+    loadMembers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -88,8 +109,8 @@ export default function TeamClient({ draft }: TeamClientProps) {
       setSelectedPerms([])
       await loadMembers()
       setTimeout(() => setSent(false), 3000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao enviar')
     } finally {
       setSending(false)
     }
@@ -372,7 +393,7 @@ export default function TeamClient({ draft }: TeamClientProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              {members.invitations.map((inv: any) => (
+              {members.invitations.map((inv) => (
                 <div key={inv.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium text-sm" style={{ color: colors.text }}>{inv.invited_name}</p>
@@ -394,7 +415,7 @@ export default function TeamClient({ draft }: TeamClientProps) {
                   </div>
                 </div>
               ))}
-              {members.members.map((mem: any) => (
+              {members.members.map((mem) => (
                 <div key={mem.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium text-sm" style={{ color: colors.text }}>Membro</p>

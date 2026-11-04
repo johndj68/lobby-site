@@ -56,6 +56,7 @@ export default function PromocaoDetailSheet({ promotionId, partnerId, onClose, o
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- guarda de parâmetro ausente, síncrono de propósito
     if (!promotionId) { setDetail(null); return }
     let cancelled = false
     setLoading(true)

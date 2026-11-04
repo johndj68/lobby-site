@@ -14,7 +14,7 @@ import MarketplaceTabs from '@/components/admin/MarketplaceTabs'
 import AppLogo from '@/components/admin/AppLogo'
 import ConfirmDialog from '@/components/admin/ConfirmDialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import ProductPreview from '@/components/vendor/editor/preview/ProductPreview'
+import ProductPreview, { type PreviewData } from '@/components/vendor/editor/preview/ProductPreview'
 import {
   MARKETPLACE_COLORS as C, formatDateTimeBR, SUBMISSION_STATUS_LABELS, SUBMISSION_STATUS_COLORS,
   isSubmissionDecidable, type PublicationStatus,
@@ -382,7 +382,7 @@ export default function SubmissionDetailClient({
               </p>
             </DialogHeader>
             <div className="max-h-[70vh] overflow-y-auto rounded-xl bg-white p-4">
-              <ProductPreview data={submission.previewData} />
+              <ProductPreview data={submission.previewData as PreviewData} />
             </div>
           </DialogContent>
         </Dialog>

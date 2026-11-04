@@ -60,7 +60,15 @@ async function validateAndResolveUrl(urlString: string): Promise<URL> {
   }
 }
 
-async function scrapeAppInfo(url: URL): Promise<Partial<any>> {
+interface ScrapedAppInfo {
+  name?: string
+  short_description?: string
+  logo_url?: string
+  import_source?: string
+  website_url?: string
+}
+
+async function scrapeAppInfo(url: URL): Promise<ScrapedAppInfo> {
   // Use AbortController for timeout (standard Fetch API)
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 10000)
@@ -96,7 +104,7 @@ async function scrapeAppInfo(url: URL): Promise<Partial<any>> {
     const html = await response.text()
 
     // Simple HTML parsing (no cheerio dependency required)
-    const parsed: Partial<any> = {}
+    const parsed: ScrapedAppInfo = {}
 
     // Extract title
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { calculateReview, type ReviewResult } from '@/lib/validations/app-review'
+import { calculateReview, type ReviewResult, type ReviewDraftInput } from '@/lib/validations/app-review'
 
 export interface StepCompletion {
   step1: boolean // Começar — identidade mínima existe
@@ -22,7 +22,7 @@ export async function getStepCompletion(supabase: SupabaseClient, draft: Record<
     supabase.from('app_team_invitations').select('*').eq('app_draft_id', draft.id).eq('status', 'pending'),
   ])
 
-  const review = calculateReview(draft, plans ?? [], config, members ?? [], invitations ?? [])
+  const review = calculateReview(draft as ReviewDraftInput, plans ?? [], config, members ?? [], invitations ?? [])
   const byId = new Map(review.items.map(i => [i.id, i]))
 
   return {

@@ -53,6 +53,7 @@ export default function RecebimentoFormSheet({ open, partnerId, current, onClose
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset de formulário ao abrir, síncrono de propósito
     setStep('form')
     setMethod(current?.payoutMethod ?? 'pix')
     setAccountHolder(current?.accountHolder ?? '')

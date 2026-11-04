@@ -56,6 +56,7 @@ export default function PromocaoFormSheet({ open, plans, partnerId, prefill, onC
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset de formulário ao abrir, síncrono de propósito
     setName(prefill?.name ?? '')
     setPlanId(prefill?.planId ?? eligiblePlans[0]?.id ?? '')
     setDiscountPercent(prefill?.discountPercent != null ? String(prefill.discountPercent) : '')
@@ -76,6 +77,7 @@ export default function PromocaoFormSheet({ open, plans, partnerId, prefill, onC
   const planMissing = !!prefill?.planId && open && !eligiblePlans.some(p => p.id === prefill.planId)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- guarda de parâmetro ausente, síncrono de propósito
     if (!open || !selectedPlan?.applicationId) { setCommissionPercent(null); return }
     let cancelled = false
     const supabase = createClient()

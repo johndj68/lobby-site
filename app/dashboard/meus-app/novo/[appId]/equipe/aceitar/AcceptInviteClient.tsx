@@ -4,12 +4,20 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { colors } from '@/lib/design-tokens'
 
+interface Invitation {
+  invited_email: string
+  expires_at: string
+  status: string
+  permissions: string[]
+  scope: string
+}
+
 interface AcceptInviteClientProps {
   appId: string
   token: string
-  invitation: any
-  draft: any
-  user: any
+  invitation: Invitation
+  draft: { name?: string | null } | null
+  user: { email?: string | null } | null
 }
 
 const PERMISSION_LABELS: Record<string, string> = {
@@ -33,6 +41,7 @@ export default function AcceptInviteClient({
   useEffect(() => {
     // Check email match
     if (user && user.email?.toLowerCase() !== invitation.invited_email.toLowerCase()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- validação de guarda, síncrono de propósito
       setError(
         `Este convite foi enviado para ${invitation.invited_email}. ` +
         `Você está conectado como ${user.email}. Troque de conta ou peça um novo convite.`
@@ -69,8 +78,8 @@ export default function AcceptInviteClient({
       setTimeout(() => {
         router.push(`/dashboard/meus-app`)
       }, 2000)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao aceitar')
     } finally {
       setAccepting(false)
     }

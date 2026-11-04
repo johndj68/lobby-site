@@ -88,7 +88,7 @@ export async function processImage(
     }
 
     if (processed.size > config.maxSize) {
-      let dimScale = Math.sqrt(config.maxSize / processed.size)
+      const dimScale = Math.sqrt(config.maxSize / processed.size)
       const newWidth = Math.max(100, Math.round(width * dimScale))
       const newHeight = Math.max(100, Math.round(height * dimScale))
       processed = await tryProcess(image, newWidth, newHeight, quality)
