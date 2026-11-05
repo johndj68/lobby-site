@@ -31,10 +31,13 @@ export interface MatchedPurchase {
  * nela pra extrair um helper genérico é risco desnecessário pra uma tela
  * de conciliação manual que não tem pressa.
  *
- * app_purchases/subscription_invoices não têm coluna de reembolso parcial
- * (peça 1 só cobriu credit_purchases/financial_transactions — gap já
- * sinalizado, não resolvido aqui) — refundedAmount fica sempre 0 pra essas
- * duas, nunca inventado.
+ * app_purchases tem refunded_amount real (20260930110000_reembolso_app_
+ * purchase.sql, mesmo padrão de credit_purchases) — lido abaixo, nunca
+ * hardcoded. subscription_invoices continua sempre 0 de propósito: essa
+ * tabela não tem (e não deveria ter) rastreio de reembolso — renovação de
+ * assinatura não é reembolsada individualmente neste sistema (ver
+ * comentário da própria tabela, 20260927210000_assinatura_stripe_
+ * billing.sql). Zero ali é o valor correto, não um gap.
  *
  * Usada como fallback per-PI só pra assinaturas (ver
  * bulkFindPurchasesByPaymentIntentIds) — as outras 3 tabelas são resolvidas
@@ -65,13 +68,13 @@ export async function findPurchaseByPaymentIntentId(admin: AdminClient, paymentI
   }
 
   const { data: appPurchase } = await admin
-    .from('app_purchases').select('id, amount, currency, status, paid_at')
+    .from('app_purchases').select('id, amount, currency, status, paid_at, refunded_amount')
     .eq('stripe_payment_intent_id', paymentIntentId).maybeSingle()
   if (appPurchase) {
     return {
       table: 'app_purchases', operationType: 'apps', id: appPurchase.id,
       amount: Number(appPurchase.amount), currency: appPurchase.currency ?? 'BRL', status: appPurchase.status,
-      refundedAmount: 0, paidAt: appPurchase.paid_at,
+      refundedAmount: Number(appPurchase.refunded_amount ?? 0), paidAt: appPurchase.paid_at,
     }
   }
 
@@ -118,7 +121,7 @@ export async function bulkFindPurchasesByPaymentIntentIds(admin: AdminClient, pa
   const [{ data: campaigns }, { data: credits }, { data: apps }] = await Promise.all([
     admin.from('campaign_purchases').select('id, amount, currency, status, refund_status, paid_at, stripe_payment_intent_id').in('stripe_payment_intent_id', paymentIntentIds),
     admin.from('credit_purchases').select('id, amount_paid, currency, status, refunded_amount, paid_at, stripe_payment_intent_id').in('stripe_payment_intent_id', paymentIntentIds),
-    admin.from('app_purchases').select('id, amount, currency, status, paid_at, stripe_payment_intent_id').in('stripe_payment_intent_id', paymentIntentIds),
+    admin.from('app_purchases').select('id, amount, currency, status, paid_at, stripe_payment_intent_id, refunded_amount').in('stripe_payment_intent_id', paymentIntentIds),
   ])
 
   // Ordem de precedência igual à cascata original — se por algum motivo o
@@ -144,7 +147,7 @@ export async function bulkFindPurchasesByPaymentIntentIds(admin: AdminClient, pa
     map.set(a.stripe_payment_intent_id, {
       table: 'app_purchases', operationType: 'apps', id: a.id,
       amount: Number(a.amount), currency: a.currency ?? 'BRL', status: a.status,
-      refundedAmount: 0, paidAt: a.paid_at,
+      refundedAmount: Number(a.refunded_amount ?? 0), paidAt: a.paid_at,
     })
   }
 
@@ -216,14 +219,14 @@ export async function fetchLocalPaidRecordsInPeriod(
   if (want.has('apps')) {
     queries.push(
       admin.from('app_purchases')
-        .select('id, amount, currency, status, paid_at, stripe_payment_intent_id')
+        .select('id, amount, currency, status, paid_at, stripe_payment_intent_id, refunded_amount')
         .eq('status', 'paid').gte('paid_at', gteIso).lte('paid_at', lteIso)
         .then(({ data }) => {
           for (const a of data ?? []) {
             records.push({
               table: 'app_purchases', operationType: 'apps', id: a.id,
               amount: Number(a.amount), currency: a.currency ?? 'BRL', status: a.status,
-              refundedAmount: 0, paidAt: a.paid_at, paymentIntentId: a.stripe_payment_intent_id,
+              refundedAmount: Number(a.refunded_amount ?? 0), paidAt: a.paid_at, paymentIntentId: a.stripe_payment_intent_id,
             })
           }
         }),

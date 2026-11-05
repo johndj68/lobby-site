@@ -242,15 +242,21 @@ Futura seção em `/admin/marketplace` ou `/admin/aplicativos` para:
 
 ## Próximas Etapas
 
+> **Atualizado em 2026-11-05** — este documento é de ~set/2026, da versão
+> inicial do marketplace. Os itens 4-7 abaixo já estavam prontos há tempo
+> (confirmado lendo o código atual numa auditoria) e a lista original
+> dizia "pendente" — se você chegou aqui por este doc, confira o código
+> antes de assumir que algo não existe.
+
 1. ✅ Migração de banco
 2. ✅ Componentes marketplace
 3. ✅ Nova home
-4. ⏳ Admin para gerenciar apps/promoções
-5. ⏳ Página de detalhes do app
-6. ⏳ Checkout/compra de apps
-7. ⏳ Integração Stripe para pagamentos
-8. ⏳ Sistema de afiliados
-9. ⏳ Avaliações de apps
+4. ✅ Admin para gerenciar apps/promoções/comissões/repasses (`app/admin/marketplace/*`)
+5. ✅ Página de detalhes do app (`app/marketplace/[slug]`)
+6. ✅ Checkout/compra de apps (`app/api/apps/[appId]/checkout`, preço/desconto sempre recalculado no servidor)
+7. ✅ Integração Stripe para pagamentos (`app/api/stripe/checkout`, `app/api/stripe/webhook`)
+8. ⏳ Sistema de afiliados — ainda não existe (confirmado, sem promessa correspondente na UI pública)
+9. ⏳ Avaliações de apps — ainda não existe (idem)
 10. ⏳ Notificações de promoções
 
 ## Troubleshooting

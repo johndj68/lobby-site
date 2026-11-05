@@ -1,0 +1,20 @@
+-- Achado da Fase 6 (auditoria do financeiro v2, 2026-11-04): grant hygiene —
+-- promotion_version_link_valid (migration 20261003100000) é SECURITY DEFINER
+-- e é usada dentro do with check de promotions_insert (RLS), mas tinha grant
+-- de EXECUTE pra anon além de authenticated/service_role — a única função
+-- financeira desta leva com esse gap (todas as outras já revogam de public/
+-- anon explicitamente, mesma lição dos 3 incidentes anteriores deste
+-- projeto: get_or_create_wallet/add_credits, confirm_credit_purchase_webhook,
+-- get_thread_summaries/spend_credits).
+--
+-- Impacto real: baixo. A função só retorna um boolean (se uma versão de
+-- promoção pertence a um usuário e ainda está ativa) — nenhum dado
+-- financeiro ou PII. Mas permite um anônimo chamar
+-- .rpc('promotion_version_link_valid', {p_user_id: '<uuid qualquer>', ...})
+-- e usar o resultado como oráculo de correlação usuário↔promoção, sem
+-- necessidade nenhuma (RLS real roda como authenticated, nunca como anon,
+-- já que anon não tem policy de insert em promotions).
+--
+-- authenticated continua podendo executar — é o papel que a RLS usa de
+-- verdade ao avaliar o with check do insert.
+revoke execute on function public.promotion_version_link_valid(uuid, uuid, uuid) from anon;

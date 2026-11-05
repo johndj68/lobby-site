@@ -90,13 +90,14 @@ const makeChain = (data: unknown) => {
 }
 
 // Build a mock Supabase admin client with per-table default responses.
-// `purchaseStatusBeforeRpc` simulates the pre-RPC status read the webhook
-// route uses to detect a Stripe redelivery of an already-confirmed purchase
-// (null = first delivery / not found, 'pending' = normal first confirmation,
-// 'paid' = redelivery of an event already processed).
+// `wasAlreadyPaid` controls what confirm_credit_purchase_webhook itself
+// reports via `was_already_paid` — the RPC holds the row lock, so IT (not
+// a plain unlocked read done before calling it) is the only thing that can
+// correctly tell a genuine first confirmation apart from Stripe redelivering
+// an event whose purchase a concurrent call already confirmed.
 const makeAdmin = (
   profileEmail: string | null = 'joao@test.com',
-  purchaseStatusBeforeRpc: string | null = null,
+  wasAlreadyPaid: boolean = false,
 ) => ({
   from: vi.fn((table: string) => {
     if (table === 'profiles')
@@ -105,11 +106,12 @@ const makeAdmin = (
       return makeChain({ balance: 200 })
     if (table === 'credit_packages')
       return makeChain({ name: 'Pacote Starter' })
-    if (table === 'credit_purchases')
-      return makeChain(purchaseStatusBeforeRpc ? { status: purchaseStatusBeforeRpc } : null)
     return makeChain(null)
   }),
-  rpc: vi.fn().mockResolvedValue({ data: makePurchaseRow(), error: null }),
+  rpc: vi.fn().mockResolvedValue({
+    data: { purchase: makePurchaseRow(), was_already_paid: wasAlreadyPaid },
+    error: null,
+  }),
 })
 
 // Allow fire-and-forget promises to settle before asserting.
@@ -241,13 +243,13 @@ describe('POST /api/stripe/webhook', () => {
       expect(body.error).toBeTruthy()
     })
 
-    it('não reenvia e-mail de recibo em redelivery de evento já confirmado (status já "paid" antes da RPC)', async () => {
+    it('não reenvia e-mail de recibo em redelivery de evento já confirmado (RPC reporta was_already_paid=true)', async () => {
       const { stripe }          = await import('@/lib/stripe')
       const { createAdminClient } = await import('@/lib/supabase-admin')
       const { sendEmail }       = await import('@/lib/notifications')
-      // purchaseStatusBeforeRpc: 'paid' — Stripe reentregando um evento cuja
-      // compra já foi confirmada por uma entrega anterior deste webhook.
-      vi.mocked(createAdminClient).mockReturnValue(makeAdmin('teste@cliente.com', 'paid') as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      // was_already_paid: true — a própria RPC (sob lock) constatou que
+      // outra entrega já confirmou esta compra antes desta chamada chegar.
+      vi.mocked(createAdminClient).mockReturnValue(makeAdmin('teste@cliente.com', true) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
       vi.mocked(stripe.webhooks.constructEvent).mockReturnValueOnce(makeCheckoutEvent('pur_123') as any) // eslint-disable-line @typescript-eslint/no-explicit-any
       const res = await POST(makeReq())
       const body = await res.json()
@@ -256,6 +258,35 @@ describe('POST /api/stripe/webhook', () => {
       expect(body.received).toBe(true)
       await flush()
       expect(vi.mocked(sendEmail)).not.toHaveBeenCalled()
+    })
+
+    it('regressão: duas entregas concorrentes do MESMO evento mandam só 1 e-mail, mesmo sem nenhuma ganhar a corrida de leitura antes da RPC', async () => {
+      // Antes da correção, a rota lia credit_purchases.status (sem lock)
+      // ANTES de chamar a RPC pra decidir se mandava e-mail. Num redelivery
+      // quase-simultâneo, as duas leituras podiam acontecer antes de
+      // qualquer RPC comitar — as duas viam "ainda não confirmada" e as
+      // duas mandavam e-mail, mesmo o crédito nunca sendo mintado 2x (isso
+      // já era protegido pelo lock DENTRO da RPC). Esta regressão simula
+      // exatamente esse resultado de corrida: a RPC em si (que segura o
+      // lock) é quem reporta was_already_paid, e só a 2ª chamada o vê true.
+      const { stripe }          = await import('@/lib/stripe')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const { sendEmail }       = await import('@/lib/notifications')
+
+      const admin = makeAdmin('teste@cliente.com')
+      admin.rpc
+        .mockResolvedValueOnce({ data: { purchase: makePurchaseRow(), was_already_paid: false }, error: null })
+        .mockResolvedValueOnce({ data: { purchase: makePurchaseRow(), was_already_paid: true }, error: null })
+      vi.mocked(createAdminClient).mockReturnValue(admin as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      vi.mocked(stripe.webhooks.constructEvent)
+        .mockReturnValueOnce(makeCheckoutEvent('pur_123') as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        .mockReturnValueOnce(makeCheckoutEvent('pur_123') as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const [resA, resB] = await Promise.all([POST(makeReq()), POST(makeReq())])
+      expect(resA.status).toBe(200)
+      expect(resB.status).toBe(200)
+      await flush()
+      expect(vi.mocked(sendEmail)).toHaveBeenCalledOnce()
     })
 
     it('não chama sendEmail quando RPC falha', async () => {

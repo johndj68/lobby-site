@@ -58,6 +58,27 @@ export async function POST(
     if (existingApplication?.is_published) {
       return NextResponse.json({ error: 'Este aplicativo já está publicado.' }, { status: 409 })
     }
+
+    // applications não tem coluna de dono própria — app_drafts.application_id
+    // é a única fonte de "a quem pertence" essa linha. draft.application_id
+    // só deveria ter sido setado por um publish anterior DESTE MESMO draft.
+    // Se outro draft (de outro parceiro, por exemplo) já reivindicou esse
+    // mesmo application_id, reutilizá-lo aqui sobrescreve o conteúdo de
+    // quem realmente é dono. Esta é só a checagem rápida pra devolver um
+    // erro amigável antes de montar o payload inteiro — a RPC abaixo
+    // repete a MESMA checagem dentro da transação (TOCTOU-safe de verdade,
+    // já que entre esta leitura e a chamada da RPC outra requisição ainda
+    // pode ter mudado o estado).
+    const { data: conflictingDraft } = await supabase
+      .from('app_drafts')
+      .select('id')
+      .eq('application_id', draft.application_id)
+      .neq('id', draftId)
+      .maybeSingle()
+    if (conflictingDraft) {
+      console.error('[publish] application_id conflict', { draftId, applicationId: draft.application_id, conflictingDraft: conflictingDraft.id })
+      return NextResponse.json({ error: 'Este aplicativo já está vinculado a outro rascunho. Não é possível publicar.' }, { status: 409 })
+    }
   }
 
   const eligibility = await checkPublishEligibility(supabase, draftId)
@@ -95,49 +116,51 @@ export async function POST(
     price_currency: singlePlan?.currency ?? 'BRL',
     billing_period: singlePlan?.billing_period ?? null,
     is_free: singlePlan ? (singlePlan.price === null || singlePlan.price === 0) : false,
-    is_published: true,
-    is_lobby_made: false,
-    suspended_at: null,
-    suspended_by: null,
-    suspended_reason: null,
-    updated_at: new Date().toISOString(),
   }
 
-  let applicationId = draft.application_id as string | null
-  if (applicationId) {
-    const { error: appUpdateErr } = await supabase.from('applications').update(applicationPayload).eq('id', applicationId)
-    if (appUpdateErr) {
-      console.error('[publish] applications update', appUpdateErr)
-      return NextResponse.json({ error: 'Falha ao atualizar o catálogo público. Tente novamente.' }, { status: 500 })
-    }
-  } else {
-    const slug = await uniqueSlug(supabase, applicationPayload.name)
-    const { data: created, error: appInsertErr } = await supabase
-      .from('applications')
-      .insert({ ...applicationPayload, slug })
-      .select('id')
-      .single()
-    if (appInsertErr || !created) {
-      console.error('[publish] applications insert', appInsertErr)
-      return NextResponse.json({ error: 'Falha ao criar o registro no catálogo público. Tente novamente.' }, { status: 500 })
-    }
-    applicationId = created.id
+  const existingApplicationId = draft.application_id as string | null
+  // Slug só é gerado (e só importa) na criação — reaproveitar um
+  // application_id existente nunca muda o slug já publicado.
+  const slug = existingApplicationId ? null : await uniqueSlug(supabase, applicationPayload.name)
+
+  // Escreve applications + app_drafts dentro de uma única transação no
+  // banco (publish_app_draft, migration 20261105110000) — antes eram duas
+  // chamadas de rede separadas, e um crash entre elas podia deixar um app
+  // publicado no catálogo sem o link de volta pro draft, e um retry criava
+  // um SEGUNDO registro em applications pro mesmo draft (listing
+  // duplicado/fantasma). A função também repete a checagem de conflito de
+  // application_id dentro da transação, fechando o TOCTOU da checagem
+  // acima.
+  const { data: publishResult, error: publishError } = await supabase.rpc('publish_app_draft', {
+    p_draft_id: draftId,
+    p_expected_status: draft.status,
+    p_application_id: existingApplicationId,
+    p_slug: slug,
+    p_name: applicationPayload.name,
+    p_description: applicationPayload.description,
+    p_short_description: applicationPayload.short_description,
+    p_category: applicationPayload.category,
+    p_category_id: applicationPayload.category_id,
+    p_developer_name: applicationPayload.developer_name,
+    p_logo_url: applicationPayload.logo_url,
+    p_preview_image_url: applicationPayload.preview_image_url,
+    p_price: applicationPayload.price,
+    p_price_currency: applicationPayload.price_currency,
+    p_billing_period: applicationPayload.billing_period,
+    p_is_free: applicationPayload.is_free,
+  })
+
+  if (publishError || !publishResult) {
+    console.error('[publish] publish_app_draft rpc', publishError)
+    const message = publishError?.message.includes('vinculado a outro rascunho')
+      ? publishError.message
+      : publishError?.message.includes('Recarregue')
+        ? publishError.message
+        : 'Não foi possível publicar agora. Tente novamente.'
+    return NextResponse.json({ error: message }, { status: 409 })
   }
 
-  // Guard `.eq('status', draft.status)` evita corrida se dois técnicos
-  // clicarem publicar ao mesmo tempo (cobre tanto o publish novo quanto o
-  // caso de reparo, já que draft.status é o valor lido no topo da rota).
-  const { data: updated, error: updateErr } = await supabase
-    .from('app_drafts')
-    .update({ status: 'published', application_id: applicationId })
-    .eq('id', draftId)
-    .eq('status', draft.status)
-    .select('id, status')
-    .single()
-
-  if (updateErr || !updated) {
-    return NextResponse.json({ error: 'Não foi possível publicar agora — o status pode ter mudado em outra sessão. Recarregue e tente novamente.' }, { status: 409 })
-  }
+  const applicationId = (publishResult as { application_id: string }).application_id
 
   await supabase
     .from('app_submissions')

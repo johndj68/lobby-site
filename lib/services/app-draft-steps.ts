@@ -19,7 +19,9 @@ export async function getStepCompletion(supabase: SupabaseClient, draft: Record<
     supabase.from('app_plans').select('*').eq('app_draft_id', draft.id),
     supabase.from('app_activation_config').select('*').eq('app_draft_id', draft.id).maybeSingle(),
     supabase.from('app_team_members').select('*').eq('app_draft_id', draft.id),
-    supabase.from('app_team_invitations').select('*').eq('app_draft_id', draft.id).eq('status', 'pending'),
+    // calculateReview só usa .length daqui — nunca precisa do token_hash
+    // (nem de nenhum outro campo), então nem pede.
+    supabase.from('app_team_invitations').select('id').eq('app_draft_id', draft.id).eq('status', 'pending'),
   ])
 
   const review = calculateReview(draft as ReviewDraftInput, plans ?? [], config, members ?? [], invitations ?? [])

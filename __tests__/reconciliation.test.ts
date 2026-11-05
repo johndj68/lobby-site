@@ -45,6 +45,21 @@ function makeAdmin(responses: Record<string, Row | Row[] | null>, inserted: Reco
         inserted[table].push(payload)
         return chain
       },
+      // A rota agora cria o run com status 'em_processamento' e só depois
+      // faz UPDATE pra 'concluido'/'falhou' (uma vez os itens persistirem)
+      // — simula isso mesclando no último registro inserido da tabela, pra
+      // `inserted.reconciliation_runs[0]` continuar refletindo o estado
+      // final sem virar uma segunda linha.
+      update: (payload: unknown) => {
+        const list = (inserted[table] = inserted[table] ?? [])
+        const last = list[list.length - 1]
+        if (last && typeof last === 'object') {
+          list[list.length - 1] = { ...(last as Row), ...(payload as Row) }
+        } else {
+          list.push(payload)
+        }
+        return chain
+      },
       // .single() após .insert(...).select('id') precisa de uma linha —
       // sintetiza um id quando a tabela não foi configurada explicitamente
       // (cenário comum: reconciliation_runs não é o foco do teste).
@@ -139,6 +154,13 @@ describe('findPurchaseByPaymentIntentId', () => {
     expect(result).toEqual({ table: 'app_purchases', operationType: 'apps', id: 'ap-1', amount: 200, currency: 'BRL', status: 'paid', refundedAmount: 0, paidAt: '2026-01-06T00:00:00Z' })
   })
 
+  it('app_purchases com reembolso parcial confirmado reflete refundedAmount real (regressão: não fica hardcoded em 0)', async () => {
+    const admin = makeAdmin({ app_purchases: { id: 'ap-2', amount: 200, currency: 'BRL', status: 'paid', paid_at: '2026-01-06T00:00:00Z', refunded_amount: 50 } })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await reconciliation.findPurchaseByPaymentIntentId(admin as any, 'pi_x')
+    expect(result?.refundedAmount).toBe(50)
+  })
+
   it('cai pra subscription_invoices via invoicePayments.list quando nenhuma das 3 tabelas com payment_intent direto bate', async () => {
     const { stripe } = await import('@/lib/stripe')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -177,6 +199,14 @@ describe('bulkFindPurchasesByPaymentIntentIds', () => {
     expect(result.get('pi_a')?.table).toBe('campaign_purchases')
     expect(result.get('pi_b')?.table).toBe('credit_purchases')
     expect(result.get('pi_c')?.table).toBe('app_purchases')
+  })
+
+  it('resolve refundedAmount real de app_purchases em lote (regressão: não fica hardcoded em 0)', async () => {
+    const admin = makeAdmin({
+      app_purchases: { id: 'ap-3', amount: 100, currency: 'BRL', status: 'paid', paid_at: null, stripe_payment_intent_id: 'pi_refunded', refunded_amount: 30 },
+    })
+    const result = await reconciliation.bulkFindPurchasesByPaymentIntentIds(admin as never, ['pi_refunded'])
+    expect(result.get('pi_refunded')?.refundedAmount).toBe(30)
   })
 })
 
@@ -272,6 +302,24 @@ describe('POST /api/admin/conciliacao/run', () => {
       expect((final.summary as { divergenceCount: number }).divergenceCount).toBe(0)
     })
 
+    it('app_purchase parcialmente reembolsada bate com o amount_refunded do Stripe — não gera falso-positivo (regressão FIN-2)', async () => {
+      // Antes da correção, refundedAmount de app_purchases ficava sempre
+      // hardcoded em 0 na conciliação — mesmo essa compra tendo sido
+      // reembolsada de verdade (refunded_amount=30 no banco, confirmado
+      // pelo webhook). O Stripe mostra amount_refunded=30 pra mesma
+      // cobrança: antes, 0 (local) != 30 (Stripe) virava "diferenca_valor"
+      // pra toda compra parcialmente reembolsada, pra sempre — um
+      // falso-positivo permanente. Depois da correção, os dois batem.
+      await setup(
+        { app_purchases: { id: 'ap-refund-1', amount: 100, currency: 'BRL', status: 'paid', paid_at: '2026-01-15T00:00:00Z', stripe_payment_intent_id: 'pi_refund_ok', refunded_amount: 30 } },
+        [{ id: 'ch_refund', status: 'succeeded', amount: 10000, amount_refunded: 3000, payment_intent: 'pi_refund_ok', currency: 'brl', created: 1700000000 }],
+      )
+      const res = await POST(makeReq({ startDate: '2026-01-01', endDate: '2026-01-31', operationTypes: ['apps'] }))
+      const final = (await readNdjson(res)).at(-1)!
+      expect((final.summary as { matchedCount: number }).matchedCount).toBe(1)
+      expect((final.summary as { divergenceCount: number }).divergenceCount).toBe(0)
+    })
+
     it('valor local diferente vira diferenca_valor', async () => {
       await setup(
         { credit_purchases: { id: 'crp-1', amount_paid: 50, currency: 'BRL', status: 'paid', refunded_amount: 0, paid_at: '2026-01-15T00:00:00Z', stripe_payment_intent_id: 'pi_mismatch' } },
@@ -348,6 +396,52 @@ describe('POST /api/admin/conciliacao/run', () => {
       const final = (await readNdjson(res)).at(-1)!
       expect((final.summary as { notVerifiableCount: number }).notVerifiableCount).toBe(1)
       expect((final.summary as { noProviderMatchCount: number }).noProviderMatchCount).toBe(0)
+    })
+
+    it('falha no meio da gravação dos itens marca o MESMO run como falhou, nunca um 2º run concluido com itens truncados', async () => {
+      // Regressão do achado da auditoria: antes, o run era inserido já
+      // como 'concluido'/'concluido_parcialmente' com as contagens totais
+      // ANTES de gravar os itens — uma falha no meio dos lotes de itens
+      // criava um SEGUNDO run 'falhou', deixando o primeiro "concluído"
+      // mentindo sobre quantos itens foram realmente persistidos.
+      const { createServerSupabaseClient } = await import('@/lib/supabase-server')
+      const { createAdminClient } = await import('@/lib/supabase-admin')
+      const { stripe } = await import('@/lib/stripe')
+      vi.mocked(createServerSupabaseClient).mockResolvedValue(leaderSupabase())
+
+      const inserted: Record<string, unknown[]> = {}
+      const admin = makeAdmin(
+        { credit_purchases: { id: 'crp-fail', amount_paid: 100, currency: 'BRL', status: 'paid', refunded_amount: 0, paid_at: '2026-01-15T00:00:00Z', stripe_payment_intent_id: 'pi_fail' } },
+        inserted,
+      )
+      const realFrom = admin.from
+      admin.from = vi.fn((table: string) => {
+        const chain = realFrom(table)
+        if (table === 'reconciliation_items') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(chain as any).insert = vi.fn(() => Promise.resolve({ data: null, error: { message: 'item insert failed (simulated)' } }))
+        }
+        return chain
+      })
+      vi.mocked(createAdminClient).mockReturnValue(admin as never)
+      vi.mocked(stripe.charges.list).mockResolvedValueOnce(chargesPage([
+        { id: 'ch_fail', status: 'succeeded', amount: 10000, amount_refunded: 0, payment_intent: 'pi_fail', currency: 'brl', created: 1700000000 },
+      ]))
+
+      const res = await POST(makeReq({ startDate: '2026-01-01', endDate: '2026-01-31', operationTypes: ['creditos'] }))
+      const final = (await readNdjson(res)).at(-1)!
+
+      expect(final.stage).toBe('falhou')
+      // Exatamente UM run gravado (criado 'em_processamento', corrigido pra
+      // 'falhou' via UPDATE) — nunca uma segunda linha.
+      expect(inserted.reconciliation_runs).toHaveLength(1)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const run = inserted.reconciliation_runs[0] as any
+      expect(run.status).toBe('falhou')
+      // E o run nunca passou por 'concluido' com contagens prometidas —
+      // não existe nenhuma linha "concluido" em lugar nenhum.
+      expect(run.status).not.toBe('concluido')
+      expect(run.status).not.toBe('concluido_parcialmente')
     })
 
     it('quando a execução falha (erro do Stripe), grava run com status falhou e envia stage falhou', async () => {

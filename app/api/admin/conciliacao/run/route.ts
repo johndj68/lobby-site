@@ -101,6 +101,14 @@ export async function POST(req: NextRequest) {
       let checkedCount = 0
       let truncated = false
       let stripePagesFetched = 0
+      // Id do run assim que ele é criado (status 'em_processamento') — o
+      // catch usa isso pra decidir UPDATE (corrige o mesmo registro) vs
+      // INSERT (só no caso raro de falhar antes do run existir). Sem isso,
+      // uma falha no meio da gravação dos itens criava um SEGUNDO run
+      // 'falhou' e deixava o primeiro parado em 'concluido' com a
+      // contagem total prometida mas os itens truncados — exatamente o
+      // retrato que este registro promete nunca mostrar.
+      let runId: string | null = null
 
       try {
         send({ stage: 'consultando_pagamentos' })
@@ -261,20 +269,21 @@ export async function POST(req: NextRequest) {
         const limitations: string[] = []
         if (truncated) limitations.push(`Teto de ${MAX_CHARGES} cobranças atingido — nem todo o período foi verificado.`)
 
-        const nowIso = new Date().toISOString()
+        const startedIso = new Date().toISOString()
+
+        // Cria o run já visível como 'em_processamento' — SEM contagens
+        // finais ainda — só pra ganhar o id que os itens referenciam via
+        // FK. A conclusão (status real + contagens) só é gravada depois
+        // que TODOS os lotes de itens tiverem sido persistidos (abaixo).
         const { data: run, error: runError } = await admin.from('reconciliation_runs').insert({
           requested_by: userId, provider: 'stripe', environment,
           period_start: startDate, period_end: endDate, timezone: 'America/Sao_Paulo',
           operation_types: operationTypes, comparison_rule_version: 'v1',
-          status, started_at: nowIso, finished_at: nowIso,
-          checked_count: checkedCount, matched_count: matchedCount, divergence_count: divergenceCount,
-          no_local_match_count: noLocalMatchCount, no_provider_match_count: noProviderMatchCount, not_verifiable_count: notVerifiableCount,
-          currency_summary: currencySummary,
-          coverage: { tablesChecked: operationTypes, stripePagesFetched, truncated },
-          limitations,
+          status: 'em_processamento', started_at: startedIso,
         }).select('id').single()
 
         if (runError || !run) throw new Error(runError?.message ?? 'Falha ao gravar execução de conciliação.')
+        runId = run.id
 
         if (items.length > 0) {
           const rows = items.map(i => ({
@@ -285,11 +294,31 @@ export async function POST(req: NextRequest) {
             local_status: i.localStatus, local_refunded_amount: i.localRefundedAmount, local_created_at: i.localCreatedAt,
             note: i.note,
           }))
-          // Lotes de 500 — período grande pode gerar milhares de itens.
+          // Lotes de 500 — período grande pode gerar milhares de itens. Uma
+          // falha em QUALQUER lote aborta pro catch externo, que marca
+          // este mesmo run (via runId) como 'falhou' — nunca deixa o run
+          // seguir pra 'concluido'/'concluido_parcialmente' com itens só
+          // parcialmente gravados.
           for (let i = 0; i < rows.length; i += 500) {
-            await admin.from('reconciliation_items').insert(rows.slice(i, i + 500))
+            const { error: itemsError } = await admin.from('reconciliation_items').insert(rows.slice(i, i + 500))
+            if (itemsError) throw new Error(`Falha ao gravar itens da conciliação (lote ${i / 500 + 1}): ${itemsError.message}`)
           }
         }
+
+        // Só agora, com todos os itens garantidamente persistidos, a
+        // execução é marcada como terminada — e sempre via UPDATE da
+        // mesma linha criada acima, nunca um segundo INSERT.
+        const finishedIso = new Date().toISOString()
+        const { error: finalizeError } = await admin.from('reconciliation_runs').update({
+          status, finished_at: finishedIso,
+          checked_count: checkedCount, matched_count: matchedCount, divergence_count: divergenceCount,
+          no_local_match_count: noLocalMatchCount, no_provider_match_count: noProviderMatchCount, not_verifiable_count: notVerifiableCount,
+          currency_summary: currencySummary,
+          coverage: { tablesChecked: operationTypes, stripePagesFetched, truncated },
+          limitations,
+        }).eq('id', run.id)
+
+        if (finalizeError) throw new Error(`Itens gravados, mas falha ao concluir o run: ${finalizeError.message}`)
 
         send({
           stage: 'concluido', runId: run.id, status,
@@ -299,12 +328,25 @@ export async function POST(req: NextRequest) {
         const message = err instanceof Error ? err.message : 'Falha desconhecida na conciliação.'
         try {
           const nowIso = new Date().toISOString()
-          await admin.from('reconciliation_runs').insert({
-            requested_by: userId, provider: 'stripe', environment,
-            period_start: startDate, period_end: endDate, timezone: 'America/Sao_Paulo',
-            operation_types: operationTypes, comparison_rule_version: 'v1',
-            status: 'falhou', started_at: nowIso, finished_at: nowIso, error_message: message,
-          })
+          if (runId) {
+            // O run já existe (criado acima) — corrige ESSA mesma linha
+            // pra 'falhou' em vez de criar uma segunda, que deixaria a
+            // primeira (ainda 'em_processamento') órfã e confusa no
+            // histórico.
+            await admin.from('reconciliation_runs').update({
+              status: 'falhou', finished_at: nowIso, error_message: message,
+            }).eq('id', runId)
+          } else {
+            // Falhou antes mesmo de criar o run (ex.: erro consultando o
+            // Stripe) — não há linha prévia pra corrigir, então registra
+            // a tentativa falha do jeito que sempre foi feito.
+            await admin.from('reconciliation_runs').insert({
+              requested_by: userId, provider: 'stripe', environment,
+              period_start: startDate, period_end: endDate, timezone: 'America/Sao_Paulo',
+              operation_types: operationTypes, comparison_rule_version: 'v1',
+              status: 'falhou', started_at: nowIso, finished_at: nowIso, error_message: message,
+            })
+          }
         } catch {
           // Se nem o registro de falha grava, o stream ainda reporta o erro ao cliente abaixo.
         }
