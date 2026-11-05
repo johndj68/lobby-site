@@ -46,7 +46,7 @@ export async function GET(
 
     const { data: invitations } = await supabase
       .from('app_team_invitations')
-      .select('*')
+      .select('id') // calculateReview só usa .length
       .eq('app_draft_id', appId)
       .eq('status', 'pending')
 

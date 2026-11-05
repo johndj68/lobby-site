@@ -30,7 +30,7 @@ export async function POST(
       // Get invitation
       const { data: invitation } = await supabase
         .from('app_team_invitations')
-        .select('*')
+        .select('id, invited_email, invited_name, status, sent_at')
         .eq('id', invitationId)
         .eq('app_draft_id', appId)
         .single()
@@ -52,16 +52,17 @@ export async function POST(
       const newToken = crypto.randomBytes(32).toString('hex')
       const newTokenHash = crypto.createHash('sha256').update(newToken).digest('hex')
 
-      // Update invitation
+      // Update invitation — só o hash é persistido, mesmo motivo da
+      // criação (ver migration 20261105120000): newToken só precisa
+      // existir na memória desta requisição pra montar o link do e-mail.
       const { data: updated } = await supabase
         .from('app_team_invitations')
         .update({
-          token: newToken,
           token_hash: newTokenHash,
           sent_at: new Date().toISOString(),
         })
         .eq('id', invitationId)
-        .select()
+        .select('id, invited_email, status, sent_at')
         .single()
 
       if (!updated) {
@@ -93,7 +94,7 @@ export async function POST(
         .update({ status: 'cancelled' })
         .eq('id', invitationId)
         .eq('app_draft_id', appId)
-        .select()
+        .select('id, invited_email, status')
         .single()
 
       if (!updated) {

@@ -18,9 +18,13 @@ export default async function AcceptInvitePage({ params, searchParams }: PagePro
   // Get invitation details without accepting
   const tokenHash = await import('crypto').then(c => c.createHash('sha256').update(token).digest('hex'))
 
+  // Só os campos que AcceptInviteClient de fato exibe/valida — este objeto
+  // vira prop de Client Component, ou seja, é serializado no payload RSC
+  // que chega no navegador. token_hash (e qualquer outro campo interno)
+  // não tem motivo pra sair do servidor pra essa tela.
   const { data: invitation } = await supabase
     .from('app_team_invitations')
-    .select('*')
+    .select('invited_email, expires_at, status, permissions, scope')
     .eq('token_hash', tokenHash)
     .single()
 

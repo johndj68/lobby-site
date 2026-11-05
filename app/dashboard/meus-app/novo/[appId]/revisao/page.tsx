@@ -36,7 +36,7 @@ export default async function ReviewPage({ params }: PageProps) {
     supabase.from('app_plans').select('*').eq('app_draft_id', appId).order('display_order', { ascending: true }),
     supabase.from('app_activation_config').select('*').eq('app_draft_id', appId).maybeSingle(),
     supabase.from('app_team_members').select('*').eq('app_draft_id', appId),
-    supabase.from('app_team_invitations').select('*').eq('app_draft_id', appId).eq('status', 'pending'),
+    supabase.from('app_team_invitations').select('id').eq('app_draft_id', appId).eq('status', 'pending'), // calculateReview só usa .length
     supabase.from('app_submissions')
       .select('id, status, submitted_at, reviewed_at, reviewer_id, public_feedback, published_at')
       .eq('app_draft_id', appId)

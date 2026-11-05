@@ -1,0 +1,21 @@
+-- Auditoria (2026-11-05): app_team_invitations guardava o token de convite
+-- em DOIS lugares — `token` (texto puro) e `token_hash` (sha256) — mesmo o
+-- fluxo de aceite (app/api/apps/team/invite/[token]/accept) só comparando
+-- contra token_hash. A coluna `token` nunca precisou existir depois do
+-- e-mail ser enviado: guardar o valor em claro anula metade do propósito
+-- de hashear, e a RLS de SELECT desta tabela ("View invitations - owner
+-- and members") já permite qualquer membro de equipe aceito ler QUALQUER
+-- convite pendente do mesmo app — inclusive o de um colega ainda não
+-- aceito. Um membro malicioso lendo a tabela direto (dashboard futuro,
+-- backup, script) ganhava o link de convite funcional de outra pessoa.
+-- O e-mail de aceite ainda bloqueia a identidade errada de completar o
+-- aceite, mas não há motivo pra manter essa exposição.
+--
+-- O código (app/api/apps/team/[appId]/invite, app/api/apps/team/[appId]/
+-- invitations/[invitationId]) já foi ajustado nesta mesma leva pra nunca
+-- mais escrever nesta coluna — o token continua existindo só na memória
+-- da requisição, tempo suficiente pra montar a URL do e-mail.
+
+-- DROP COLUMN já leva consigo a constraint unique inline (token text not
+-- null unique) e seu índice de apoio — não precisa dropar à parte.
+alter table public.app_team_invitations drop column if exists token;

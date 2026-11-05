@@ -82,9 +82,11 @@ export async function POST(
       .select('*')
       .eq('app_draft_id', appId)
 
+    // calculateReview só usa .length daqui — nunca precisa do token_hash
+    // (nem de nenhum outro campo), então nem pede.
     const { data: invitations } = await supabase
       .from('app_team_invitations')
-      .select('*')
+      .select('id')
       .eq('app_draft_id', appId)
       .eq('status', 'pending')
 
