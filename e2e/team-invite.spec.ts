@@ -84,6 +84,7 @@ test.describe('Enviar convite de equipe (AUTH-1)', () => {
 
 test.describe('Aceitar convite de equipe (AUTH-1)', () => {
   let draftId: string
+  let victimDraftId: string
   let token: string
   let inviteeUserId: string
 
@@ -122,10 +123,37 @@ test.describe('Aceitar convite de equipe (AUTH-1)', () => {
       status:        'pending',
     })
     if (inviteErr) throw new Error(`Failed to seed invitation: ${inviteErr.message}`)
+
+    // Draft "vítima" não relacionado ao convite — o convidado não é dono
+    // nem membro dele. Usado só pra provar que a tela de aceite não
+    // revela o nome de um app arbitrário quando a URL aponta pra outro
+    // draft (achado de IDOR na revisão de segurança, Fase 7).
+    const { data: victimDraft, error: victimErr } = await admin
+      .from('app_drafts')
+      .insert({ created_by: ownerProfile.id, name: 'E2E Victim Draft — nunca deveria aparecer' })
+      .select('id')
+      .single()
+    if (victimErr || !victimDraft) throw new Error(`Failed to seed victim draft: ${victimErr?.message}`)
+    victimDraftId = victimDraft.id
   })
 
   test.afterAll(async () => {
-    if (draftId) await adminClient().from('app_drafts').delete().eq('id', draftId)
+    const admin = adminClient()
+    if (draftId) await admin.from('app_drafts').delete().eq('id', draftId)
+    if (victimDraftId) await admin.from('app_drafts').delete().eq('id', victimDraftId)
+  })
+
+  test('regressão (IDOR): token válido com appId de outro draft na URL não revela o nome do draft alheio', async ({ page }) => {
+    await login(page, INVITEE_EMAIL, INVITEE_PASSWORD)
+
+    // Mesmo token válido do convidado, mas appId da URL é o draft vítima,
+    // não o draft real do convite (draftId).
+    await page.goto(`/dashboard/meus-app/novo/${victimDraftId}/equipe/aceitar?token=${token}`)
+
+    // appId não bate com invitation.app_draft_id -> redireciona, nunca
+    // chega a renderizar o nome do draft vítima.
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 })
+    await expect(page.getByText('E2E Victim Draft')).toHaveCount(0)
   })
 
   test('convidado vê os detalhes do convite e aceita com sucesso', async ({ page }) => {
