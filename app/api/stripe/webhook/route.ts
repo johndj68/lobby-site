@@ -118,20 +118,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const admin = createAdminClient()
 
-  // Redelivery check: Stripe retries this webhook (timeout, manual redelivery
-  // from the dashboard, etc.) — the RPC below is already idempotent for the
-  // credit-minting/financial_transactions side (row lock + status check in
-  // confirm_credit_purchase_webhook), but nothing stopped the receipt email
-  // from being re-sent to the customer on every redelivery. Reading the
-  // pre-RPC status tells us whether this call is the actual first
-  // confirmation or just Stripe replaying an already-processed event.
-  const { data: existing } = await admin
-    .from('credit_purchases')
-    .select('status')
-    .eq('id', purchaseId)
-    .single()
-  const alreadyConfirmed = existing?.status === 'paid'
-
   // Store Stripe identifiers on the purchase record for audit trail
   await admin
     .from('credit_purchases')
@@ -144,12 +130,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     .eq('id', purchaseId)
 
   // Confirm purchase via dedicated webhook function (no is_leader check —
-  // service_role doesn't have auth.uid(), so the leader-gated version fails)
-  const { data: purchaseRaw, error } = await admin.rpc('confirm_credit_purchase_webhook', { p_purchase_id: purchaseId })
+  // service_role doesn't have auth.uid(), so the leader-gated version fails).
+  // Redelivery check: Stripe retries this webhook (timeout, manual redelivery
+  // from the dashboard, etc.). The RPC takes a row lock (`for update`) before
+  // checking status, so it — not a plain read done beforehand from here — is
+  // the only thing that can correctly tell "was it ME who just confirmed, or
+  // was it already confirmed by a concurrent redelivery that beat me to the
+  // lock". A pre-read done here without that lock can observe the
+  // not-yet-confirmed state in BOTH concurrent requests and send the receipt
+  // email twice; `was_already_paid` can't lie about that because only one
+  // caller ever actually performs the transition.
+  const { data: rpcResult, error } = await admin.rpc('confirm_credit_purchase_webhook', { p_purchase_id: purchaseId })
   if (error) {
     console.error('[stripe/webhook] confirm_credit_purchase RPC failed:', error)
     throw new Error(error.message)
   }
+  const { purchase: purchaseRaw, was_already_paid: alreadyConfirmed } = rpcResult as { purchase: unknown; was_already_paid: boolean }
 
   console.info('[stripe/webhook] Credit purchase confirmed:', purchaseId)
 
