@@ -97,7 +97,7 @@ export async function POST(
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
   <h2>Convite para colaborar</h2>
   <p>Olá ${escapeHtml(invited_name)},</p>
-  <p>${escapeHtml(user.user_metadata?.full_name || user.email)} convidou você para colaborar no aplicativo <strong>${escapeHtml(draft.name)}</strong> na LOBBY.</p>
+  <p>${escapeHtml(user.user_metadata?.full_name || user.email)} convidou você para colaborar no aplicativo <strong>${escapeHtml(draft.name || 'um aplicativo sem nome ainda')}</strong> na LOBBY.</p>
 
   <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
     <p><strong>Escopo:</strong> ${scope === 'app' ? 'Somente este aplicativo' : 'Toda a organização'}</p>
@@ -128,7 +128,8 @@ export async function POST(
   }
 }
 
-function escapeHtml(str: string): string {
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return ''
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
