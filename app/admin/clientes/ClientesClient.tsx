@@ -3,7 +3,7 @@
 // Hooks de estado e memoização para busca e cálculos derivados
 import { useState, useMemo } from 'react'
 // Ícones usados nos cards de estatísticas e lista de clientes
-import { Search, Users, FolderKanban, ArrowRight, TrendingUp } from 'lucide-react'
+import { Search, Users, FolderKanban, ArrowRight, TrendingUp, AlertTriangle, RotateCcw } from 'lucide-react'
 // Utilitário para exibir tempo relativo (ex: "há 2 dias")
 import { timeAgo } from '@/lib/utils'
 // Link do Next.js para navegação para a página de detalhes de cada projeto
@@ -29,6 +29,10 @@ interface ClientRow {
 /* Props do componente — recebe a lista de clientes já agrupada pelo Server Component */
 interface Props {
   clients: ClientRow[]
+  // true quando a query de client_projects falhou no servidor — nesse
+  // caso `clients` vem vazio por força (rows ?? []), e sem este flag a
+  // tela mostraria "nenhum cliente" como se fosse um fato, não uma falha.
+  loadError?: boolean
 }
 
 /* Mapeamento de status de projeto para cor hexadecimal.
@@ -59,7 +63,7 @@ function sc(s: string) { return STATUS_COLOR[s] ?? '#94A3B8' }
 function sl(s: string) { return STATUS_LABEL[s] ?? s }
 
 /* ── Componente principal de listagem de clientes ──────────────────────── */
-export default function ClientesClient({ clients }: Props) {
+export default function ClientesClient({ clients, loadError = false }: Props) {
   // Texto de busca livre (nome, email ou empresa do cliente)
   const [search, setSearch] = useState('')
 
@@ -81,6 +85,23 @@ export default function ClientesClient({ clients }: Props) {
   const activeClients = clients.filter(c =>
     c.projects.some(p => p.status === 'ativo' || p.status === 'em_andamento')
   ).length
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-10 text-center">
+        <AlertTriangle size={28} className="text-red-400" aria-hidden="true" />
+        <p className="text-sm font-semibold text-white">Não foi possível carregar os clientes.</p>
+        <p className="text-xs text-white/40">A lista pode estar incompleta ou indisponível agora — isto não significa que não há clientes cadastrados.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-1 inline-flex items-center gap-2 rounded-xl bg-[#005BFF] px-4 py-2 text-sm font-semibold text-white"
+        >
+          <RotateCcw size={14} aria-hidden="true" /> Tentar novamente
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

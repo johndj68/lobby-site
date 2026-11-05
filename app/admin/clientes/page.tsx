@@ -22,10 +22,21 @@ export default async function ClientesPage() {
      (client_name, client_email, client_company são desnormalizados na tabela).
      Ordenados pelo mais recentemente atualizado para que clientes ativos
      apareçam no topo após o agrupamento. */
-  const { data: rows } = await supabase
+  // Teto explícito (igual ao default do PostgREST, só documentado): sem
+  // paginação nesta tela ainda — volume atual é pequeno — mas sem limite
+  // nenhum a consulta trunca em 1000 do mesmo jeito, só que calada. Loga
+  // quando o teto é atingido, pra não desaparecer cliente sem ningém notar.
+  const ROWS_CAP = 1000
+  const { data: rows, error: rowsError } = await supabase
     .from('client_projects')
     .select('id, client_id, title, status, progress, updated_at, client_name, client_email, client_company')
     .order('updated_at', { ascending: false })
+    .limit(ROWS_CAP)
+
+  if (rowsError) console.error('[admin/clientes] falha ao carregar client_projects:', rowsError)
+  if ((rows?.length ?? 0) >= ROWS_CAP) {
+    console.warn(`[admin/clientes] atingiu o teto de ${ROWS_CAP} projetos — a lista pode estar incompleta. Hora de paginar esta tela.`)
+  }
 
   /* Agrupa os projetos por client_id usando um Map para acesso O(1).
      Chave: client_id | Valor: dados do cliente + lista de projetos aninhados */
@@ -69,7 +80,7 @@ export default async function ClientesPage() {
           </h1>
           <p className="mt-1 text-sm text-white/40">Todos os clientes com projetos cadastrados.</p>
         </div>
-        <ClientesClient clients={clients} />
+        <ClientesClient clients={clients} loadError={!!rowsError} />
       </div>
     </AdminShell>
   )

@@ -14,7 +14,7 @@ import {
   Download, Mail, Building2, Clock, Search,
   Users, FileText, TrendingUp, BarChart3, Eye, Zap, X,
   Activity, BookOpen, Sparkles,
-  ChevronDown,
+  ChevronDown, AlertTriangle, RotateCcw,
 } from 'lucide-react'
 // Layout padrão do painel administrativo (sidebar + header)
 import AdminShell from '@/components/layout/AdminShell'
@@ -36,6 +36,10 @@ interface Props {
   profile: { full_name?: string } | null  // Perfil do técnico logado
   leads:   Lead[]                // Todos os leads capturados
   ranking: MaterialRank[]        // Ranking de downloads por material (pré-calculado)
+  // true quando a query de downloads falhou no servidor — `leads` vem
+  // vazio por força (leads ?? []), e sem este flag a tela mostraria
+  // "nenhum lead encontrado" como se fosse um fato, não uma falha.
+  loadError?: boolean
 }
 
 /* ── Configurações de filtro ─────────────────────────────────────────── */
@@ -324,7 +328,7 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
 }
 
 /* ── Componente principal da página de Leads ────────────────────────── */
-export default function LeadsClient({ user, profile, leads, ranking }: Props) {
+export default function LeadsClient({ user, profile, leads, ranking, loadError = false }: Props) {
   // Categoria selecionada no filtro (ex: "Automação")
   const [catFilter,  setCatFilter]  = useState('Todos')
   // Período selecionado no dropdown (ex: "Esta semana")
@@ -399,6 +403,25 @@ export default function LeadsClient({ user, profile, leads, ranking }: Props) {
   const thisWeek = leads.filter(l => new Date(l.created_at).getTime() > weekCutoff)
   // Leads repetidos = diferença entre total e emails únicos (baixaram mais de um material)
   const repeatLeads = leads.length - uniqueEmails
+
+  if (loadError) {
+    return (
+      <AdminShell user={user} profile={profile}>
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-white/[0.10] bg-white/[0.02] p-12 text-center">
+          <AlertTriangle size={28} className="text-red-400" aria-hidden="true" />
+          <p className="text-sm font-semibold text-white">Não foi possível carregar os leads.</p>
+          <p className="max-w-sm text-xs text-white/30">A lista pode estar incompleta ou indisponível agora — isto não significa que não há leads capturados.</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-1 inline-flex items-center gap-2 rounded-xl bg-[#005BFF] px-4 py-2 text-sm font-semibold text-white"
+          >
+            <RotateCcw size={14} aria-hidden="true" /> Tentar novamente
+          </button>
+        </div>
+      </AdminShell>
+    )
+  }
 
   return (
     <AdminShell user={user} profile={profile}>
