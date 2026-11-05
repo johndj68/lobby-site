@@ -52,23 +52,24 @@ export async function POST(
     return NextResponse.json({ error: 'Already invited or member' }, { status: 400 })
   }
 
-  const { data: member } = await supabase
-    .from('app_team_members')
-    .select('id')
-    .eq('app_draft_id', appId)
-    .eq('user_id', (await supabase.auth.admin.listUsers()).data?.users.find(u => u.email?.toLowerCase() === invited_email.toLowerCase())?.id || 'invalid')
-    .single()
-
-  if (member) {
-    return NextResponse.json({ error: 'Already a member' }, { status: 400 })
-  }
+  // Não há um segundo caminho pra checar "já é membro" por e-mail aqui:
+  // app_team_members só ganha uma linha através do accept de um convite
+  // (app/api/apps/team/invite/[token]/accept), e todo convite aceito já
+  // fica registrado com status='accepted' em app_team_invitations — a
+  // checagem acima (linha anterior) já cobre esse caso. (Uma versão
+  // anterior tentava resolver o e-mail pra um user_id via
+  // `supabase.auth.admin.listUsers()`, que exige service-role key — o
+  // client de sessão usado aqui não tem esse privilégio e a chamada
+  // sempre lançava, quebrando todo convite com 500.)
 
   try {
     // Generate token
     const token = crypto.randomBytes(32).toString('hex')
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
 
-    // Create invitation
+    // Create invitation — só token_hash é persistido (nunca o token em
+    // claro: ele só vive na memória desta requisição, o suficiente pra
+    // montar o link do e-mail abaixo). Ver migration 20261105120000.
     const { data: invitation, error: inviteError } = await supabase
       .from('app_team_invitations')
       .insert({
@@ -78,12 +79,11 @@ export async function POST(
         invited_name,
         permissions: permissions,
         scope: scope || 'app',
-        token,
         token_hash: tokenHash,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
         status: 'pending',
       })
-      .select()
+      .select('id, invited_email, status, permissions')
       .single()
 
     if (inviteError) {
