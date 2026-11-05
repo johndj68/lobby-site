@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import crypto from 'crypto'
 
 export async function POST(
@@ -16,12 +17,26 @@ export async function POST(
     return NextResponse.json({ error: 'Email not confirmed' }, { status: 400 })
   }
 
+  // Client admin pra todo o resto: até aceitar, o convidado não é dono nem
+  // membro do draft — nenhuma policy de RLS de app_team_invitations/
+  // app_team_members cobre "é a pessoa convidada" (achado em e2e, Fase 7
+  // audit: a tela de aceite nunca funcionou de ponta a ponta pra um
+  // convidado de verdade, sempre voltava vazio). Abrir RLS linha a linha
+  // pra isso significaria dar ao convidado UPDATE/INSERT direto nessas
+  // tabelas antes do aceite — ele podia alterar o próprio convite (ex.:
+  // subir permissions) via REST direto, sem passar por aqui. Toda a
+  // autorização real já é feita em código abaixo (e-mail bate, não
+  // expirou, status pending, ainda não é membro) — igual o motivo de
+  // outras rotas sensíveis deste projeto (webhook Stripe, publish) usarem
+  // o client admin em vez de abrir mão fina de RLS pro caso.
+  const admin = createAdminClient()
+
   try {
     // Hash token
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
 
     // Find invitation
-    const { data: invitation } = await supabase
+    const { data: invitation } = await admin
       .from('app_team_invitations')
       .select('*')
       .eq('token_hash', tokenHash)
@@ -41,7 +56,7 @@ export async function POST(
 
     // Validate expiry
     if (new Date(invitation.expires_at) < new Date()) {
-      await supabase
+      await admin
         .from('app_team_invitations')
         .update({ status: 'expired' })
         .eq('id', invitation.id)
@@ -58,7 +73,7 @@ export async function POST(
     }
 
     // Check not already member
-    const { data: existing } = await supabase
+    const { data: existing } = await admin
       .from('app_team_members')
       .select('id')
       .eq('app_draft_id', invitation.app_draft_id)
@@ -72,7 +87,7 @@ export async function POST(
     // Create member + mark invitation as accepted (transactional)
     const now = new Date().toISOString()
 
-    const { data: member, error: memberError } = await supabase
+    const { data: member, error: memberError } = await admin
       .from('app_team_members')
       .insert({
         app_draft_id: invitation.app_draft_id,
@@ -91,7 +106,7 @@ export async function POST(
     }
 
     // Mark invitation accepted
-    await supabase
+    await admin
       .from('app_team_invitations')
       .update({
         status: 'accepted',
