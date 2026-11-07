@@ -103,6 +103,38 @@ describe('POST /api/apps/team/[appId]/invite', () => {
     expect(adminListUsersSpy).not.toHaveBeenCalled()
   })
 
+  it('regressão: não quebra ao convidar num app ainda sem nome (draft.name null)', async () => {
+    const { sendEmail } = await import('@/lib/notifications')
+    const queue: Record<string, ReturnType<typeof chain>[]> = {
+      app_drafts: [chain({ data: { id: 'app-1', name: null }, error: null })],
+      app_team_invitations: [
+        chain({ data: [], error: null }),
+        chain({
+          data: { id: 'inv-2', invited_email: 'colega2@example.com', status: 'pending', permissions: ['edit'] },
+          error: null,
+        }),
+      ],
+    }
+    fromMock.mockImplementation((table: string) => {
+      const next = queue[table]?.shift()
+      if (!next) throw new Error(`unexpected supabase.from('${table}') call`)
+      return next
+    })
+
+    const req = createMockRequest({
+      invited_email: 'colega2@example.com',
+      invited_name: 'Colega',
+      permissions: ['edit'],
+      scope: 'app',
+    })
+
+    const res = await POST(req, { params: Promise.resolve({ appId: 'app-1' }) })
+
+    expect(res.status).toBe(200)
+    const html = vi.mocked(sendEmail).mock.calls.at(-1)?.[2] as string
+    expect(html).toContain('um aplicativo sem nome ainda')
+  })
+
   it('rejects a duplicate invite to someone already pending/accepted', async () => {
     const queue: Record<string, ReturnType<typeof chain>[]> = {
       app_drafts: [chain({ data: { id: 'app-1', name: 'App Teste' }, error: null })],
